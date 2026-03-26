@@ -70,7 +70,7 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     }
     ?>
 </head>
-<body>
+<body class="<?= (isset($hideNav) && $hideNav) ? 'hide-nav' : ''; ?>">
     <?php if (!isset($hideNav) || !$hideNav): ?>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg" id="mainNav">
