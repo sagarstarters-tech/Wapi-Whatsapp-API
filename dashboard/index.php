@@ -102,7 +102,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="dash-alert-icon"><i class="bi bi-envelope-open"></i></div>
             <div class="dash-alert-content">
                 <h6>Verify Email : Email is not verified yet. Please verify your email.</h6>
-                <p>Click the link to get started : <a href="/wapi/auth/verify-email.php">Start Email Verification</a></p>
+                <p>Click the link to get started : <a href="<?= baseUrl('auth/verify-email.php'); ?>">Start Email Verification</a></p>
             </div>
             <button class="close-btn" onclick="this.parentElement.style.display='none'">&times;</button>
         </div>
@@ -113,7 +113,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="dash-alert-icon"><i class="bi bi-whatsapp"></i></div>
             <div class="dash-alert-content">
                 <h6>Verify WhatsApp Number : WhatsApp phone number is not verified yet. Please verify your WhatsApp phone number.</h6>
-                <p>Click the link to get started : <a href="/wapi/dashboard/whatsapp.php">Start WhatsApp Verification</a></p>
+                <p>Click the link to get started : <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>">Start WhatsApp Verification</a></p>
             </div>
             <button class="close-btn" onclick="this.parentElement.style.display='none'">&times;</button>
         </div>

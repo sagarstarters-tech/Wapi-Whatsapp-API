@@ -11,6 +11,23 @@ class Auth {
     }
 
     /**
+     * Verify user email via token
+     */
+    public function verifyEmail($token) {
+        $user = $this->db->fetch("SELECT id FROM users WHERE email_verify_token = ? AND email_verified = 0", [$token]);
+        if (!$user) {
+            return ['success' => false, 'message' => 'Invalid or already used verification link.'];
+        }
+
+        $this->db->update('users', [
+            'email_verified' => 1,
+            'email_verify_token' => null
+        ], 'id = ?', [$user['id']]);
+
+        return ['success' => true, 'message' => 'Email verified successfully! You can now access all features.'];
+    }
+
+    /**
      * Register a new user
      */
     public function register($name, $email, $password, $phone = null, $company = null) {
