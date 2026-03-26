@@ -219,14 +219,14 @@ include __DIR__ . '/../includes/header.php';
                             <div class="mb-2"><i class="bi bi-chat-dots me-2"></i> Messages: <?= number_format($subscription['message_limit']); ?>/mo</div>
                             <div class="mb-2"><i class="bi bi-people me-2"></i> Contacts: <?= number_format($subscription['contacts_limit']); ?></div>
                         </div>
-                        <a href="/wapi/dashboard/subscription.php" class="btn btn-outline-primary btn-sm w-100 mt-3">
+                        <a href="<?= baseUrl('dashboard/subscription.php'); ?>" class="btn btn-outline-primary btn-sm w-100 mt-3">
                             <i class="bi bi-arrow-up-circle"></i> Upgrade Plan
                         </a>
                         <?php else: ?>
                         <div class="text-center py-3">
                             <i class="bi bi-credit-card-2-front" style="font-size: 2rem; color: var(--text-muted);"></i>
                             <p class="text-muted mt-2 mb-3">No active plan</p>
-                            <a href="/wapi/dashboard/subscription.php" class="btn btn-primary btn-sm">Choose a Plan</a>
+                            <a href="<?= baseUrl('dashboard/subscription.php'); ?>" class="btn btn-primary btn-sm">Choose a Plan</a>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -241,11 +241,11 @@ include __DIR__ . '/../includes/header.php';
                     <div class="card-body p-4">
                         <h5 class="fw-bold mb-3">Quick Actions</h5>
                         <div class="d-grid gap-2">
-                            <a href="/wapi/dashboard/messages.php" class="btn btn-outline-primary text-start"><i class="bi bi-send-fill me-2"></i> Send Message</a>
-                            <a href="/wapi/dashboard/bulk-messages.php" class="btn btn-outline-primary text-start"><i class="bi bi-megaphone-fill me-2"></i> Bulk Message</a>
-                            <a href="/wapi/dashboard/contacts.php" class="btn btn-outline-primary text-start"><i class="bi bi-person-plus-fill me-2"></i> Add Contact</a>
-                            <a href="/wapi/dashboard/api-keys.php" class="btn btn-outline-primary text-start"><i class="bi bi-key-fill me-2"></i> Generate API Key</a>
-                            <a href="/wapi/dashboard/templates.php" class="btn btn-outline-primary text-start"><i class="bi bi-file-earmark-text-fill me-2"></i> Create Template</a>
+                            <a href="<?= baseUrl('dashboard/messages.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-send-fill me-2"></i> Send Message</a>
+                            <a href="<?= baseUrl('dashboard/bulk-messages.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-megaphone-fill me-2"></i> Bulk Message</a>
+                            <a href="<?= baseUrl('dashboard/contacts.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-person-plus-fill me-2"></i> Add Contact</a>
+                            <a href="<?= baseUrl('dashboard/api-keys.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-key-fill me-2"></i> Generate API Key</a>
+                            <a href="<?= baseUrl('dashboard/templates.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-file-earmark-text-fill me-2"></i> Create Template</a>
                         </div>
                     </div>
                 </div>
@@ -254,14 +254,14 @@ include __DIR__ . '/../includes/header.php';
                 <div class="data-table">
                     <div class="data-table-header">
                         <h5 class="data-table-title">Recent Messages</h5>
-                        <a href="/wapi/dashboard/logs.php" class="btn btn-outline-primary btn-sm">View All</a>
+                        <a href="<?= baseUrl('dashboard/message-logs.php'); ?>" class="btn btn-outline-primary btn-sm">View All</a>
                     </div>
                     <div class="table-responsive">
                         <table class="table">
                             <thead><tr><th>To</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php if (empty($recentMessages)): ?>
-                                <tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size: 1.5rem;"></i><br>No messages yet. <a href="/wapi/dashboard/messages.php">Send your first message</a></td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size: 1.5rem;"></i><br>No messages yet. <a href="<?= baseUrl('dashboard/messages.php'); ?>">Send your first message</a></td></tr>
                                 <?php else: ?>
                                 <?php foreach ($recentMessages as $msg): ?>
                                 <tr>
