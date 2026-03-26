@@ -16,12 +16,16 @@ function redirect($url) {
  * Get base URL
  */
 function baseUrl($path = '') {
-    // Strip redundant /wapi/ or wapi/ from the start of the path
+    // Strip redundant /wapi/ from the start of the path string
     $path = ltrim($path, '/');
     if (strpos($path, 'wapi/') === 0) {
         $path = substr($path, 5);
     }
-    return rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
+    
+    $url = rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
+    
+    // Final deduplication (e.g., /wapi/wapi/ -> /wapi/)
+    return preg_replace('/\/wapi\/wapi\//', '/wapi/', $url);
 }
 
 /**
