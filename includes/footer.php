@@ -42,19 +42,19 @@ $contactPhone = $settings->get('contact_phone', '');
                 <div class="col-lg-2 col-md-6">
                     <h5>Company</h5>
                     <ul class="footer-links">
-                        <li><a href="<?= baseUrl('index.php#about'); ?>">About Us</a></li>
+                        <li><a href="<?= baseUrl('about.php'); ?>">About Us</a></li>
                         <li><a href="#">Blog</a></li>
                         <li><a href="#">Careers</a></li>
-                        <li><a href="<?= baseUrl('index.php#contact'); ?>">Contact</a></li>
+                        <li><a href="<?= baseUrl('contact.php'); ?>">Contact</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6">
                     <h5>Legal</h5>
                     <ul class="footer-links">
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Cookie Policy</a></li>
-                        <li><a href="#">GDPR</a></li>
+                        <li><a href="<?= baseUrl('privacy.php'); ?>">Privacy Policy</a></li>
+                        <li><a href="<?= baseUrl('terms.php'); ?>">Terms of Service</a></li>
+                        <li><a href="<?= baseUrl('cookies.php'); ?>">Cookie Policy</a></li>
+                        <li><a href="<?= baseUrl('gdpr.php'); ?>">GDPR</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6">
