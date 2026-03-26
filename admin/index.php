@@ -8,6 +8,8 @@ require_once __DIR__ . '/../config/session.php';
 
 Auth::requireAdmin();
 
+$hideNav = true; // Prevents landing page nav from appearing in admin
+
 $db = Database::getInstance();
 $settings = new Settings();
 
@@ -31,8 +33,8 @@ $todayMessages = $db->count('messages', 'DATE(created_at) = CURDATE()');
 $todayUsers = $db->count('users', 'DATE(created_at) = CURDATE() AND role = ?', ['user']);
 
 $pageTitle = 'Admin Dashboard';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', '/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -45,7 +47,7 @@ include __DIR__ . '/../includes/header.php';
             <div>
                 <h1 class="dash-title">Dashboard</h1>
                 <div class="dash-breadcrumb">
-                    <a href="/wapi/admin/">Admin</a>
+                    <a href="<?= baseUrl('admin/'); ?>">Admin</a>
                     <i class="bi bi-chevron-right"></i>
                     <span>Dashboard</span>
                 </div>
@@ -136,7 +138,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="data-table">
                     <div class="data-table-header">
                         <h5 class="data-table-title">Recent Users</h5>
-                        <a href="/wapi/admin/users.php" class="btn btn-outline-primary btn-sm">View All</a>
+                        <a href="<?= baseUrl('admin/users.php'); ?>" class="btn btn-outline-primary btn-sm">View All</a>
                     </div>
                     <div class="table-responsive">
                         <table class="table">
@@ -176,7 +178,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="data-table">
                     <div class="data-table-header">
                         <h5 class="data-table-title">Recent Payments</h5>
-                        <a href="/wapi/admin/payments.php" class="btn btn-outline-primary btn-sm">View All</a>
+                        <a href="<?= baseUrl('admin/payments.php'); ?>" class="btn btn-outline-primary btn-sm">View All</a>
                     </div>
                     <div class="table-responsive">
                         <table class="table">

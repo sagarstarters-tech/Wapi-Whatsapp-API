@@ -59,23 +59,32 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <link rel="manifest" href="<?= baseUrl('manifest.json'); ?>">
     <meta name="theme-color" content="<?= e($primaryColor); ?>">
     
-    <?php if ($recaptchaSiteKey): ?>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    <?php endif; ?>
+    <?php 
+    if ($recaptchaSiteKey) {
+        echo '<script src="https://www.google.com/recaptcha/api.js" async defer></script>';
+    }
+    
+    // Auto-hide public nav for admin and dashboard pages
+    if (strpos($_SERVER['REQUEST_URI'], '/admin/') !== false || strpos($_SERVER['REQUEST_URI'], '/dashboard/') !== false) {
+        $hideNav = true;
+    }
+    ?>
 </head>
 <body>
+    <?php if (!isset($hideNav) || !$hideNav): ?>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg" id="mainNav">
         <div class="container">
-            <a class="navbar-brand" href="<?= baseUrl(); ?>">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="<?= baseUrl(); ?>">
                 <?php 
                 if ($siteLogo): 
                     $logoPath = str_replace('/wapi/', '', $siteLogo);
                     $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
                 ?>
-                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>">
+                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="max-height: 40px;">
+                <?php else: ?>
+                    <span class="brand"><?= e($siteName); ?></span>
                 <?php endif; ?>
-                <?= e($siteName); ?>
             </a>
             
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
@@ -114,3 +123,4 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
             </div>
         </div>
     </nav>
+    <?php endif; ?>
