@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/session.php';
 
 // Redirect if already logged in
 if (Auth::isLoggedIn()) {
-    redirect(Auth::isAdmin() ? '/wapi/admin/' : '/wapi/dashboard/');
+    redirect(Auth::isAdmin() ? 'admin/' : 'dashboard/');
 }
 
 $error = '';
@@ -35,9 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($redirectUrl) {
                     redirect($redirectUrl);
                 } elseif ($result['user']['role'] === 'admin') {
-                    redirect('/wapi/admin/');
+                    redirect('admin/');
                 } else {
-                    redirect('/wapi/dashboard/');
+                    redirect('dashboard/');
                 }
             } else {
                 $error = $result['message'];
@@ -89,7 +89,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="form-group">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label mb-0">Password</label>
-                    <a href="/wapi/auth/forgot-password.php" style="font-size: 0.8125rem;">Forgot password?</a>
+                    <a href="<?= baseUrl('auth/forgot-password.php'); ?>" style="font-size: 0.8125rem;">Forgot password?</a>
                 </div>
                 <div class="input-group">
                     <i class="bi bi-lock input-icon"></i>
@@ -111,7 +111,7 @@ include __DIR__ . '/../includes/header.php';
         </form>
 
         <p class="text-center mt-4" style="font-size: 0.9375rem; color: var(--text-secondary);">
-            Don't have an account? <a href="/wapi/auth/register.php" class="fw-bold">Sign Up</a>
+            Don't have an account? <a href="<?= baseUrl('auth/register.php'); ?>" class="fw-bold">Sign Up</a>
         </p>
     </div>
 </section>

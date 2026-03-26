@@ -7,7 +7,8 @@
 /**
  * Redirect to URL
  */
-function redirect($url) {
+function redirect($path) {
+    $url = (strpos($path, 'http') === 0) ? $path : baseUrl($path);
     header("Location: {$url}");
     exit;
 }

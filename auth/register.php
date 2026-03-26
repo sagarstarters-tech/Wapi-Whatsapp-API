@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
 
 if (Auth::isLoggedIn()) {
-    redirect(Auth::isAdmin() ? '/wapi/admin/' : '/wapi/dashboard/');
+    redirect(Auth::isAdmin() ? 'admin/' : 'dashboard/');
 }
 
 $error = '';
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($result['success']) {
                 setFlash('success', 'Registration successful! Please login to continue.');
-                redirect('/wapi/auth/login.php');
+                redirect('auth/login.php');
             } else {
                 $error = $result['message'];
             }
@@ -147,7 +147,7 @@ include __DIR__ . '/../includes/header.php';
         </form>
 
         <p class="text-center mt-4" style="font-size: 0.9375rem; color: var(--text-secondary);">
-            Already have an account? <a href="/wapi/auth/login.php" class="fw-bold">Sign In</a>
+            Already have an account? <a href="<?= baseUrl('auth/login.php'); ?>" class="fw-bold">Sign In</a>
         </p>
     </div>
 </section>

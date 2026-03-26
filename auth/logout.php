@@ -9,4 +9,4 @@ $auth = new Auth();
 $auth->logout();
 
 setFlash('success', 'You have been logged out successfully.');
-redirect('/wapi/auth/login.php');
+redirect('auth/login.php');
