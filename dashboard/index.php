@@ -135,7 +135,7 @@ include __DIR__ . '/../includes/header.php';
                 <p><strong><?= e($settings->get('site_name', 'WAPI')); ?> pricing will increase soon. ⏳</strong><br>
                 🔒 Upgrade to a <strong>yearly plan</strong> now to <strong>lock your current price for a lifetime</strong>.<br>
                 ✅ Enable <strong>auto-payment</strong> to continue at the <strong>same price forever</strong>, even after future increases.</p>
-                <p class="mt-2 mb-0"><a href="/wapi/dashboard/subscription.php">👉 View Pricing & Upgrade Now</a></p>
+                <p class="mt-2 mb-0"><a href="<?= baseUrl('dashboard/subscription.php'); ?>">👉 View Pricing & Upgrade Now</a></p>
             </div>
             <button class="close-btn" onclick="this.parentElement.style.display='none'">&times;</button>
         </div>
