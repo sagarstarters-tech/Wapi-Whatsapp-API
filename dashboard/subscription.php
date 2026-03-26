@@ -147,7 +147,7 @@ function initPayment(planId, planName, amount) {
         description: planName + ' Plan Subscription',
         handler: function(response) {
             // Verify payment on server
-            window.location.href = '/wapi/api/verify-payment.php?payment_id=' + response.razorpay_payment_id + '&plan_id=' + planId;
+            window.location.href = '<?= baseUrl('api/verify-payment.php'); ?>?payment_id=' + response.razorpay_payment_id + '&plan_id=' + planId;
         },
         prefill: {
             name: '<?= e($_SESSION['user_name'] ?? ''); ?>',
@@ -162,7 +162,7 @@ function initPayment(planId, planName, amount) {
 
 function activateFreePlan(planId) {
     if (confirm('Activate the free plan?')) {
-        window.location.href = '/wapi/api/activate-plan.php?plan_id=' + planId;
+        window.location.href = '<?= baseUrl('api/activate-plan.php'); ?>?plan_id=' + planId;
     }
 }
 </script>
