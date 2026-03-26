@@ -80,7 +80,7 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Analytics -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Analytics</div>
-            <a href="<?= baseUrl('dashboard/logs.php'); ?>" class="sidebar-link <?= $currentPage === 'logs' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/message-logs.php'); ?>" class="sidebar-link <?= $currentPage === 'message-logs' ? 'active' : ''; ?>">
                 <i class="bi bi-list-check"></i>
                 <span>Message Logs</span>
             </a>
