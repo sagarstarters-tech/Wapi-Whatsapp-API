@@ -33,19 +33,19 @@ $contactPhone = $settings->get('contact_phone', '');
                 <div class="col-lg-2 col-md-6">
                     <h5>Product</h5>
                     <ul class="footer-links">
-                        <li><a href="<?= baseUrl('#features'); ?>">Features</a></li>
-                        <li><a href="<?= baseUrl('#pricing'); ?>">Pricing</a></li>
-                        <li><a href="<?= baseUrl('#demo'); ?>">Demo</a></li>
+                        <li><a href="<?= baseUrl('index.php#features'); ?>">Features</a></li>
+                        <li><a href="<?= baseUrl('index.php#pricing'); ?>">Pricing</a></li>
+                        <li><a href="<?= baseUrl('index.php#demo'); ?>">Demo</a></li>
                         <li><a href="<?= baseUrl('docs/'); ?>">API Docs</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6">
                     <h5>Company</h5>
                     <ul class="footer-links">
-                        <li><a href="#">About Us</a></li>
+                        <li><a href="<?= baseUrl('index.php#about'); ?>">About Us</a></li>
                         <li><a href="#">Blog</a></li>
                         <li><a href="#">Careers</a></li>
-                        <li><a href="#">Contact</a></li>
+                        <li><a href="<?= baseUrl('index.php#contact'); ?>">Contact</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6">
@@ -64,7 +64,7 @@ $contactPhone = $settings->get('contact_phone', '');
                         <?php if ($contactPhone): ?>
                         <li><a href="tel:<?= e($contactPhone); ?>"><?= e($contactPhone); ?></a></li>
                         <?php endif; ?>
-                        <li><a href="<?= baseUrl('#faq'); ?>">FAQ</a></li>
+                        <li><a href="<?= baseUrl('index.php#faq'); ?>">FAQ</a></li>
                     </ul>
                 </div>
             </div>
