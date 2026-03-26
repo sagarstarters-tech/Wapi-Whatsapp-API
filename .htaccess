@@ -75,6 +75,6 @@ Options -Indexes
 </IfModule>
 
 # Custom Error Pages
-ErrorDocument 403 /wapi/errors/403.php
-ErrorDocument 404 /wapi/errors/404.php
-ErrorDocument 500 /wapi/errors/500.php
+ErrorDocument 403 /errors/403.php
+ErrorDocument 404 /errors/404.php
+ErrorDocument 500 /errors/500.php
