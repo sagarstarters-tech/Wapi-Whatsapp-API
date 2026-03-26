@@ -9,6 +9,8 @@ Auth::requireAdmin();
 $db = Database::getInstance();
 $settings = new Settings();
 
+$hideNav = true; // Prevents landing page nav from appearing in admin
+
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $action = $_POST['action'] ?? '';
@@ -116,8 +118,8 @@ foreach ($users as &$u) {
 unset($u);
 
 $pageTitle = 'User Management';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -128,7 +130,7 @@ include __DIR__ . '/../includes/header.php';
             <div>
                 <h1 class="dash-title">Users</h1>
                 <div class="dash-breadcrumb">
-                    <a href="/wapi/admin/">Admin</a><i class="bi bi-chevron-right"></i><span>Users</span>
+                    <a href="<?= baseUrl('admin/'); ?>">Admin</a><i class="bi bi-chevron-right"></i><span>Users</span>
                 </div>
             </div>
             <div class="d-flex gap-2">

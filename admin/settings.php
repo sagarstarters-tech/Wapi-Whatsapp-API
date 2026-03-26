@@ -10,6 +10,8 @@ Auth::requireAdmin();
 $db = Database::getInstance();
 $settings = new Settings();
 
+$hideNav = true; // Prevents landing page nav from appearing in admin
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $group = sanitize($_POST['group'] ?? 'general');
@@ -31,15 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     }
 
     setFlash('success', 'Settings saved successfully!');
-    redirect('/wapi/admin/settings.php?tab=' . $group);
+    redirect('admin/settings.php?tab=' . $group);
 }
 
 $activeTab = sanitize($_GET['tab'] ?? 'general');
 $allSettings = $settings->getAll();
 
 $pageTitle = 'Settings';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -50,7 +52,7 @@ include __DIR__ . '/../includes/header.php';
             <div>
                 <h1 class="dash-title">Settings</h1>
                 <div class="dash-breadcrumb">
-                    <a href="/wapi/admin/">Admin</a><i class="bi bi-chevron-right"></i><span>Settings</span>
+                    <a href="<?= baseUrl('admin/'); ?>">Admin</a><i class="bi bi-chevron-right"></i><span>Settings</span>
                 </div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>

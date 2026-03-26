@@ -9,6 +9,8 @@ Auth::requireAdmin();
 $db = Database::getInstance();
 $settings = new Settings();
 
+$hideNav = true; // Prevents landing page nav from appearing in admin
+
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $action = $_POST['action'] ?? '';
@@ -67,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         $db->delete('plans', 'id = ?', [sanitizeInt($_POST['plan_id'])]);
         setFlash('success', 'Plan deleted.');
     }
-    redirect('/wapi/admin/plans.php');
+    redirect('admin/plans.php');
 }
 
 $plans = $db->fetchAll("SELECT * FROM plans ORDER BY sort_order ASC");
@@ -78,8 +80,8 @@ if (isset($_GET['edit'])) {
 }
 
 $pageTitle = 'Plan Management';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -89,11 +91,11 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Plans</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/admin/">Admin</a><i class="bi bi-chevron-right"></i><span>Plans</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('admin/'); ?>">Admin</a><i class="bi bi-chevron-right"></i><span>Plans</span></div>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <a href="/wapi/admin/plans.php?edit=0" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Plan</a>
+                <a href="<?= baseUrl('admin/plans.php?edit=0'); ?>" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Plan</a>
             </div>
         </div>
 
@@ -150,7 +152,7 @@ include __DIR__ . '/../includes/header.php';
                     
                     <div class="mt-4 d-flex gap-2">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save Plan</button>
-                        <a href="/wapi/admin/plans.php" class="btn btn-outline-primary">Cancel</a>
+                        <a href="<?= baseUrl('admin/plans.php'); ?>" class="btn btn-outline-primary">Cancel</a>
                     </div>
                 </form>
             </div>
