@@ -16,7 +16,7 @@ function redirect($url) {
  * Get base URL
  */
 function baseUrl($path = '') {
-    return APP_URL . '/' . ltrim($path, '/');
+    return rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
 }
 
 /**
