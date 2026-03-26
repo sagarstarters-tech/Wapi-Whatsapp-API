@@ -33,7 +33,7 @@ include __DIR__ . '/includes/header.php';
                         <?= e($settings->get('hero_subtitle', 'Send bulk messages, automate replies, manage contacts and grow your business.')); ?>
                     </p>
                     <div class="d-flex gap-3 flex-wrap <?php if (empty($settings->get('hero_button_text'))): ?>d-none<?php endif; ?>">
-                        <a href="<?= e($settings->get('hero_button_link', '/wapi/auth/register.php')); ?>" class="btn btn-primary btn-lg">
+                        <a href="<?= baseUrl($settings->get('hero_button_link', 'auth/register.php')); ?>" class="btn btn-primary btn-lg">
                             <?= e($settings->get('hero_button_text', 'Get Started Free')); ?>
                             <i class="bi bi-arrow-right"></i>
                         </a>
@@ -252,7 +252,7 @@ include __DIR__ . '/includes/header.php';
                             <?php endforeach; ?>
                         </ul>
 
-                        <a href="/wapi/auth/register.php?plan=<?= e($plan['slug']); ?>" 
+                        <a href="<?= baseUrl('auth/register.php?plan=' . e($plan['slug'])); ?>" 
                            class="btn <?= $plan['is_popular'] ? 'btn-primary' : 'btn-outline-primary'; ?> w-100 btn-lg">
                             Get Started
                         </a>
@@ -330,7 +330,7 @@ include __DIR__ . '/includes/header.php';
             <p style="font-size: 1.125rem; opacity: 0.9; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
                 Join thousands of businesses using WAPI to power their WhatsApp communication.
             </p>
-            <a href="/wapi/auth/register.php?plan=trial" class="btn btn-lg" 
+            <a href="<?= baseUrl('auth/register.php?plan=trial'); ?>" class="btn btn-lg" 
                style="background: white; color: var(--primary); font-weight: 700; padding: 0.875rem 2.5rem; border-radius: 12px;">
                 Start 14 Days Free Trial <i class="bi bi-arrow-right"></i>
             </a>

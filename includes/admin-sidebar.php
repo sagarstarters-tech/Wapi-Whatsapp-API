@@ -28,7 +28,7 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
         <!-- Main -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Main</div>
-            <a href="/wapi/admin/" class="sidebar-link <?= $currentPage === 'index' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/'); ?>" class="sidebar-link <?= $currentPage === 'index' ? 'active' : ''; ?>">
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span>Dashboard</span>
             </a>
@@ -37,20 +37,20 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
         <!-- Management -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Management</div>
-            <a href="/wapi/admin/users.php" class="sidebar-link <?= $currentPage === 'users' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/users.php'); ?>" class="sidebar-link <?= $currentPage === 'users' ? 'active' : ''; ?>">
                 <i class="bi bi-people-fill"></i>
                 <span>Users</span>
                 <span class="badge"><?= $totalUsers; ?></span>
             </a>
-            <a href="/wapi/admin/plans.php" class="sidebar-link <?= $currentPage === 'plans' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/plans.php'); ?>" class="sidebar-link <?= $currentPage === 'plans' ? 'active' : ''; ?>">
                 <i class="bi bi-credit-card-2-front-fill"></i>
                 <span>Plans</span>
             </a>
-            <a href="/wapi/admin/payments.php" class="sidebar-link <?= $currentPage === 'payments' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/payments.php'); ?>" class="sidebar-link <?= $currentPage === 'payments' ? 'active' : ''; ?>">
                 <i class="bi bi-cash-stack"></i>
                 <span>Payments</span>
             </a>
-            <a href="/wapi/admin/messages.php" class="sidebar-link <?= $currentPage === 'messages' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/messages.php'); ?>" class="sidebar-link <?= $currentPage === 'messages' ? 'active' : ''; ?>">
                 <i class="bi bi-chat-dots-fill"></i>
                 <span>Messages</span>
             </a>
@@ -59,11 +59,11 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
         <!-- Content -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Content</div>
-            <a href="/wapi/admin/content.php" class="sidebar-link <?= $currentPage === 'content' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/content.php'); ?>" class="sidebar-link <?= $currentPage === 'content' ? 'active' : ''; ?>">
                 <i class="bi bi-file-earmark-text-fill"></i>
                 <span>CMS</span>
             </a>
-            <a href="/wapi/admin/templates.php" class="sidebar-link <?= $currentPage === 'templates' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/templates.php'); ?>" class="sidebar-link <?= $currentPage === 'templates' ? 'active' : ''; ?>">
                 <i class="bi bi-file-earmark-code-fill"></i>
                 <span>Templates</span>
             </a>
@@ -72,15 +72,15 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
         <!-- Settings -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Settings</div>
-            <a href="/wapi/admin/settings.php" class="sidebar-link <?= $currentPage === 'settings' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/settings.php'); ?>" class="sidebar-link <?= $currentPage === 'settings' ? 'active' : ''; ?>">
                 <i class="bi bi-gear-fill"></i>
                 <span>General</span>
             </a>
-            <a href="/wapi/admin/api-settings.php" class="sidebar-link <?= $currentPage === 'api-settings' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/api-settings.php'); ?>" class="sidebar-link <?= $currentPage === 'api-settings' ? 'active' : ''; ?>">
                 <i class="bi bi-whatsapp"></i>
                 <span>WhatsApp API</span>
             </a>
-            <a href="/wapi/admin/email-settings.php" class="sidebar-link <?= $currentPage === 'email-settings' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('admin/email-settings.php'); ?>" class="sidebar-link <?= $currentPage === 'email-settings' ? 'active' : ''; ?>">
                 <i class="bi bi-envelope-fill"></i>
                 <span>Email / SMTP</span>
             </a>
@@ -88,11 +88,11 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
     </nav>
 
     <div class="sidebar-footer">
-        <a href="/wapi/" class="sidebar-link">
+        <a href="<?= baseUrl(); ?>" class="sidebar-link">
             <i class="bi bi-globe"></i>
             <span>View Website</span>
         </a>
-        <a href="/wapi/auth/logout.php" class="sidebar-link" style="color: var(--danger);">
+        <a href="<?= baseUrl('auth/logout.php'); ?>" class="sidebar-link" style="color: var(--danger);">
             <i class="bi bi-box-arrow-left"></i>
             <span>Logout</span>
         </a>

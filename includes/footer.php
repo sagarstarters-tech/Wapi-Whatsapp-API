@@ -33,10 +33,10 @@ $contactPhone = $settings->get('contact_phone', '');
                 <div class="col-lg-2 col-md-6">
                     <h5>Product</h5>
                     <ul class="footer-links">
-                        <li><a href="/wapi/#features">Features</a></li>
-                        <li><a href="/wapi/#pricing">Pricing</a></li>
-                        <li><a href="/wapi/#demo">Demo</a></li>
-                        <li><a href="/wapi/docs/">API Docs</a></li>
+                        <li><a href="<?= baseUrl('#features'); ?>">Features</a></li>
+                        <li><a href="<?= baseUrl('#pricing'); ?>">Pricing</a></li>
+                        <li><a href="<?= baseUrl('#demo'); ?>">Demo</a></li>
+                        <li><a href="<?= baseUrl('docs/'); ?>">API Docs</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6">
@@ -64,7 +64,7 @@ $contactPhone = $settings->get('contact_phone', '');
                         <?php if ($contactPhone): ?>
                         <li><a href="tel:<?= e($contactPhone); ?>"><?= e($contactPhone); ?></a></li>
                         <?php endif; ?>
-                        <li><a href="/wapi/#faq">FAQ</a></li>
+                        <li><a href="<?= baseUrl('#faq'); ?>">FAQ</a></li>
                     </ul>
                 </div>
             </div>
@@ -88,7 +88,7 @@ $contactPhone = $settings->get('contact_phone', '');
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Main JS -->
-    <script src="/wapi/assets/js/app.js"></script>
+    <script src="<?= asset('assets/js/app.js'); ?>"></script>
     
     <?php if (isset($extraJs)): ?>
         <?php foreach ((array)$extraJs as $js): ?>

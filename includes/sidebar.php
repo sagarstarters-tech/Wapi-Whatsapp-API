@@ -37,11 +37,11 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Overview -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Overview</div>
-            <a href="/wapi/dashboard/" class="sidebar-link <?= $currentPage === 'index' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/'); ?>" class="sidebar-link <?= $currentPage === 'index' ? 'active' : ''; ?>">
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="/wapi/dashboard/whatsapp.php" class="sidebar-link <?= $currentPage === 'whatsapp' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>" class="sidebar-link <?= $currentPage === 'whatsapp' ? 'active' : ''; ?>">
                 <i class="bi bi-whatsapp"></i>
                 <span>WhatsApp Setup</span>
             </a>
@@ -50,19 +50,19 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Messaging -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Messaging</div>
-            <a href="/wapi/dashboard/messages.php" class="sidebar-link <?= $currentPage === 'messages' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/messages.php'); ?>" class="sidebar-link <?= $currentPage === 'messages' ? 'active' : ''; ?>">
                 <i class="bi bi-send-fill"></i>
                 <span>Send Message</span>
             </a>
-            <a href="/wapi/dashboard/bulk-messages.php" class="sidebar-link <?= $currentPage === 'bulk-messages' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/bulk-messages.php'); ?>" class="sidebar-link <?= $currentPage === 'bulk-messages' ? 'active' : ''; ?>">
                 <i class="bi bi-megaphone-fill"></i>
                 <span>Bulk Messages</span>
             </a>
-            <a href="/wapi/dashboard/templates.php" class="sidebar-link <?= $currentPage === 'templates' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/templates.php'); ?>" class="sidebar-link <?= $currentPage === 'templates' ? 'active' : ''; ?>">
                 <i class="bi bi-file-earmark-text-fill"></i>
                 <span>Templates</span>
             </a>
-            <a href="/wapi/dashboard/chatbot.php" class="sidebar-link <?= $currentPage === 'chatbot' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="sidebar-link <?= $currentPage === 'chatbot' ? 'active' : ''; ?>">
                 <i class="bi bi-robot"></i>
                 <span>Chatbot</span>
             </a>
@@ -71,7 +71,7 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Contacts -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Contacts</div>
-            <a href="/wapi/dashboard/contacts.php" class="sidebar-link <?= $currentPage === 'contacts' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/contacts.php'); ?>" class="sidebar-link <?= $currentPage === 'contacts' ? 'active' : ''; ?>">
                 <i class="bi bi-people-fill"></i>
                 <span>Contacts</span>
             </a>
@@ -80,7 +80,7 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Analytics -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Analytics</div>
-            <a href="/wapi/dashboard/logs.php" class="sidebar-link <?= $currentPage === 'logs' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/logs.php'); ?>" class="sidebar-link <?= $currentPage === 'logs' ? 'active' : ''; ?>">
                 <i class="bi bi-list-check"></i>
                 <span>Message Logs</span>
             </a>
@@ -89,15 +89,15 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Account -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Account</div>
-            <a href="/wapi/dashboard/api-keys.php" class="sidebar-link <?= $currentPage === 'api-keys' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/api-keys.php'); ?>" class="sidebar-link <?= $currentPage === 'api-keys' ? 'active' : ''; ?>">
                 <i class="bi bi-key-fill"></i>
                 <span>API Keys</span>
             </a>
-            <a href="/wapi/dashboard/subscription.php" class="sidebar-link <?= $currentPage === 'subscription' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/subscription.php'); ?>" class="sidebar-link <?= $currentPage === 'subscription' ? 'active' : ''; ?>">
                 <i class="bi bi-credit-card-fill"></i>
                 <span>Subscription</span>
             </a>
-            <a href="/wapi/dashboard/settings.php" class="sidebar-link <?= $currentPage === 'settings' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/settings.php'); ?>" class="sidebar-link <?= $currentPage === 'settings' ? 'active' : ''; ?>">
                 <i class="bi bi-gear-fill"></i>
                 <span>Settings</span>
             </a>
@@ -105,11 +105,11 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
     </nav>
 
     <div class="sidebar-footer">
-        <a href="/wapi/" class="sidebar-link">
+        <a href="<?= baseUrl(); ?>" class="sidebar-link">
             <i class="bi bi-globe"></i>
             <span>View Website</span>
         </a>
-        <a href="/wapi/auth/logout.php" class="sidebar-link" style="color: var(--danger);">
+        <a href="<?= baseUrl('auth/logout.php'); ?>" class="sidebar-link" style="color: var(--danger);">
             <i class="bi bi-box-arrow-left"></i>
             <span>Logout</span>
         </a>

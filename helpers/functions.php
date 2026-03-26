@@ -199,7 +199,7 @@ function uploadFile($file, $directory = 'general', $allowedTypes = null) {
         return [
             'success' => true,
             'filename' => $filename,
-            'path' => '/wapi/uploads/' . $directory . '/' . $filename,
+            'path' => 'uploads/' . $directory . '/' . $filename,
             'full_path' => $filepath
         ];
     }

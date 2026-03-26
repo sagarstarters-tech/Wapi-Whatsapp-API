@@ -27,7 +27,7 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <title><?= e(($pageTitle ?? 'Home') . ' | ' . $siteName); ?></title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="<?= e($settings->get('site_favicon', '/wapi/assets/images/favicon.png')); ?>">
+    <link rel="icon" type="image/png" href="<?= asset('assets/images/favicon.png'); ?>">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,7 +41,7 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/wapi/assets/css/style.css">
+    <link rel="stylesheet" href="<?= asset('assets/css/style.css'); ?>">
     <?php if (isset($extraCss)): ?>
         <?php foreach ((array)$extraCss as $css): ?>
             <link rel="stylesheet" href="<?= $css; ?>">
@@ -56,7 +56,7 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     </style>
     
     <!-- PWA -->
-    <link rel="manifest" href="/wapi/manifest.json">
+    <link rel="manifest" href="<?= baseUrl('manifest.json'); ?>">
     <meta name="theme-color" content="<?= e($primaryColor); ?>">
     
     <?php if ($recaptchaSiteKey): ?>
@@ -67,9 +67,13 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg" id="mainNav">
         <div class="container">
-            <a class="navbar-brand" href="/wapi/">
-                <?php if ($siteLogo): ?>
-                    <img src="<?= e($siteLogo); ?>" alt="<?= e($siteName); ?>">
+            <a class="navbar-brand" href="<?= baseUrl(); ?>">
+                <?php 
+                if ($siteLogo): 
+                    $logoPath = str_replace('/wapi/', '', $siteLogo);
+                    $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
+                ?>
+                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>">
                 <?php endif; ?>
                 <?= e($siteName); ?>
             </a>
@@ -80,11 +84,11 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
 
             <div class="collapse navbar-collapse" id="navMenu">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
-                    <li class="nav-item"><a class="nav-link" href="/wapi/#features">Features</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/wapi/#pricing">Pricing</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/wapi/#demo">Demo</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/wapi/#faq">FAQ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/wapi/docs/">API Docs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= baseUrl('#features'); ?>">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= baseUrl('#pricing'); ?>">Pricing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= baseUrl('#demo'); ?>">Demo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= baseUrl('#faq'); ?>">FAQ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= baseUrl('docs/'); ?>">API Docs</a></li>
                     <li class="nav-item ms-lg-2">
                         <button class="theme-toggle" id="themeToggle" title="Toggle theme">
                             <i class="bi bi-moon-fill"></i>
@@ -92,16 +96,16 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
                     </li>
                     <?php if (Auth::isLoggedIn()): ?>
                         <li class="nav-item ms-lg-2">
-                            <a class="btn btn-primary btn-sm" href="/wapi/<?= Auth::isAdmin() ? 'admin' : 'dashboard'; ?>/">
+                            <a class="btn btn-primary btn-sm" href="<?= baseUrl((Auth::isAdmin() ? 'admin' : 'dashboard') . '/'); ?>">
                                 <i class="bi bi-grid-fill"></i> Dashboard
                             </a>
                         </li>
                     <?php else: ?>
                         <li class="nav-item ms-lg-1">
-                            <a class="nav-link" href="/wapi/auth/login.php">Login</a>
+                            <a class="nav-link" href="<?= baseUrl('auth/login.php'); ?>">Login</a>
                         </li>
                         <li class="nav-item ms-lg-1">
-                            <a class="btn btn-primary btn-sm" href="/wapi/auth/register.php">
+                            <a class="btn btn-primary btn-sm" href="<?= baseUrl('auth/register.php'); ?>">
                                 Get Started <i class="bi bi-arrow-right"></i>
                             </a>
                         </li>
