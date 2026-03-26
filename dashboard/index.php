@@ -36,8 +36,8 @@ $recentMessages = $db->fetchAll("SELECT m.*, c.name as contact_name FROM message
 // API Keys count
 $apiKeysCount = $db->count('api_keys', "user_id = ? AND is_active = 1", [$userId]);
 
-// Message chart data (last 7 days)
-$chartData = $db->fetchAll("SELECT DATE(created_at) as date, COUNT(*) as count FROM messages WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(created_at) ORDER BY date ASC", [$userId]);
+// Message chart data (last 7 days grouped by status)
+$chartData = $db->fetchAll("SELECT DATE(created_at) as date, status, COUNT(*) as count FROM messages WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(created_at), status ORDER BY date ASC", [$userId]);
 
 // Fetch User & WA Data for Alerts
 $user = $db->fetch("SELECT * FROM users WHERE id = ?", [$userId]);
@@ -197,7 +197,9 @@ include __DIR__ . '/../includes/header.php';
                     <div class="chart-header">
                         <h5 class="chart-title">Messages (Last 7 Days)</h5>
                     </div>
-                    <canvas id="messagesChart" height="280"></canvas>
+                    <div class="chart-container">
+                        <canvas id="messagesChart"></canvas>
+                    </div>
                 </div>
             </div>
 
