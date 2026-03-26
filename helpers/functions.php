@@ -16,7 +16,11 @@ function redirect($url) {
  * Get base URL
  */
 function baseUrl($path = '') {
-    $path = str_replace('/wapi/', '', $path);
+    // Strip redundant /wapi/ or wapi/ from the start of the path
+    $path = ltrim($path, '/');
+    if (strpos($path, 'wapi/') === 0) {
+        $path = substr($path, 5);
+    }
     return rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
 }
 
