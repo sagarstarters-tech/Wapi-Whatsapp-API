@@ -123,7 +123,7 @@ include __DIR__ . '/../includes/header.php';
             <div class="dash-alert-icon"><i class="bi bi-bell"></i></div>
             <div class="dash-alert-content">
                 <h6><i class="bi bi-megaphone"></i> Join the <?= e($settings->get('site_name', 'WAPI')); ?> WhatsApp Channel</h6>
-                <p>Get instant updates, product news, and important announcements — all in one place. 🚀 <a href="#">👉 Join our WhatsApp Channel</a></p>
+                <p>Get instant updates, product news, and important announcements — all in one place. 🚀 <a href="<?= e($settings->get('whatsapp_channel_url', '#')); ?>" target="_blank">👉 Join our WhatsApp Channel</a></p>
             </div>
             <button class="close-btn" onclick="this.parentElement.style.display='none'">&times;</button>
         </div>

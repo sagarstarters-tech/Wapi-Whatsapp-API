@@ -97,6 +97,10 @@ include __DIR__ . '/../includes/header.php';
                             <textarea name="settings[site_description]" class="form-control" rows="3"><?= e($allSettings['site_description'] ?? ''); ?></textarea>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">WhatsApp Channel URL</label>
+                            <input type="url" name="settings[whatsapp_channel_url]" class="form-control" value="<?= e($allSettings['whatsapp_channel_url'] ?? ''); ?>" placeholder="https://whatsapp.com/channel/...">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Contact Email</label>
                             <input type="email" name="settings[contact_email]" class="form-control" value="<?= e($allSettings['contact_email'] ?? ''); ?>">
                         </div>
