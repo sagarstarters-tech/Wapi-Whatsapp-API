@@ -54,27 +54,32 @@ function initCharts() {
     const msgCtx = document.getElementById('messagesChart');
     if (msgCtx && window.chartData) {
         const data = window.chartData.messages || [];
-        const dates = [...new Set(data.map(d => d.date))].sort();
-        
-        const sentData = dates.map(date => {
-            const item = data.find(d => d.date === date && d.status === 'sent');
-            return item ? item.count : 0;
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            last7Days.push(date.toISOString().split('T')[0]);
+        }
+
+        const sentData = last7Days.map(date => {
+            const items = data.filter(d => d.date === date && d.status === 'sent');
+            return items.reduce((sum, item) => sum + parseInt(item.count), 0);
         });
         
-        const deliveredData = dates.map(date => {
-            const item = data.find(d => d.date === date && d.status === 'delivered');
-            return item ? item.count : 0;
+        const deliveredData = last7Days.map(date => {
+            const items = data.filter(d => d.date === date && d.status === 'delivered');
+            return items.reduce((sum, item) => sum + parseInt(item.count), 0);
         });
 
-        const failedData = dates.map(date => {
-            const item = data.find(d => d.date === date && d.status === 'failed');
-            return item ? item.count : 0;
+        const failedData = last7Days.map(date => {
+            const items = data.filter(d => d.date === date && d.status === 'failed');
+            return items.reduce((sum, item) => sum + parseInt(item.count), 0);
         });
 
-        const labels = dates.length > 0 ? dates.map(d => {
+        const labels = last7Days.map(d => {
             const date = new Date(d);
             return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-        }) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        });
 
         new Chart(msgCtx, {
             type: 'line',
@@ -83,7 +88,7 @@ function initCharts() {
                 datasets: [
                     {
                         label: 'Sent',
-                        data: sentData.length > 0 ? sentData : [12, 19, 15, 25, 22, 30, 28],
+                        data: sentData,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         fill: true,
@@ -92,7 +97,7 @@ function initCharts() {
                     },
                     {
                         label: 'Delivered',
-                        data: deliveredData.length > 0 ? deliveredData : [10, 17, 14, 23, 20, 28, 26],
+                        data: deliveredData,
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
                         fill: true,
@@ -101,7 +106,7 @@ function initCharts() {
                     },
                     {
                         label: 'Failed',
-                        data: failedData.length > 0 ? failedData : [1, 0, 1, 2, 1, 0, 1],
+                        data: failedData,
                         borderColor: '#ef4444',
                         backgroundColor: 'rgba(239, 68, 68, 0.1)',
                         fill: true,

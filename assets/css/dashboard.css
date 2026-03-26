@@ -352,18 +352,26 @@
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: 1.5rem;
+    height: 100%;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
 }
 
 .chart-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .chart-title {
     font-weight: 700;
     font-size: 1.0625rem;
+    margin-bottom: 0;
 }
 
 /* ===== User Info Row ===== */

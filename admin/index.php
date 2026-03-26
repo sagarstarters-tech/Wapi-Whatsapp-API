@@ -119,7 +119,9 @@ include __DIR__ . '/../includes/header.php';
                             <option>Last 30 Days</option>
                         </select>
                     </div>
-                    <canvas id="messagesChart" height="300"></canvas>
+                    <div class="chart-container">
+                        <canvas id="messagesChart"></canvas>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-4">
@@ -127,7 +129,9 @@ include __DIR__ . '/../includes/header.php';
                     <div class="chart-header">
                         <h5 class="chart-title">Message Status</h5>
                     </div>
-                    <canvas id="statusChart" height="300"></canvas>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
