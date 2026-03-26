@@ -101,9 +101,16 @@ include __DIR__ . '/../includes/header.php';
                     <?php elseif ($plan['monthly_price'] == 0): ?>
                         <button class="btn btn-outline-primary w-100" onclick="activateFreePlan(<?= $plan['id']; ?>)">Activate</button>
                     <?php else: ?>
-                        <button class="btn btn-primary w-100" onclick="initPayment(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= str_replace(',', '', (string)$plan['monthly_price']); ?>)">
-                            <i class="bi bi-credit-card"></i> Subscribe
-                        </button>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary w-100" onclick="initPayment(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= str_replace(',', '', (string)$plan['monthly_price']); ?>)">
+                                <i class="bi bi-credit-card"></i> Pay via Razorpay
+                            </button>
+                            <?php if ($settings->get('payment_method_manual_enabled') == '1'): ?>
+                            <button class="btn btn-outline-success w-100" onclick="initManualUPI(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= str_replace(',', '', (string)$plan['monthly_price']); ?>)">
+                                <i class="bi bi-phone"></i> Pay via UPI (PhonePe/GPay)
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -166,11 +173,79 @@ function initPayment(planId, planName, amount) {
     rzp.open();
 }
 
+function initManualUPI(planId, planName, amount) {
+    const upiId = '<?= e($settings->get('upi_id', '')); ?>';
+    const upiName = '<?= e($settings->get('upi_name', 'WAPI')); ?>';
+    
+    if (!upiId) {
+        alert('UPI ID is not configured. Please contact admin.');
+        return;
+    }
+
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=Plan_${planName}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
+    
+    // Set details in modal
+    document.getElementById('manualUpiId').innerText = upiId;
+    document.getElementById('manualUpiName').innerText = upiName;
+    document.getElementById('manualUpiAmount').innerText = '₹' + amount;
+    document.getElementById('manualUpiQr').src = qrUrl;
+    document.getElementById('manualUpiPlanId').value = planId;
+    
+    // Deep link for mobile
+    document.getElementById('upiDeepLink').href = upiLink;
+
+    const modal = new bootstrap.Modal(document.getElementById('manualUpiModal'));
+    modal.show();
+}
+
 function activateFreePlan(planId) {
     if (confirm('Activate the free plan?')) {
         window.location.href = '<?= baseUrl('api/activate-plan.php'); ?>?plan_id=' + planId;
     }
 }
 </script>
+
+<!-- Manual UPI Modal -->
+<div class="modal fade" id="manualUpiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; border: none; overflow: hidden;">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-phone-vibrate"></i> Pay via UPI (Manual)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <img id="manualUpiQr" src="" alt="UPI QR Code" style="width: 200px; height: 200px; border: 4px solid #f8f9fa; border-radius: 10px;">
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-muted small mb-1">Scan QR or Pay to UPI ID:</p>
+                    <h5 class="fw-bold mb-0" id="manualUpiId"></h5>
+                    <p class="text-muted small" id="manualUpiName"></p>
+                    <div class="display-6 fw-bold text-success mb-3" id="manualUpiAmount"></div>
+                    
+                    <a id="upiDeepLink" href="#" class="btn btn-outline-success btn-sm w-100 mb-2 d-md-none">
+                        <i class="bi bi-box-arrow-up-right"></i> Open UPI App (Mobile Only)
+                    </a>
+                </div>
+
+                <hr>
+
+                <form action="<?= baseUrl('api/submit-utr.php'); ?>" method="POST">
+                    <?= CSRF::tokenField(); ?>
+                    <input type="hidden" name="plan_id" id="manualUpiPlanId">
+                    <div class="text-start mb-3">
+                        <label class="form-label fw-bold">Transaction ID (UTR/Reference No.)</label>
+                        <input type="text" name="utr" class="form-control" placeholder="Enter 12-digit UTR No." required pattern="[0-9A-Za-z]{8,}">
+                        <div class="form-text small">After payment, copy & paste the Transaction ID from your app.</div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 fw-bold">Submit Payment Proof</button>
+                    <p class="text-muted extra-small mt-3">Admin will verify your payment and activate the plan manually (Takes 2-12 hours).</p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

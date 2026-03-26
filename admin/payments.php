@@ -27,9 +27,51 @@ if ($statusFilter) {
     $params[] = $statusFilter;
 }
 
+// Handle manual approval
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
+    $paymentId = sanitizeInt($_POST['payment_id'] ?? 0);
+    $action = $_POST['action'] ?? '';
+
+    if ($paymentId && $action === 'approve') {
+        $payment = $db->fetch("SELECT * FROM payments WHERE id = ? AND status = 'pending'", [$paymentId]);
+        if ($payment) {
+            $db->beginTransaction();
+            try {
+                // Activate subscription
+                $db->update('subscriptions', ['status' => 'cancelled'], "user_id = ? AND status = 'active'", [$payment['user_id']]);
+                
+                $startsAt = date('Y-m-d H:i:s');
+                $expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+                
+                $subscriptionId = $db->insert('subscriptions', [
+                    'user_id' => $payment['user_id'],
+                    'plan_id' => $payment['plan_id'],
+                    'billing_cycle' => 'monthly',
+                    'amount' => $payment['amount'],
+                    'status' => 'active',
+                    'starts_at' => $startsAt,
+                    'expires_at' => $expiresAt
+                ]);
+
+                // Update payment
+                $db->update('payments', [
+                    'subscription_id' => $subscriptionId,
+                    'status' => 'success'
+                ], 'id = ?', [$paymentId]);
+
+                $db->commit();
+                setFlash('success', 'Payment approved and subscription activated!');
+            } catch (Exception $e) {
+                $db->rollback();
+                setFlash('danger', 'Error approving payment: ' . $e->getMessage());
+            }
+        }
+    }
+}
+
 $totalPayments = $db->fetchColumn("SELECT COUNT(*) FROM payments p JOIN users u ON p.user_id = u.id WHERE {$where}", $params);
 $pagination = paginate($totalPayments, $page, 20);
-$payments = $db->fetchAll("SELECT p.*, u.name as user_name, u.email as user_email, s.billing_cycle, pl.name as plan_name FROM payments p JOIN users u ON p.user_id = u.id LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id WHERE {$where} ORDER BY p.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
+$payments = $db->fetchAll("SELECT p.*, u.name as user_name, u.email as user_email, s.billing_cycle, pl.name as plan_name, COALESCE(pl2.name, pl.name) as actual_plan_name FROM payments p JOIN users u ON p.user_id = u.id LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id LEFT JOIN plans pl2 ON p.plan_id = pl2.id WHERE {$where} ORDER BY p.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
 
 $totalRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success'") ?: 0;
 $monthlyRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success' AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())") ?: 0;
@@ -97,7 +139,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>Method</th><th>Payment ID</th><th>Status</th><th>Date</th></tr></thead>
+                    <thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>Method</th><th>UTR / Payment ID</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
                     <tbody>
                         <?php if (empty($payments)): ?>
                         <tr><td colspan="7" class="text-center text-muted py-4">No payments found</td></tr>
@@ -113,12 +155,26 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                 </div>
                             </td>
-                            <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"><?= e($p['plan_name'] ?? '-'); ?></span></td>
+                            <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"><?= e($p['actual_plan_name'] ?? $p['plan_name'] ?? '-'); ?></span></td>
                             <td class="fw-bold"><?= formatCurrency($p['amount']); ?></td>
                             <td><?= ucfirst($p['payment_method'] ?? 'Razorpay'); ?></td>
-                            <td style="font-size: 0.8125rem;"><code><?= e($p['razorpay_payment_id'] ?? '-'); ?></code></td>
+                            <td style="font-size: 0.8125rem;">
+                                <code><?= e($p['utr_number'] ?? $p['razorpay_payment_id'] ?? '-'); ?></code>
+                            </td>
                             <td><span class="status-badge status-<?= $p['status'] === 'success' ? 'active' : $p['status']; ?>"><?= ucfirst($p['status']); ?></span></td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted);"><?= formatDate($p['created_at']); ?></td>
+                            <td>
+                                <?php if ($p['status'] === 'pending' && $p['payment_method'] === 'UPI'): ?>
+                                    <form method="POST" onsubmit="return confirm('Confirm this payment and activate user plan?')">
+                                        <?= CSRF::tokenField(); ?>
+                                        <input type="hidden" name="payment_id" value="<?= $p['id']; ?>">
+                                        <input type="hidden" name="action" value="approve">
+                                        <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i> Approve</button>
+                                    </form>
+                                <?php else: ?>
+                                    -
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; endif; ?>
                     </tbody>

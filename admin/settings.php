@@ -170,6 +170,19 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
 
+                    <h5 class="fw-bold mt-5 mb-4 border-top pt-4">Manual UPI / QR Gateway (PhonePe/GPay)</h5>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Mode</label>
+                            <select name="settings[payment_method_manual_enabled]" class="form-control">
+                                <option value="1" <?= ($allSettings['payment_method_manual_enabled'] ?? '0') === '1' ? 'selected' : ''; ?>>Enabled</option>
+                                <option value="0" <?= ($allSettings['payment_method_manual_enabled'] ?? '0') === '0' ? 'selected' : ''; ?>>Disabled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6"><label class="form-label">Merchant Name</label><input type="text" name="settings[upi_name]" class="form-control" value="<?= e($allSettings['upi_name'] ?? ''); ?>" placeholder="Sagar Starters"></div>
+                        <div class="col-md-12"><label class="form-label">Merchant UPI ID</label><input type="text" name="settings[upi_id]" class="form-control" value="<?= e($allSettings['upi_id'] ?? ''); ?>" placeholder="merchant@upi"></div>
+                    </div>
+
                 <?php elseif ($activeTab === 'email'): ?>
                     <h5 class="fw-bold mb-4">Email Configuration</h5>
                     <div class="row g-4">
