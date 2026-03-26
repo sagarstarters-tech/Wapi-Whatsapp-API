@@ -9,6 +9,8 @@ Auth::requireAdmin();
 $db = Database::getInstance();
 $settings = new Settings();
 
+$hideNav = true; // Prevents landing page nav from appearing in admin
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $fields = [
         'whatsapp_api_url', 'whatsapp_api_version', 'webhook_verify_token',
@@ -20,12 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         }
     }
     setFlash('success', 'WhatsApp API settings saved successfully!');
-    redirect('/wapi/admin/api-settings.php');
+    redirect('admin/api-settings.php');
 }
 
 $pageTitle = 'WhatsApp API Settings';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -35,7 +37,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">WhatsApp API Settings</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/admin/">Admin</a><i class="bi bi-chevron-right"></i><span>WhatsApp API</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('admin/'); ?>">Admin</a><i class="bi bi-chevron-right"></i><span>WhatsApp API</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>

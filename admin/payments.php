@@ -9,6 +9,8 @@ Auth::requireAdmin();
 $db = Database::getInstance();
 $settings = new Settings();
 
+$hideNav = true; // Prevents landing page nav from appearing in admin
+
 $search = sanitize($_GET['search'] ?? '');
 $statusFilter = sanitize($_GET['status'] ?? '');
 $page = max(1, sanitizeInt($_GET['page'] ?? 1));
@@ -33,8 +35,8 @@ $totalRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments 
 $monthlyRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success' AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())") ?: 0;
 
 $pageTitle = 'Payments';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -44,7 +46,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Payments</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/admin/">Admin</a><i class="bi bi-chevron-right"></i><span>Payments</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('admin/'); ?>">Admin</a><i class="bi bi-chevron-right"></i><span>Payments</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>
