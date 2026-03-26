@@ -14,14 +14,14 @@ $planId = sanitizeInt($_GET['plan_id'] ?? 0);
 
 if (empty($paymentId) || empty($planId)) {
     setFlash('danger', 'Invalid payment verification request.');
-    redirect('/wapi/dashboard/subscription.php');
+    redirect('dashboard/subscription.php');
 }
 
 $plan = $db->fetch("SELECT * FROM plans WHERE id = ? AND is_active = 1", [$planId]);
 
 if (!$plan) {
     setFlash('danger', 'Invalid plan selected.');
-    redirect('/wapi/dashboard/subscription.php');
+    redirect('dashboard/subscription.php');
 }
 
 // In a real production app you would verify the signature using Razorpay API here.

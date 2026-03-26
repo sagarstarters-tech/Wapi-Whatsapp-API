@@ -101,7 +101,7 @@ include __DIR__ . '/../includes/header.php';
                     <?php elseif ($plan['monthly_price'] == 0): ?>
                         <button class="btn btn-outline-primary w-100" onclick="activateFreePlan(<?= $plan['id']; ?>)">Activate</button>
                     <?php else: ?>
-                        <button class="btn btn-primary w-100" onclick="initPayment(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= $plan['monthly_price']; ?>)">
+                        <button class="btn btn-primary w-100" onclick="initPayment(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= str_replace(',', '', (string)$plan['monthly_price']); ?>)">
                             <i class="bi bi-credit-card"></i> Subscribe
                         </button>
                     <?php endif; ?>
@@ -139,8 +139,14 @@ include __DIR__ . '/../includes/header.php';
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 function initPayment(planId, planName, amount) {
+    const razorpayKey = '<?= e($settings->get('razorpay_key_id', '')); ?>';
+    if (!razorpayKey) {
+        alert('Razorpay Key is not configured. Please go to Admin -> Settings -> Payment and set your Key ID.');
+        return;
+    }
+
     const options = {
-        key: '<?= e($settings->get('razorpay_key_id', '')); ?>',
+        key: razorpayKey,
         amount: amount * 100, // Razorpay takes amount in paise
         currency: 'INR',
         name: '<?= e($settings->get('site_name', 'WAPI')); ?>',

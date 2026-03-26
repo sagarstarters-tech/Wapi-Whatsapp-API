@@ -29,9 +29,6 @@ ini_set('error_log', __DIR__ . '/../logs/error.log');
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $fallbackUrl = $protocol . "://" . $host;
-if (strpos($_SERVER['REQUEST_URI'] ?? '', '/wapi/') !== false) {
-    $fallbackUrl .= '/wapi';
-}
 define('APP_URL', $_ENV['APP_URL'] ?? $fallbackUrl);
 define('APP_NAME', $_ENV['APP_NAME'] ?? 'WAPI');
 define('APP_VERSION', $_ENV['APP_VERSION'] ?? '1.0.0');

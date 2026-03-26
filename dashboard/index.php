@@ -64,7 +64,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <a href="/wapi/dashboard/messages.php" class="btn btn-primary btn-sm"><i class="bi bi-send-fill"></i> Send Message</a>
+                <a href="<?= baseUrl('dashboard/messages.php'); ?>" class="btn btn-primary btn-sm"><i class="bi bi-send-fill"></i> Send Message</a>
             </div>
         </div>
 
@@ -92,7 +92,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
             <div class="ms-auto">
-                <a href="/wapi/dashboard/subscription.php" class="btn btn-sm btn-light text-success fw-bold px-3 border-0" style="border-radius: 20px;"><i class="bi bi-arrow-up-circle-fill"></i> Upgrade Server</a>
+                <a href="<?= baseUrl('dashboard/subscription.php'); ?>" class="btn btn-sm btn-light text-success fw-bold px-3 border-0" style="border-radius: 20px;"><i class="bi bi-arrow-up-circle-fill"></i> Upgrade Server</a>
             </div>
         </div>
 

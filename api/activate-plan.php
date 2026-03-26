@@ -13,14 +13,14 @@ $planId = sanitizeInt($_GET['plan_id'] ?? 0);
 
 if (empty($planId)) {
     setFlash('danger', 'Invalid plan activation request.');
-    redirect('/wapi/dashboard/subscription.php');
+    redirect('dashboard/subscription.php');
 }
 
 $plan = $db->fetch("SELECT * FROM plans WHERE id = ? AND is_active = 1", [$planId]);
 
 if (!$plan || $plan['monthly_price'] > 0) {
     setFlash('danger', 'Invalid plan or plan is not free.');
-    redirect('/wapi/dashboard/subscription.php');
+    redirect('dashboard/subscription.php');
 }
 
 // Cancel existing active subscriptions
@@ -52,4 +52,4 @@ $db->insert('payments', [
 ]);
 
 setFlash('success', 'Free plan activated successfully!');
-redirect('/wapi/dashboard/subscription.php');
+redirect('dashboard/subscription.php');

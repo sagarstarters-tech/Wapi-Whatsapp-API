@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $result = $wa->sendBulk($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $contacts, $type, $content, $mediaUrl);
 
     setFlash('success', "Bulk send complete: {$result['success']} sent, {$result['failed']} failed.");
-    redirect('/wapi/dashboard/bulk-messages.php');
+    redirect('dashboard/bulk-messages.php');
 }
 
 $totalContacts = $db->count('contacts', 'user_id = ? AND is_active = 1', [$userId]);
