@@ -1,0 +1,117 @@
+<?php
+/**
+ * WAPI SaaS - User Dashboard Sidebar Component
+ */
+$currentPage = basename($_SERVER['PHP_SELF'], '.php');
+$db = Database::getInstance();
+
+// Get user credit balance
+$credits = $db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$_SESSION['user_id']]);
+$creditBalance = $credits ? ($credits['total_credits'] - $credits['used_credits']) : 0;
+$unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0", [$_SESSION['user_id']]);
+?>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-user-block d-flex align-items-center gap-2">
+            <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                <?= strtoupper(substr($_SESSION['user_name'] ?? 'U', 0, 1)); ?>
+            </div>
+            <div>
+                <div class="fw-bold" style="font-size: 0.8125rem; line-height: 1.2;"><?= e($_SESSION['user_name'] ?? 'User'); ?></div>
+                <div style="font-size: 0.6875rem; color: var(--text-muted);">
+                    Credits: <span class="fw-bold text-primary"><?= number_format($creditBalance); ?></span>
+                </div>
+            </div>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle">
+            <i class="bi bi-layout-sidebar-inset"></i>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav">
+        <!-- Overview -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Overview</div>
+            <a href="/wapi/dashboard/" class="sidebar-link <?= $currentPage === 'index' ? 'active' : ''; ?>">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/wapi/dashboard/whatsapp.php" class="sidebar-link <?= $currentPage === 'whatsapp' ? 'active' : ''; ?>">
+                <i class="bi bi-whatsapp"></i>
+                <span>WhatsApp Setup</span>
+            </a>
+        </div>
+
+        <!-- Messaging -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Messaging</div>
+            <a href="/wapi/dashboard/messages.php" class="sidebar-link <?= $currentPage === 'messages' ? 'active' : ''; ?>">
+                <i class="bi bi-send-fill"></i>
+                <span>Send Message</span>
+            </a>
+            <a href="/wapi/dashboard/bulk-messages.php" class="sidebar-link <?= $currentPage === 'bulk-messages' ? 'active' : ''; ?>">
+                <i class="bi bi-megaphone-fill"></i>
+                <span>Bulk Messages</span>
+            </a>
+            <a href="/wapi/dashboard/templates.php" class="sidebar-link <?= $currentPage === 'templates' ? 'active' : ''; ?>">
+                <i class="bi bi-file-earmark-text-fill"></i>
+                <span>Templates</span>
+            </a>
+            <a href="/wapi/dashboard/chatbot.php" class="sidebar-link <?= $currentPage === 'chatbot' ? 'active' : ''; ?>">
+                <i class="bi bi-robot"></i>
+                <span>Chatbot</span>
+            </a>
+        </div>
+
+        <!-- Contacts -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Contacts</div>
+            <a href="/wapi/dashboard/contacts.php" class="sidebar-link <?= $currentPage === 'contacts' ? 'active' : ''; ?>">
+                <i class="bi bi-people-fill"></i>
+                <span>Contacts</span>
+            </a>
+        </div>
+
+        <!-- Analytics -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Analytics</div>
+            <a href="/wapi/dashboard/logs.php" class="sidebar-link <?= $currentPage === 'logs' ? 'active' : ''; ?>">
+                <i class="bi bi-list-check"></i>
+                <span>Message Logs</span>
+            </a>
+        </div>
+
+        <!-- Account -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Account</div>
+            <a href="/wapi/dashboard/api-keys.php" class="sidebar-link <?= $currentPage === 'api-keys' ? 'active' : ''; ?>">
+                <i class="bi bi-key-fill"></i>
+                <span>API Keys</span>
+            </a>
+            <a href="/wapi/dashboard/subscription.php" class="sidebar-link <?= $currentPage === 'subscription' ? 'active' : ''; ?>">
+                <i class="bi bi-credit-card-fill"></i>
+                <span>Subscription</span>
+            </a>
+            <a href="/wapi/dashboard/settings.php" class="sidebar-link <?= $currentPage === 'settings' ? 'active' : ''; ?>">
+                <i class="bi bi-gear-fill"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="/wapi/" class="sidebar-link">
+            <i class="bi bi-globe"></i>
+            <span>View Website</span>
+        </a>
+        <a href="/wapi/auth/logout.php" class="sidebar-link" style="color: var(--danger);">
+            <i class="bi bi-box-arrow-left"></i>
+            <span>Logout</span>
+        </a>
+    </div>
+</aside>

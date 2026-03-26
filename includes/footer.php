@@ -1,0 +1,99 @@
+<?php
+/**
+ * WAPI SaaS - Dynamic Footer
+ * Included on all public pages
+ */
+$settings = $settings ?? new Settings();
+$chatWidgetEnabled = $settings->get('chat_widget_enabled', '1');
+$chatWidgetNumber = $settings->get('chat_widget_number', '');
+$chatWidgetMessage = $settings->get('chat_widget_message', 'Hi! I need help.');
+$footerText = $settings->get('footer_text', '© 2026 WAPI. All rights reserved.');
+$contactEmail = $settings->get('contact_email', 'support@wapi.com');
+$contactPhone = $settings->get('contact_phone', '');
+?>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="navbar-brand mb-3" style="font-size: 1.75rem;">
+                        <?= e($settings->get('site_name', 'WAPI')); ?>
+                    </div>
+                    <p class="text-secondary mb-3" style="font-size: 0.9375rem;">
+                        <?= e($settings->get('site_tagline', 'Powerful WhatsApp Business API for your business')); ?>
+                    </p>
+                    <div class="footer-social">
+                        <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                        <a href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h5>Product</h5>
+                    <ul class="footer-links">
+                        <li><a href="/wapi/#features">Features</a></li>
+                        <li><a href="/wapi/#pricing">Pricing</a></li>
+                        <li><a href="/wapi/#demo">Demo</a></li>
+                        <li><a href="/wapi/docs/">API Docs</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h5>Company</h5>
+                    <ul class="footer-links">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h5>Legal</h5>
+                    <ul class="footer-links">
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                        <li><a href="#">GDPR</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h5>Support</h5>
+                    <ul class="footer-links">
+                        <li><a href="mailto:<?= e($contactEmail); ?>"><?= e($contactEmail); ?></a></li>
+                        <?php if ($contactPhone): ?>
+                        <li><a href="tel:<?= e($contactPhone); ?>"><?= e($contactPhone); ?></a></li>
+                        <?php endif; ?>
+                        <li><a href="/wapi/#faq">FAQ</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p><?= $footerText; ?></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Chat Widget -->
+    <?php if ($chatWidgetEnabled === '1' && $chatWidgetNumber): ?>
+    <div class="chat-widget">
+        <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $chatWidgetNumber); ?>?text=<?= urlencode($chatWidgetMessage); ?>" 
+           target="_blank" class="chat-widget-btn" aria-label="Chat on WhatsApp">
+            <i class="bi bi-whatsapp"></i>
+        </a>
+    </div>
+    <?php endif; ?>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Main JS -->
+    <script src="/wapi/assets/js/app.js"></script>
+    
+    <?php if (isset($extraJs)): ?>
+        <?php foreach ((array)$extraJs as $js): ?>
+            <script src="<?= $js; ?>"></script>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</body>
+</html>
