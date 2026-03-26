@@ -10,6 +10,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
@@ -35,14 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         $db->delete('templates', 'id = ? AND user_id = ?', [sanitizeInt($_POST['template_id']), $userId]);
         setFlash('success', 'Template deleted.');
     }
-    redirect('/wapi/dashboard/templates.php');
+    redirect('dashboard/templates.php');
 }
 
 $templates = $db->fetchAll("SELECT * FROM templates WHERE user_id = ? ORDER BY created_at DESC", [$userId]);
 
 $pageTitle = 'Templates';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -52,7 +54,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Message Templates</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Templates</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Templates</span></div>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>

@@ -10,6 +10,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 $search = sanitize($_GET['search'] ?? '');
 $statusFilter = sanitize($_GET['status'] ?? '');
 $page = max(1, sanitizeInt($_GET['page'] ?? 1));
@@ -32,8 +34,8 @@ $pagination = paginate($totalMessages, $page, 20);
 $messages = $db->fetchAll("SELECT m.*, c.name as contact_name FROM messages m LEFT JOIN contacts c ON m.contact_id = c.id WHERE m.{$where} ORDER BY m.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
 
 $pageTitle = 'Message Logs';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -43,7 +45,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Message Logs</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Logs</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Logs</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>

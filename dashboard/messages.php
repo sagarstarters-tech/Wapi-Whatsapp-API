@@ -10,6 +10,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 // Get user's WhatsApp account
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
 
@@ -17,7 +19,7 @@ $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND s
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     if (!$waAccount) {
         setFlash('danger', 'Please configure your WhatsApp API settings first.');
-        redirect('/wapi/dashboard/settings.php');
+        redirect('dashboard/settings.php');
     }
 
     $to = sanitize($_POST['to'] ?? '');
@@ -44,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 $contacts = $db->fetchAll("SELECT id, name, phone FROM contacts WHERE user_id = ? AND is_active = 1 ORDER BY name ASC LIMIT 100", [$userId]);
 
 $pageTitle = 'Send Message';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -55,13 +57,13 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Send Message</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Send Message</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Send Message</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>
 
         <?php if (!$waAccount): ?>
-        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> Please <a href="/wapi/dashboard/settings.php" class="fw-bold">configure your WhatsApp API</a> to start sending messages.</div>
+        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> Please <a href="<?= baseUrl('dashboard/settings.php'); ?>" class="fw-bold">configure your WhatsApp API</a> to start sending messages.</div>
         <?php endif; ?>
 
         <div class="row g-4">

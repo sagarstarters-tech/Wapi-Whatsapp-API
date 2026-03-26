@@ -10,6 +10,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $action = $_POST['action'] ?? '';
 
@@ -37,14 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         $db->delete('api_keys', 'id = ? AND user_id = ?', [sanitizeInt($_POST['key_id']), $userId]);
         setFlash('success', 'API key deleted.');
     }
-    redirect('/wapi/dashboard/api-keys.php');
+    redirect('dashboard/api-keys.php');
 }
 
 $apiKeys = $db->fetchAll("SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC", [$userId]);
 
 $pageTitle = 'API Keys';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -54,7 +56,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">API Keys</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>API Keys</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>API Keys</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>

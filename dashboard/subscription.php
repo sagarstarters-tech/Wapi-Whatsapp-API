@@ -10,6 +10,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 // Get available plans
 $plans = $db->fetchAll("SELECT p.*, GROUP_CONCAT(pf.feature_text, '|||', pf.is_included ORDER BY pf.sort_order SEPARATOR ';;;') as features_list FROM plans p LEFT JOIN plan_features pf ON p.id = pf.plan_id WHERE p.is_active = 1 GROUP BY p.id ORDER BY p.sort_order ASC");
 
@@ -20,8 +22,8 @@ $currentSub = $db->fetch("SELECT s.*, p.name as plan_name FROM subscriptions s J
 $payments = $db->fetchAll("SELECT p.*, pl.name as plan_name FROM payments p LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 10", [$userId]);
 
 $pageTitle = 'Subscription';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -31,7 +33,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Subscription</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Subscription</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Subscription</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>

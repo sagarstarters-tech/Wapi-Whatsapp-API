@@ -10,6 +10,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $action = $_POST['action'] ?? '';
@@ -36,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         $db->delete('contacts', 'id = ? AND user_id = ?', [sanitizeInt($_POST['contact_id']), $userId]);
         setFlash('success', 'Contact deleted.');
     }
-    redirect('/wapi/dashboard/contacts.php');
+    redirect('dashboard/contacts.php');
 }
 
 // Pagination & search
@@ -55,8 +57,8 @@ $pagination = paginate($totalContacts, $page);
 $contacts = $db->fetchAll("SELECT * FROM contacts WHERE {$where} ORDER BY created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
 
 $pageTitle = 'Contacts';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -66,7 +68,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Contacts</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Contacts</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Contacts</span></div>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
@@ -103,7 +105,7 @@ include __DIR__ . '/../includes/header.php';
                             <td style="font-size: 0.8125rem; color: var(--text-muted);"><?= timeAgo($contact['created_at']); ?></td>
                             <td>
                                 <div class="d-flex gap-1">
-                                    <a href="/wapi/dashboard/messages.php?to=<?= urlencode($contact['phone']); ?>" class="btn btn-icon btn-sm" style="background: rgba(37,211,102,0.1); color: var(--whatsapp); border: 1px solid rgba(37,211,102,0.2);" title="Send Message"><i class="bi bi-send"></i></a>
+                                    <a href="<?= baseUrl('dashboard/messages.php?to=' . urlencode($contact['phone'])); ?>" class="btn btn-icon btn-sm" style="background: rgba(37,211,102,0.1); color: var(--whatsapp); border: 1px solid rgba(37,211,102,0.2);" title="Send Message"><i class="bi bi-send"></i></a>
                                     <button class="btn btn-icon btn-sm" style="background: var(--bg-secondary); border: 1px solid var(--border-color);" onclick="editContact(<?= htmlspecialchars(json_encode($contact)); ?>)" title="Edit"><i class="bi bi-pencil"></i></button>
                                     <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this contact?')">
                                         <?= CSRF::tokenField(); ?><input type="hidden" name="action" value="delete"><input type="hidden" name="contact_id" value="<?= $contact['id']; ?>">

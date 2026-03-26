@@ -11,6 +11,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 // Handle AJAX save
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
@@ -90,9 +92,9 @@ $pageTitle = 'Chatbot Flow Builder';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="/wapi/assets/css/style.css" rel="stylesheet">
-    <link href="/wapi/assets/css/dashboard.css" rel="stylesheet">
-    <link href="/wapi/assets/css/chatbot-builder.css" rel="stylesheet">
+    <link href="<?= asset('assets/css/style.css'); ?>" rel="stylesheet">
+    <link href="<?= asset('assets/css/dashboard.css'); ?>" rel="stylesheet">
+    <link href="<?= asset('assets/css/chatbot-builder.css'); ?>" rel="stylesheet">
 </head>
 <body>
 
@@ -101,7 +103,7 @@ $pageTitle = 'Chatbot Flow Builder';
 <div class="chatbot-builder-page">
     <!-- Top Bar -->
     <div class="builder-topbar">
-        <a href="/wapi/dashboard/chatbot.php" class="back-btn">
+        <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="back-btn">
             <i class="bi bi-arrow-left"></i> Back
         </a>
         <input type="text" id="flowName" class="flow-name-input" value="<?= e($editFlow['name'] ?? 'New Bot Flow'); ?>" placeholder="Flow Name">
@@ -145,7 +147,7 @@ $pageTitle = 'Chatbot Flow Builder';
     <input type="hidden" id="csrfToken" value="<?= CSRF::generateToken(); ?>">
 </div>
 
-<script src="/wapi/assets/js/chatbot-builder.js"></script>
+<script src="<?= asset('assets/js/chatbot-builder.js'); ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const canvasEl = document.getElementById('builderCanvas');
@@ -164,8 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php else: ?>
 <!-- ============ FLOW LIST MODE ============ -->
 <?php
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 <div class="dashboard-wrapper">
@@ -174,11 +176,11 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Chatbot Flows</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Chatbot</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Chatbot</span></div>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <a href="/wapi/dashboard/chatbot.php?mode=builder" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Create New Flow</a>
+                <a href="<?= baseUrl('dashboard/chatbot.php?mode=builder'); ?>" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Create New Flow</a>
             </div>
         </div>
 
@@ -193,7 +195,7 @@ include __DIR__ . '/../includes/header.php';
                     <i class="bi bi-robot" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
                     <h5>No Chatbot Flows Yet</h5>
                     <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 1.5rem;">Create your first chatbot flow using our visual drag-and-drop builder.</p>
-                    <a href="/wapi/dashboard/chatbot.php?mode=builder" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create Your First Flow</a>
+                    <a href="<?= baseUrl('dashboard/chatbot.php?mode=builder'); ?>" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create Your First Flow</a>
                 </div>
             </div>
             <?php else: ?>
@@ -207,7 +209,7 @@ include __DIR__ . '/../includes/header.php';
                                 <span class="status-badge status-<?= $flow['is_active'] ? 'active' : 'inactive'; ?>"><?= $flow['is_active'] ? 'Active' : 'Disabled'; ?></span>
                             </div>
                             <div class="d-flex gap-1">
-                                <a href="/wapi/dashboard/chatbot.php?edit=<?= $flow['id']; ?>" class="btn btn-sm" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                                <a href="<?= baseUrl('dashboard/chatbot.php?edit=' . $flow['id']); ?>" class="btn btn-sm" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <button class="btn btn-sm" style="background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2);" onclick="deleteFlow(<?= $flow['id']; ?>)">
@@ -231,7 +233,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-top p-3">
-                        <a href="/wapi/dashboard/chatbot.php?edit=<?= $flow['id']; ?>" class="btn btn-primary btn-sm w-100">
+                        <a href="<?= baseUrl('dashboard/chatbot.php?edit=' . $flow['id']); ?>" class="btn btn-primary btn-sm w-100">
                             <i class="bi bi-pencil-square"></i> Open in Builder
                         </a>
                     </div>
@@ -249,7 +251,7 @@ function deleteFlow(id) {
     form.append('action', 'delete_flow');
     form.append('flow_id', id);
     form.append('csrf_token', '<?= CSRF::generateToken(); ?>');
-    fetch('/wapi/dashboard/chatbot.php', { method: 'POST', body: form })
+    fetch('<?= baseUrl('dashboard/chatbot.php'); ?>', { method: 'POST', body: form })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
