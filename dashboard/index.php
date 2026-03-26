@@ -10,6 +10,7 @@ Auth::requireLogin();
 $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
 
 // Get user stats
 $credits = $db->fetch("SELECT * FROM credits WHERE user_id = ?", [$userId]);
@@ -45,8 +46,8 @@ $isEmailVerified = !empty($user['email_verified']);
 $isWaVerified = !empty($waAccount['phone_number_id']);
 
 $pageTitle = 'Dashboard';
-$extraCss = ['/wapi/assets/css/dashboard.css?v=' . time()];
-$extraJs = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', '/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 

@@ -11,6 +11,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 $user = $db->fetch("SELECT * FROM users WHERE id = ?", [$userId]);
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? LIMIT 1", [$userId]);
 
@@ -41,14 +43,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             setFlash('success', 'Password changed successfully.');
         }
     }
-    redirect('/wapi/dashboard/settings.php?tab=' . sanitize($_POST['tab'] ?? 'profile'));
+    redirect('dashboard/settings.php?tab=' . sanitize($_POST['tab'] ?? 'profile'));
 }
 
 $activeTab = sanitize($_GET['tab'] ?? 'profile');
 
 $pageTitle = 'Settings';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -58,7 +60,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Account Settings</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Settings</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Settings</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>

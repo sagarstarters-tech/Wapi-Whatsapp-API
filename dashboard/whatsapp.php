@@ -11,6 +11,8 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 // Get existing WhatsApp account
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? LIMIT 1", [$userId]);
 $isConnected = !empty($waAccount['phone_number_id']) && !empty($waAccount['access_token']);
@@ -43,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             }
             
             setFlash('success', 'WhatsApp successfully connected! You can now send and receive messages.');
-            redirect('/wapi/dashboard/whatsapp.php');
+            redirect('dashboard/whatsapp.php');
         }
     }
 
@@ -52,12 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             $db->delete('whatsapp_accounts', 'id = ?', [$waAccount['id']]);
             setFlash('success', 'WhatsApp account disconnected.');
         }
-        redirect('/wapi/dashboard/whatsapp.php');
+        redirect('dashboard/settings.php?tab=' . sanitize($_POST['tab'] ?? 'profile'));
     }
 }
 
 $pageTitle = 'Connect WhatsApp';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
+$extraCss = [asset('assets/css/dashboard.css')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -67,8 +69,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header mb-4">
             <div>
                 <h1 class="dash-title">Connect to WhatsApp API <i class="bi bi-whatsapp text-success"></i></h1>
-                <div class="dash-breadcrumb">
-                    <a href="/wapi/dashboard/">Dashboard</a> <i class="bi bi-chevron-right"></i> <span>WhatsApp Setup</span>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Settings</span></div>
                 </div>
             </div>
         </div>

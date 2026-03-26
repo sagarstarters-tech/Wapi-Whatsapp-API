@@ -10,12 +10,14 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+$hideNav = true; // Prevents landing page nav from appearing in dashboard
+
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     if (!$waAccount) {
         setFlash('danger', 'Configure your WhatsApp API first.');
-        redirect('/wapi/dashboard/settings.php?tab=whatsapp');
+        redirect('dashboard/settings.php?tab=whatsapp');
     }
 
     $type = sanitize($_POST['message_type'] ?? 'text');
@@ -39,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 
     if (empty($contacts)) {
         setFlash('danger', 'No contacts found for the selected target.');
-        redirect('/wapi/dashboard/bulk-messages.php');
+        redirect('dashboard/bulk-messages.php');
     }
 
     $wa = new WhatsApp();
@@ -60,8 +62,8 @@ foreach ($tags as $t) {
 }
 
 $pageTitle = 'Bulk Messages';
-$extraCss = ['/wapi/assets/css/dashboard.css'];
-$extraJs = ['/wapi/assets/js/admin.js'];
+$extraCss = [asset('assets/css/dashboard.css')];
+$extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -71,7 +73,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Bulk Messages</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/dashboard/">Dashboard</a><i class="bi bi-chevron-right"></i><span>Bulk Messages</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Bulk Messages</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>
@@ -81,7 +83,7 @@ include __DIR__ . '/../includes/header.php';
         <?php endif; ?>
 
         <?php if (!$waAccount): ?>
-        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> <a href="/wapi/dashboard/settings.php?tab=whatsapp" class="fw-bold">Configure WhatsApp API</a> first.</div>
+        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> <a href="<?= baseUrl('dashboard/settings.php?tab=whatsapp'); ?>" class="fw-bold">Configure WhatsApp API</a> first.</div>
         <?php endif; ?>
 
         <div class="card" style="border-radius: var(--border-radius);">
