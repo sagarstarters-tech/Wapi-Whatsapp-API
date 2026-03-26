@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             $db->delete('whatsapp_accounts', 'id = ?', [$waAccount['id']]);
             setFlash('success', 'WhatsApp account disconnected.');
         }
-        redirect('dashboard/settings.php?tab=' . sanitize($_POST['tab'] ?? 'profile'));
+        redirect('dashboard/whatsapp.php');
     }
 }
 
@@ -69,8 +69,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header mb-4">
             <div>
                 <h1 class="dash-title">Connect to WhatsApp API <i class="bi bi-whatsapp text-success"></i></h1>
-                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Settings</span></div>
-                </div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>WhatsApp Setup</span></div>
             </div>
         </div>
 
