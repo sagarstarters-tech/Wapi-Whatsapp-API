@@ -25,7 +25,8 @@ function baseUrl($path = '') {
     $url = rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
     
     // Final deduplication (e.g., /wapi/wapi/ -> /wapi/)
-    return preg_replace('/\/wapi\/wapi\//', '/wapi/', $url);
+    // Replaces multiple occurrences of /wapi with a single one
+    return preg_replace('/(\/wapi)+/', '/wapi', $url);
 }
 
 /**
