@@ -435,32 +435,47 @@ class WhatsApp {
      */
     private function sendInteractiveMessage($userId, $phoneNumberId, $accessToken, $to, $node) {
         $data = $node['data'] ?? [];
-        $buttons = $data['buttons'] ?? ['Yes'];
-        $btnConfig = [];
-
-        foreach ($buttons as $i => $btnText) {
-            if ($i >= 3) break; // WhatsApp max 3 buttons
-            $btnConfig[] = [
-                'type' => 'reply',
-                'reply' => ['id' => "flow_btn_{$node['id']}_{$i}", 'title' => mb_substr($btnText, 0, 20)]
-            ];
-        }
-
+        $url = $data['url'] ?? '';
+        
         $payload = [
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
             'to' => $this->formatPhone($to),
             'type' => 'interactive',
             'interactive' => [
-                'type' => 'button',
-                'body' => ['text' => $data['message'] ?? 'Please select an option:'],
-                'action' => ['buttons' => $btnConfig]
+                'body' => ['text' => $data['message'] ?? 'Please select an option:']
             ]
         ];
 
-        // If card has description or header
+        // If card has description/footer
         if (!empty($data['description'])) {
             $payload['interactive']['footer'] = ['text' => mb_substr($data['description'], 0, 60)];
+        }
+
+        // Check if we should send CTA URL button OR Reply buttons
+        if (!empty($url)) {
+            // WhatsApp Call-to-Action (Link) button
+            $payload['interactive']['type'] = 'cta_url';
+            $payload['interactive']['action'] = [
+                'name' => 'cta_url',
+                'parameters' => [
+                    'display_text' => mb_substr(($data['buttons'][0] ?? 'Visit Website'), 0, 20),
+                    'url' => $url
+                ]
+            ];
+        } else {
+            // Standard Quick Reply buttons (up to 3)
+            $buttons = $data['buttons'] ?? ['Yes'];
+            $btnConfig = [];
+            foreach ($buttons as $i => $btnText) {
+                if ($i >= 3) break;
+                $btnConfig[] = [
+                    'type' => 'reply',
+                    'reply' => ['id' => "flow_btn_{$node['id']}_{$i}", 'title' => mb_substr($btnText, 0, 20)]
+                ];
+            }
+            $payload['interactive']['type'] = 'button';
+            $payload['interactive']['action'] = ['buttons' => $btnConfig];
         }
 
         return $this->sendMessage($userId, $phoneNumberId, $accessToken, $to, 'interactive', $data['message'] ?? 'Interactive', $payload);
