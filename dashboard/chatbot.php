@@ -255,12 +255,14 @@ function deleteFlow(id) {
     const form = new FormData();
     form.append('action', 'delete_flow');
     form.append('flow_id', id);
-    form.append('csrf_token', '<?= CSRF::generateToken(); ?>');
+    form.append('<?= CSRF_TOKEN_NAME; ?>', '<?= CSRF::generateToken(); ?>');
     fetch('<?= baseUrl('dashboard/chatbot.php'); ?>', { method: 'POST', body: form })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             document.getElementById('flow-card-' + id)?.remove();
+        } else {
+            alert(data.message || 'Delete failed');
         }
     });
 }
