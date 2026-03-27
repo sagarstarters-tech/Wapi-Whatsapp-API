@@ -82,12 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     }
 }
 
-$totalPayments = $db->fetchColumn("SELECT COUNT(*) FROM payments p JOIN users u ON p.user_id = u.id WHERE {$where}", $params);
-$pagination = paginate($totalPayments, $page, 20);
-$payments = $db->fetchAll("SELECT p.*, u.name as user_name, u.email as user_email, s.billing_cycle, pl.name as plan_name, COALESCE(pl2.name, pl.name) as actual_plan_name FROM payments p JOIN users u ON p.user_id = u.id LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id LEFT JOIN plans pl2 ON p.plan_id = pl2.id WHERE {$where} ORDER BY p.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
+try {
+    $totalPayments = $db->fetchColumn("SELECT COUNT(*) FROM payments p JOIN users u ON p.user_id = u.id WHERE {$where}", $params);
+    $pagination = paginate($totalPayments, $page, 20);
+    $payments = $db->fetchAll("SELECT p.*, u.name as user_name, u.email as user_email, s.billing_cycle, pl.name as plan_name, COALESCE(pl2.name, pl.name) as actual_plan_name FROM payments p JOIN users u ON p.user_id = u.id LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id LEFT JOIN plans pl2 ON p.plan_id = pl2.id WHERE {$where} ORDER BY p.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
 
-$totalRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success'") ?: 0;
-$monthlyRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success' AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())") ?: 0;
+    $totalRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success'") ?: 0;
+    $monthlyRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success' AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())") ?: 0;
+} catch (Exception $e) {
+    die("<h3>FATAL ERROR:</h3><p>" . $e->getMessage() . "</p><p>SQL: SELECT p.*, u.name as user_name, u.email as user_email, s.billing_cycle, pl.name as plan_name, COALESCE(pl2.name, pl.name) as actual_plan_name FROM payments p JOIN users u ON p.user_id = u.id LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id LEFT JOIN plans pl2 ON p.plan_id = pl2.id</p>");
+}
 
 $pageTitle = 'Payments';
 $extraCss = [asset('assets/css/dashboard.css')];
