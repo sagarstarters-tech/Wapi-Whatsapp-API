@@ -204,8 +204,7 @@ class ChatbotFlowBuilder {
             button:    { message: '', buttons: ['Visit store'], url: '' },
             condition: { variable: '', operator: 'equals', value: '' },
             delay:     { duration: 5, unit: 'Sec' },
-            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'], display_type: 'button' },
-            user_input: { message: 'What is your name?', variable: 'user_name', validation: 'text' }
+            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'] }
         };
         this.nodes[id] = {
             id, type, x: Math.round(x), y: Math.round(y),
@@ -524,8 +523,7 @@ class ChatbotFlowBuilder {
             button: 'Button', 
             condition: 'Condition', 
             delay: 'Delay',
-            interactive: 'Interactive',
-            user_input: 'User Input'
+            interactive: 'Interactive'
         };
         const icons = {
             start: 'bi-lightning-charge-fill', 
@@ -537,8 +535,7 @@ class ChatbotFlowBuilder {
             button: 'bi-hand-index-thumb-fill', 
             condition: 'bi-signpost-split-fill', 
             delay: 'bi-clock-fill',
-            interactive: 'bi-chat-quote-fill',
-            user_input: 'bi-keyboard-fill'
+            interactive: 'bi-chat-quote-fill'
         };
         let h = '';
 
@@ -667,13 +664,8 @@ class ChatbotFlowBuilder {
                     <input type="text" data-field="message" value="${this._esc(node.data.message||'')}" placeholder="e.g. Visit Our Site"></div>
                     <div class="node-field"><div class="field-label">Description</div>
                     <textarea data-field="description" rows="2" placeholder="e.g. if you are interested...">${this._esc(node.data.description||'')}</textarea></div>
-                    <div class="node-field"><div class="field-label">Display Type</div>
-                    <select data-field="display_type" onmousedown="event.stopPropagation()">
-                        <option value="button" ${node.data.display_type==='button'?'selected':''}>Interactive Buttons</option>
-                        <option value="list" ${node.data.display_type==='list'?'selected':''}>List Message (Menu)</option>
-                    </select></div>
-                    <div class="node-field"><div class="field-label">${node.data.display_type === 'list' ? 'Menu Options' : 'Buttons'} (comma separated)</div>
-                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Option 1, Option 2"></div>`;
+                    <div class="node-field"><div class="field-label">Buttons (comma separated)</div>
+                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Button 1, Button 2"></div>`;
 
             case 'button':
                 return `${this._delayField(node)}
@@ -697,23 +689,16 @@ class ChatbotFlowBuilder {
                     <div class="node-field"><div class="field-label">Value</div>
                     <input type="text" data-field="value" value="${this._esc(node.data.value||'')}" placeholder="Expected value"></div>`;
 
-            case 'user_input':
-                return `${this._delayField(node)}
-                    <div class="node-field"><div class="field-label">Question to User</div>
-                    <textarea data-field="message" rows="2" placeholder="e.g. Please enter your name">${this._esc(node.data.message||'')}</textarea></div>
-                    <div class="node-field"><div class="field-label">Store Answer in Variable</div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text">{{</span>
-                        <input type="text" data-field="variable" class="form-control" value="${this._esc(node.data.variable||'')}" placeholder="e.g. name">
-                        <span class="input-group-text">}}</span>
-                    </div></div>
-                    <div class="node-field"><div class="field-label">Expected Input Type</div>
-                    <select data-field="validation" onmousedown="event.stopPropagation()">
-                        <option value="text" ${node.data.validation==='text'?'selected':''}>Any Text</option>
-                        <option value="email" ${node.data.validation==='email'?'selected':''}>Valid Email</option>
-                        <option value="number" ${node.data.validation==='number'?'selected':''}>Number Only</option>
-                        <option value="phone" ${node.data.validation==='phone'?'selected':''}>Phone Number</option>
-                    </select></div>`;
+            case 'delay':
+                return `<div class="node-field"><div class="field-label">Wait Duration</div>
+                    <div class="delay-row">
+                        <input type="number" data-field="duration" value="${node.data.duration||5}" min="1">
+                        <select data-field="unit" onmousedown="event.stopPropagation()">
+                            <option value="Sec" ${node.data.unit==='Sec'?'selected':''}>Seconds</option>
+                            <option value="Min" ${node.data.unit==='Min'?'selected':''}>Minutes</option>
+                            <option value="Hour" ${node.data.unit==='Hour'?'selected':''}>Hours</option>
+                        </select>
+                    </div></div>`;
 
             default: return '';
         }

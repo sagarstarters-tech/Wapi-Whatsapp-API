@@ -141,7 +141,7 @@ include __DIR__ . '/../includes/header.php';
                                     <small class="text-muted"><?= date('H:i', strtotime($c['created_at'])); ?></small>
                                 </div>
                                 <div class="text-muted text-truncate mini-msg" style="font-size: 0.75rem;">
-                                    <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?= e(substr($c['content'] ?? '', 0, 30)); ?>
+                                    <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?= e(substr($msg['content'] ?? '', 0, 30)); ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -168,7 +168,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="chat-footer" id="chatFooter" style="display: none;">
                     <form id="chatForm">
                         <div class="chat-input-row">
-                            <input type="text" id="chatInput" class="form-control" placeholder="Type a message..." required autocomplete="off">
+                            <input type="text" id="chatInput" class="form-control" placeholder="Type a message..." required>
                             <button type="submit" class="btn btn-primary"><i class="bi bi-send-fill"></i></button>
                         </div>
                     </form>
@@ -181,48 +181,30 @@ include __DIR__ . '/../includes/header.php';
 
 <script>
     let currentChat = null;
-    let pollInterval = null;
 
     function loadMessages(phone, el) {
         currentChat = phone;
-        if (el) {
-            document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
-            el.classList.add('active');
-        }
+        document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
         document.getElementById('activeContactName').innerText = phone;
         document.getElementById('chatFooter').style.display = 'block';
+        
+        // In a real app, this would be an AJAX call
+        document.getElementById('chatMessages').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
         
         fetch('<?= baseUrl('api/chat-history.php'); ?>?phone=' + phone)
             .then(r => r.json())
             .then(data => {
                 let html = '';
-                if (data.length === 0) {
-                    html = '<div class="text-center p-5 text-muted">No messages yet.</div>';
-                } else {
-                    data.forEach(m => {
-                        html += `<div class="msg-bubble ${m.direction === 'inbound' ? 'msg-in' : 'msg-out'}">
-                            ${m.content}
-                            <div style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right;">${m.time} ${m.direction === 'outbound' ? '✓' : ''}</div>
-                        </div>`;
-                    });
-                }
-                
-                const msgContainer = document.getElementById('chatMessages');
-                const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 50;
-                
-                msgContainer.innerHTML = html;
-                
-                if (isAtBottom || el) {
-                    scrollToBottom();
-                }
+                data.forEach(m => {
+                    html += `<div class="msg-bubble ${m.direction === 'inbound' ? 'msg-in' : 'msg-out'}">
+                        ${m.content}
+                        <div style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right;">${m.time}</div>
+                    </div>`;
+                });
+                document.getElementById('chatMessages').innerHTML = html;
+                scrollToBottom();
             });
-
-        // Start polling if not already started
-        if (!pollInterval) {
-            pollInterval = setInterval(() => {
-                if (currentChat) loadMessages(currentChat, null);
-            }, 5000);
-        }
     }
 
     function scrollToBottom() {
@@ -232,12 +214,10 @@ include __DIR__ . '/../includes/header.php';
 
     document.getElementById('chatForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        const msgInput = document.getElementById('chatInput');
-        const msg = msgInput.value;
+        const msg = document.getElementById('chatInput').value;
         if (!msg || !currentChat) return;
 
-        msgInput.value = '';
-
+        // AJAX to send message
         fetch('<?= baseUrl('dashboard/messages.php'); ?>', {
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -246,10 +226,8 @@ include __DIR__ . '/../includes/header.php';
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                loadMessages(currentChat, null);
-            } else {
-                alert(data.message || 'Failed to send message');
-                msgInput.value = msg; // Restore message
+                document.getElementById('chatInput').value = '';
+                loadMessages(currentChat, document.querySelector('.chat-item.active'));
             }
         });
     });
