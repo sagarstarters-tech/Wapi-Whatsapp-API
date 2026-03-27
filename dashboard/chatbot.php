@@ -107,28 +107,28 @@ $pageTitle = 'Chatbot Flow Builder';
 <div class="chatbot-builder-page">
     <!-- Top Bar -->
     <div class="builder-topbar">
-        <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="back-btn">
-            <i class="bi bi-arrow-left"></i> Back
+        <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="back-btn" title="Exit Builder">
+            <i class="bi bi-chevron-left"></i>
         </a>
         <input type="text" id="flowName" class="flow-name-input" value="<?= e($editFlow['name'] ?? 'New Bot Flow'); ?>" placeholder="Flow Name">
         <div class="builder-actions">
-            <button class="btn-icon" onclick="builder.exportFlow()" title="Export JSON"><i class="bi bi-download"></i></button>
-            <button class="btn-icon" onclick="builder.centerCanvas()" title="Center View"><i class="bi bi-fullscreen"></i></button>
-            <button class="btn-save" onclick="builder.saveFlow()"><i class="bi bi-check-lg"></i> Save</button>
+            <button class="btn-icon me-2" onclick="builder.exportFlow()" title="Export JSON"><i class="bi bi-download"></i></button>
+            <button class="btn-save" onclick="builder.saveFlow()">Save</button>
         </div>
     </div>
 
     <!-- Component Toolbar -->
     <div class="component-toolbar">
-        <span class="toolbar-label">Components</span>
-        <button class="component-btn text-type" data-type="text"><i class="bi bi-chat-text-fill"></i><span>Text</span></button>
-        <button class="component-btn image-type" data-type="image"><i class="bi bi-image-fill"></i><span>Image</span></button>
-        <button class="component-btn audio-type" data-type="audio"><i class="bi bi-volume-up-fill"></i><span>Audio</span></button>
-        <button class="component-btn video-type" data-type="video"><i class="bi bi-camera-video-fill"></i><span>Video</span></button>
-        <button class="component-btn file-type" data-type="file"><i class="bi bi-file-earmark-fill"></i><span>File</span></button>
-        <button class="component-btn button-type" data-type="button"><i class="bi bi-grid-3x2-gap-fill"></i><span>Buttons</span></button>
-        <button class="component-btn condition-type" data-type="condition"><i class="bi bi-signpost-split-fill"></i><span>Condition</span></button>
-        <button class="component-btn delay-type" data-type="delay"><i class="bi bi-clock-fill"></i><span>Delay</span></button>
+        <button class="component-btn text-type" data-type="text" title="Text Message"><i class="bi bi-chat-left-text"></i></button>
+        <button class="component-btn image-type" data-type="image" title="Image"><i class="bi bi-image"></i></button>
+        <button class="component-btn audio-type" data-type="audio" title="Audio"><i class="bi bi-volume-up"></i></button>
+        <button class="component-btn video-type" data-type="video" title="Video"><i class="bi bi-camera-video"></i></button>
+        <button class="component-btn file-type" data-type="file" title="File"><i class="bi bi-file-earmark"></i></button>
+        <button class="component-btn button-type" data-type="interactive" title="Interactive (Buttons)"><i class="bi bi-grid"></i></button>
+        <button class="component-btn condition-type" data-type="condition" title="Condition"><i class="bi bi-signpost-split"></i></button>
+        <button class="component-btn delay-type" data-type="delay" title="Delay"><i class="bi bi-clock"></i></button>
+        <button class="component-btn ai-type" data-type="ai_reply" title="AI Reply"><i class="bi bi-robot"></i></button>
+        <button class="component-btn template-type" data-type="template" title="Template Message"><i class="bi bi-file-richtext"></i></button>
     </div>
 
     <!-- Canvas -->
@@ -137,12 +137,12 @@ $pageTitle = 'Chatbot Flow Builder';
             <svg class="connections-svg" id="connectionsSvg" xmlns="http://www.w3.org/2000/svg"></svg>
         </div>
 
-        <!-- Zoom Controls -->
+        <!-- Navigation Controls -->
         <div class="zoom-controls">
-            <button onclick="builder.setZoom(builder.zoom + 0.1)"><i class="bi bi-plus"></i></button>
+            <button class="mb-2" onclick="builder.centerCanvas()" title="Center View"><i class="bi bi-crosshair"></i></button>
+            <button onclick="builder.setZoom(builder.zoom + 0.1)"><i class="bi bi-plus-lg"></i></button>
             <div class="zoom-level" id="zoomLevel">100%</div>
-            <button onclick="builder.setZoom(builder.zoom - 0.1)"><i class="bi bi-dash"></i></button>
-            <button onclick="builder.setZoom(1)" title="Reset Zoom"><i class="bi bi-aspect-ratio"></i></button>
+            <button onclick="builder.setZoom(builder.zoom - 0.1)"><i class="bi bi-dash-lg"></i></button>
         </div>
     </div>
 
