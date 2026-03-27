@@ -484,6 +484,18 @@ class ChatbotFlowBuilder {
     }
 
     // ========== Button helpers ==========
+    updateSingleButton(nodeId, val) {
+        if (!this.nodes[nodeId].data.buttons) this.nodes[nodeId].data.buttons = [];
+        this.nodes[nodeId].data.buttons[0] = val;
+        // Don't refresh fully to avoid losing focus, just sync
+        this._syncNodeData(nodeId);
+    }
+
+    updateInteractiveButtons(nodeId, val) {
+        this.nodes[nodeId].data.buttons = val.split(',').map(s => s.trim()).filter(s => s !== '');
+        this._refreshNode(nodeId);
+    }
+
     addButton(nodeId) {
         if (!this.nodes[nodeId].data.buttons) this.nodes[nodeId].data.buttons = [];
         if (this.nodes[nodeId].data.buttons.length >= 3) {
@@ -648,16 +660,20 @@ class ChatbotFlowBuilder {
 
             case 'interactive':
                 return `${this._delayField(node)}
-                    <div class="node-field">
-                        <div class="field-label" style="color:#2563eb;font-weight:700">Visit Our Site</div>
-                        <div style="font-size:0.75rem;color:#64748b;margin-bottom:8px">if you are interested to visit our site</div>
-                    </div>`;
+                    <div class="node-field"><div class="field-label">Card Title</div>
+                    <input type="text" data-field="message" value="${this._esc(node.data.message||'')}" placeholder="e.g. Visit Our Site"></div>
+                    <div class="node-field"><div class="field-label">Description</div>
+                    <textarea data-field="description" rows="2" placeholder="e.g. if you are interested...">${this._esc(node.data.description||'')}</textarea></div>
+                    <div class="node-field"><div class="field-label">Buttons (comma separated)</div>
+                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Button 1, Button 2"></div>`;
 
             case 'button':
-                return `<div class="node-field text-center py-2">
-                    <i class="bi bi-hand-index-thumb" style="font-size:2rem;color:#3b82f6;opacity:0.6"></i>
-                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${this._esc(node.data.buttons[0] || 'Button')}</div>
-                </div>`;
+                return `${this._delayField(node)}
+                    <div class="node-field text-center py-2">
+                        <i class="bi bi-hand-index-thumb" style="font-size:1.5rem;color:#3b82f6;opacity:0.6"></i>
+                    </div>
+                    <div class="node-field"><div class="field-label">Button Text</div>
+                    <input type="text" value="${this._esc(node.data.buttons[0] || 'Button')}" oninput="builder.updateSingleButton('${id}', this.value)" placeholder="e.g. Visit store"></div>`;
 
             case 'condition':
                 return `<div class="node-field"><div class="field-label">Variable</div>
