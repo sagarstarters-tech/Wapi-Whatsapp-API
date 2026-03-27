@@ -445,7 +445,14 @@
 
 /* Output port - inside footer row, right side */
 .port.port-out {
-    /* Positioned inline in the footer row */
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.port.port-out:hover {
+    transform: translateY(-50%) scale(1.3);
 }
 
 /* Input port - absolute left of node */

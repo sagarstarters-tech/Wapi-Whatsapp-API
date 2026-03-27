@@ -201,10 +201,10 @@ class ChatbotFlowBuilder {
             audio:     { url: '', delay: 0, delayUnit: 'Sec' },
             video:     { url: '', caption: '', delay: 0, delayUnit: 'Sec' },
             file:      { url: '', filename: '', delay: 0, delayUnit: 'Sec' },
-            button:    { message: '', buttons: ['Button 1'] },
+            button:    { message: '', buttons: ['Visit store'] },
             condition: { variable: '', operator: 'equals', value: '' },
             delay:     { duration: 5, unit: 'Sec' },
-            interactive: { message: 'New Sequence Campaign', description: '', delay: 0, buttons: ['Sequence 1', 'Sequence 2', 'Sequence 3'] }
+            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'] }
         };
         this.nodes[id] = {
             id, type, x: Math.round(x), y: Math.round(y),
@@ -286,7 +286,7 @@ class ChatbotFlowBuilder {
             port.addEventListener('mouseup', (e) => {
                 e.stopPropagation();
                 if (self.isConnecting && self.connectFromNode !== id) {
-                    // Remove existing connection from this output
+                    // Remove existing connection from THIS SPECIFIC output port
                     self.connections = self.connections.filter(c =>
                         !(c.fromNode === self.connectFromNode && c.fromPort === self.connectFromPort)
                     );
@@ -568,17 +568,21 @@ class ChatbotFlowBuilder {
         if (node.type === 'condition') {
             h += `<div class="node-port-row"><span class="port-label">✅ True</span><div class="port port-out" data-port="true" data-node="${node.id}"></div></div>`;
             h += `<div class="node-port-row"><span class="port-label">❌ False</span><div class="port port-out" data-port="false" data-node="${node.id}"></div></div>`;
-        } else if (node.type === 'start') {
-            h += `<div class="node-port-row"><span class="port-label">Compose Next Message</span><div class="port port-out" data-port="out" data-node="${node.id}"></div></div>`;
-            h += `<div class="node-port-row"><span class="port-label">Subscribe to Sequence</span><div class="port port-out" data-port="seq" data-node="${node.id}"></div></div>`;
-        } else if (node.type === 'interactive') {
-             h += `<div class="node-port-row"><span class="port-label">Set-up New Sequence</span><div class="port port-out" data-port="setup" data-node="${node.id}"></div></div>`;
-             h += `<div class="node-port-row"><span class="port-label">Schedule Sequence Message</span><div class="port port-out" data-port="schedule" data-node="${node.id}"></div></div>`;
-        } else if (node.type === 'button') {
-            h += `<div class="node-port-row"><span class="port-label">Frequencey</span><div class="port port-out" data-port="freq" data-node="${node.id}"></div></div>`;
-            h += `<div class="node-port-row"><span class="port-label">Compose and Schedule Message</span><div class="port port-out" data-port="out" data-node="${node.id}"></div></div>`;
+        } else if (node.type === 'button' || node.type === 'interactive') {
+            h += `<div class="node-port-row"><span class="port-label">Next</span><div class="port port-out" data-port="out" data-node="${node.id}"></div></div>`;
         } else {
             h += `<div class="node-port-row"><span class="port-label">Compose Next Message</span><div class="port port-out" data-port="out" data-node="${node.id}"></div></div>`;
+        }
+
+        if (node.type === 'interactive') {
+             (node.data.buttons || []).forEach((b, i) => {
+                h += `<div class="node-port-row"><span class="port-label">${this._esc(b)}</span><div class="port port-out" data-port="btn_${i}" data-node="${node.id}"></div></div>`;
+             });
+        }
+
+        if (node.type === 'button') {
+            h += `<div class="node-port-row text-muted-row"><span class="port-label">Next</span><div class="port port-out" data-port="next" data-node="${node.id}"></div></div>`;
+            h += `<div class="node-port-row text-muted-row"><span class="port-label">Subscribe to Sequence</span><div class="port port-out" data-port="seq" data-node="${node.id}"></div></div>`;
         }
         h += `</div>`;
         return h;
@@ -647,15 +651,14 @@ class ChatbotFlowBuilder {
             case 'interactive':
                 return `${this._delayField(node)}
                     <div class="node-field">
-                        <div class="field-label" style="color:#1e293b;font-weight:700">New Sequence Campaign</div>
+                        <div class="field-label" style="color:#2563eb;font-weight:700">Visit Our Site</div>
+                        <div style="font-size:0.75rem;color:#64748b;margin-bottom:8px">if you are interested to visit our site</div>
                     </div>`;
 
             case 'button':
                 return `<div class="node-field text-center py-2">
-                    <div class="field-label" style="color:#1e293b;font-weight:700;text-align:left;display:flex;align-items:center;gap:6px">
-                        <i class="bi bi-droplet-fill" style="color:#0ea5e9"></i> Send Message After
-                    </div>
                     <i class="bi bi-hand-index-thumb" style="font-size:2rem;color:#3b82f6;opacity:0.6"></i>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${this._esc(node.data.buttons[0] || 'Button')}</div>
                 </div>`;
 
             case 'condition':
