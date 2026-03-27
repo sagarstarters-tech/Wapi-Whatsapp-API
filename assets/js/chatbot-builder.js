@@ -204,7 +204,7 @@ class ChatbotFlowBuilder {
             button:    { message: '', buttons: ['Visit store'], url: '' },
             condition: { variable: '', operator: 'equals', value: '' },
             delay:     { duration: 5, unit: 'Sec' },
-            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'], url: '' }
+            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'] }
         };
         this.nodes[id] = {
             id, type, x: Math.round(x), y: Math.round(y),
@@ -665,9 +665,7 @@ class ChatbotFlowBuilder {
                     <div class="node-field"><div class="field-label">Description</div>
                     <textarea data-field="description" rows="2" placeholder="e.g. if you are interested...">${this._esc(node.data.description||'')}</textarea></div>
                     <div class="node-field"><div class="field-label">Buttons (comma separated)</div>
-                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Button 1, Button 2"></div>
-                    <div class="node-field"><div class="field-label">Website Link (Optional)</div>
-                    <input type="text" data-field="url" value="${this._esc(node.data.url||'')}" placeholder="https://example.com"></div>`;
+                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Button 1, Button 2"></div>`;
 
             case 'button':
                 return `${this._delayField(node)}
