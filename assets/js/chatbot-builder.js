@@ -286,10 +286,8 @@ class ChatbotFlowBuilder {
             port.addEventListener('mouseup', (e) => {
                 e.stopPropagation();
                 if (self.isConnecting && self.connectFromNode !== id) {
-                    // Remove existing connection from THIS SPECIFIC output port
-                    self.connections = self.connections.filter(c =>
-                        !(c.fromNode === self.connectFromNode && c.fromPort === self.connectFromPort)
-                    );
+                    // DO NOT remove existing connections from THIS port.
+                    // This allows multiple lines from one port (like Botbee).
                     self.connections.push({
                         fromNode: self.connectFromNode,
                         fromPort: self.connectFromPort,
