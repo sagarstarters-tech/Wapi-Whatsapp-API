@@ -829,7 +829,7 @@ class ChatbotFlowBuilder {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
         btn.disabled = true;
 
-        fetch(baseUrl + 'api/upload-image.php', {
+        fetch(baseUrl + '/api/upload-image.php', {
             method: 'POST',
             body: formData
         })
