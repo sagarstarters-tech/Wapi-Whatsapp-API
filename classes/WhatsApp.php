@@ -249,6 +249,28 @@ class WhatsApp {
         $text = $msg['text']['body'] ?? '';
         $msgType = $msg['type'] ?? 'text';
 
+        // Handle button clicks (interactive replies)
+        if ($msgType === 'interactive' && isset($msg['interactive']['button_reply'])) {
+            $replyId = $msg['interactive']['button_reply']['id'] ?? '';
+            $text = $msg['interactive']['button_reply']['title'] ?? '';
+            
+            // Check if this is a flow button (Format: flow_btn_{nodeId}_{btnIdx})
+            if (strpos($replyId, 'flow_btn_') === 0) {
+                $parts = explode('_', $replyId);
+                $nodeId = $parts[2] . '_' . $parts[3] . '_' . $parts[4];
+                $btnIdx = $parts[5];
+                
+                // Find user and process next step
+                if (!$userId) {
+                    $account = $this->db->fetch("SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'", [$phoneNumberId]);
+                    if ($account) {
+                        $userId = $account['user_id'];
+                        $this->processFlowButtonClick($userId, $phoneNumberId, $account['access_token'], $from, $nodeId, $btnIdx);
+                    }
+                }
+            }
+        }
+
         // Find user by phone_number_id
         if (!$userId) {
             $account = $this->db->fetch("SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'", [$phoneNumberId]);
@@ -267,8 +289,46 @@ class WhatsApp {
             'direction' => 'inbound'
         ]);
 
-        // Check chatbot auto-reply
-        $this->processAutoReply($userId, $phoneNumberId, $from, $text);
+        // Check chatbot auto-reply (only for text messages)
+        if ($msgType === 'text') {
+            $this->processAutoReply($userId, $phoneNumberId, $from, $text);
+        }
+    }
+
+    /**
+     * Handle button click in a flow
+     */
+    private function processFlowButtonClick($userId, $phoneNumberId, $accessToken, $to, $nodeId, $btnIdx) {
+        // Find the flow this node belongs to
+        $flow = $this->db->fetch("SELECT response_content FROM chatbot_flows WHERE user_id = ? AND response_content LIKE ?", [$userId, "%$nodeId%"]);
+        if (!$flow) return;
+
+        $flowData = json_decode($flow['response_content'], true);
+        if (!$flowData) return;
+
+        $node = $flowData['nodes'][$nodeId] ?? null;
+        if (!$node) return;
+
+        // 1. Check if there's a specific connection for this button index
+        $portId = "btn_{$btnIdx}";
+        $connections = array_filter($flowData['connections'] ?? [], function($c) use ($nodeId, $portId) {
+            return $c['fromNode'] === $nodeId && $c['fromPort'] === $portId;
+        });
+
+        // 2. Fallback to generic 'out' port if no specific button connection
+        if (empty($connections)) {
+             $connections = array_filter($flowData['connections'] ?? [], function($c) use ($nodeId) {
+                return $c['fromNode'] === $nodeId && $c['fromPort'] === 'out';
+            });
+        }
+
+        foreach ($connections as $conn) {
+            $nextNodeId = $conn['toNode'];
+            $nextNode = $flowData['nodes'][$nextNodeId] ?? null;
+            if ($nextNode) {
+                $this->processNode($userId, $phoneNumberId, $accessToken, $to, $flowData, $nextNode);
+            }
+        }
     }
 
     /**
@@ -280,31 +340,130 @@ class WhatsApp {
             [$userId]
         );
 
+        $incomingText = strtolower(trim($incomingText));
+
         foreach ($flows as $flow) {
             $matched = false;
-            $keyword = strtolower($flow['trigger_keyword']);
-            $text = strtolower($incomingText);
+            $keywords = explode(',', strtolower($flow['trigger_keyword']));
+            $matchType = $flow['match_type'];
 
-            switch ($flow['match_type']) {
-                case 'exact':
-                    $matched = ($text === $keyword);
-                    break;
-                case 'contains':
-                    $matched = (strpos($text, $keyword) !== false);
-                    break;
-                case 'starts_with':
-                    $matched = (strpos($text, $keyword) === 0);
-                    break;
+            foreach ($keywords as $kw) {
+                $kw = trim($kw);
+                if (empty($kw)) continue;
+
+                if ($matchType === 'exact') {
+                    if ($incomingText === $kw) $matched = true;
+                } elseif ($matchType === 'contains') {
+                    if (strpos($incomingText, $kw) !== false) $matched = true;
+                } elseif ($matchType === 'starts_with') {
+                    if (strpos($incomingText, $kw) === 0) $matched = true;
+                }
+                if ($matched) break;
             }
 
             if ($matched) {
                 $account = $this->db->fetch("SELECT access_token FROM whatsapp_accounts WHERE user_id = ? AND phone_number_id = ?", [$userId, $phoneNumberId]);
-                if ($account) {
-                    $this->sendText($userId, $phoneNumberId, $account['access_token'], $to, $flow['response_content']);
-                }
-                break; // Only first match
+                if (!$account) continue;
+
+                $flowData = json_decode($flow['response_content'], true);
+                if (!$flowData) continue;
+
+                // Start from the 'node_start'
+                $this->executeFlowStep($userId, $phoneNumberId, $account['access_token'], $to, $flowData, 'node_start');
+                break; // Only first matching flow
             }
         }
+    }
+
+    /**
+     * Execute a specific node in the chatbot flow
+     */
+    private function executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $nodeId) {
+        // Find connections from this node
+        $connections = array_filter($flowData['connections'] ?? [], function($c) use ($nodeId) {
+            return $c['fromNode'] === $nodeId;
+        });
+
+        foreach ($connections as $conn) {
+            $nextNodeId = $conn['toNode'];
+            $nextNode = $flowData['nodes'][$nextNodeId] ?? null;
+            if (!$nextNode) continue;
+
+            $this->processNode($userId, $phoneNumberId, $accessToken, $to, $flowData, $nextNode);
+        }
+    }
+
+    /**
+     * Process and send content for a specific node types
+     */
+    private function processNode($userId, $phoneNumberId, $accessToken, $to, $flowData, $node) {
+        $data = $node['data'] ?? [];
+        $delay = isset($data['delay']) ? (int)$data['delay'] : 0;
+        if ($delay > 0) sleep($delay);
+
+        switch ($node['type']) {
+            case 'text':
+                $this->sendText($userId, $phoneNumberId, $accessToken, $to, $data['message'] ?? '');
+                $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
+                break;
+
+            case 'image':
+                $this->sendImage($userId, $phoneNumberId, $accessToken, $to, $data['url'] ?? '', $data['caption'] ?? '');
+                $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
+                break;
+
+            case 'button':
+            case 'interactive':
+                $this->sendInteractiveMessage($userId, $phoneNumberId, $accessToken, $to, $node);
+                // Connections from buttons are handled by Meta callbacks (Interactive Webhooks)
+                break;
+
+            case 'video':
+                $this->sendVideo($userId, $phoneNumberId, $accessToken, $to, $data['url'] ?? '', $data['caption'] ?? '');
+                $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
+                break;
+
+            case 'file':
+                $this->sendDocument($userId, $phoneNumberId, $accessToken, $to, $data['url'] ?? '', $data['filename'] ?? '');
+                $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
+                break;
+        }
+    }
+
+    /**
+     * Send Interactive (Buttons/List) via WhatsApp API
+     */
+    private function sendInteractiveMessage($userId, $phoneNumberId, $accessToken, $to, $node) {
+        $data = $node['data'] ?? [];
+        $buttons = $data['buttons'] ?? ['Yes'];
+        $btnConfig = [];
+
+        foreach ($buttons as $i => $btnText) {
+            if ($i >= 3) break; // WhatsApp max 3 buttons
+            $btnConfig[] = [
+                'type' => 'reply',
+                'reply' => ['id' => "flow_btn_{$node['id']}_{$i}", 'title' => mb_substr($btnText, 0, 20)]
+            ];
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $this->formatPhone($to),
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'button',
+                'body' => ['text' => $data['message'] ?? 'Please select an option:'],
+                'action' => ['buttons' => $btnConfig]
+            ]
+        ];
+
+        // If card has description or header
+        if (!empty($data['description'])) {
+            $payload['interactive']['footer'] = ['text' => mb_substr($data['description'], 0, 60)];
+        }
+
+        return $this->sendMessage($userId, $phoneNumberId, $accessToken, $to, 'interactive', $data['message'] ?? 'Interactive', $payload);
     }
 
     /**
