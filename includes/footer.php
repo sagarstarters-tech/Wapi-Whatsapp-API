@@ -55,6 +55,7 @@ $contactPhone = $settings->get('contact_phone', '');
                         <li><a href="<?= baseUrl('terms.php'); ?>">Terms of Service</a></li>
                         <li><a href="<?= baseUrl('cookies.php'); ?>">Cookie Policy</a></li>
                         <li><a href="<?= baseUrl('gdpr.php'); ?>">GDPR</a></li>
+                        <li><a href="<?= baseUrl('data-deletion.php'); ?>">Data Deletion</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6">
