@@ -129,12 +129,17 @@ class ChatbotFlowBuilder {
     }
 
     setZoom(val) {
-        const rect = this.canvas.getBoundingClientRect();
-        const cx = rect.width / 2, cy = rect.height / 2;
         const oldZoom = this.zoom;
-        this.zoom = Math.max(0.25, Math.min(2.5, val));
+        this.zoom = Math.max(0.1, Math.min(2.5, val));
+        
+        // Zoom relative to center
+        const rect = this.canvas.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        
         this.pan.x = cx - (cx - this.pan.x) * (this.zoom / oldZoom);
         this.pan.y = cy - (cy - this.pan.y) * (this.zoom / oldZoom);
+        
         this._applyTransform();
         this._updateZoomLabel();
     }
@@ -191,17 +196,15 @@ class ChatbotFlowBuilder {
         this.nodeCounter++;
         const id = 'node_' + this.nodeCounter + '_' + Date.now();
         const defaults = {
-            text:        { message: '', delay: 0, delayUnit: 'Sec' },
-            image:       { url: '', caption: '', delay: 0, delayUnit: 'Sec' },
-            audio:       { url: '', delay: 0, delayUnit: 'Sec' },
-            video:       { url: '', caption: '', delay: 0, delayUnit: 'Sec' },
-            file:        { url: '', filename: '', delay: 0, delayUnit: 'Sec' },
-            button:      { message: '', buttons: ['Button 1'] },
-            interactive: { message: '', buttons: ['Reply 1'] },
-            ai_reply:    { prompt: '' },
-            template:    { name: '', language: 'en' },
-            condition:   { variable: '', operator: 'equals', value: '' },
-            delay:       { duration: 5, unit: 'Sec' }
+            text:      { message: '', delay: 0, delayUnit: 'Sec' },
+            image:     { url: '', caption: '', delay: 0, delayUnit: 'Sec' },
+            audio:     { url: '', delay: 0, delayUnit: 'Sec' },
+            video:     { url: '', caption: '', delay: 0, delayUnit: 'Sec' },
+            file:      { url: '', filename: '', delay: 0, delayUnit: 'Sec' },
+            button:    { message: '', buttons: ['Visit store'] },
+            condition: { variable: '', operator: 'equals', value: '' },
+            delay:     { duration: 5, unit: 'Sec' },
+            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'] }
         };
         this.nodes[id] = {
             id, type, x: Math.round(x), y: Math.round(y),
@@ -283,8 +286,18 @@ class ChatbotFlowBuilder {
             port.addEventListener('mouseup', (e) => {
                 e.stopPropagation();
                 if (self.isConnecting && self.connectFromNode !== id) {
-                    self._createConnection(self.connectFromNode, self.connectFromPort, id);
+                    // Remove existing connection from this output
+                    self.connections = self.connections.filter(c =>
+                        !(c.fromNode === self.connectFromNode && c.fromPort === self.connectFromPort)
+                    );
+                    self.connections.push({
+                        fromNode: self.connectFromNode,
+                        fromPort: self.connectFromPort,
+                        toNode: id,
+                        toPort: 'in'
+                    });
                     self.isConnecting = false;
+                    self.connectFromNode = null;
                     self._removeTempLine();
                     self._drawConnections();
                 }
@@ -435,85 +448,10 @@ class ChatbotFlowBuilder {
     }
 
     _finishConnect(e) {
-        if (this.isConnecting) {
-            const rect = this.canvas.getBoundingClientRect();
-            // If dropped on empty canvas, show selector
-            if (e.target === this.canvas || e.target.closest('.builder-canvas-inner')) {
-                const pos = this._screenToCanvas(e.clientX, e.clientY);
-                this._showNodeSelector(pos.x, pos.y, this.connectFromNode, this.connectFromPort);
-            }
-        }
         this.isConnecting = false;
         this.connectFromNode = null;
         this.connectFromPort = null;
         this._removeTempLine();
-    }
-
-    _createConnection(fromNode, fromPort, toNode) {
-        // Remove existing connection from this output
-        this.connections = this.connections.filter(c =>
-            !(c.fromNode === fromNode && c.fromPort === fromPort)
-        );
-        this.connections.push({
-            fromNode, fromPort, toNode, toPort: 'in'
-        });
-    }
-
-    _showNodeSelector(x, y, fromNode, fromPort) {
-        // Remove any existing
-        const old = document.getElementById('nodeSelectorMenu');
-        if (old) old.remove();
-
-        const menu = document.createElement('div');
-        menu.id = 'nodeSelectorMenu';
-        menu.className = 'node-selector-menu';
-        const rect = this.canvas.getBoundingClientRect();
-        menu.style.left = (x * this.zoom + this.pan.x + rect.left) + 'px';
-        menu.style.top = (y * this.zoom + this.pan.y + rect.top) + 'px';
-
-        const types = [
-            { id: 'text', label: 'Text', icon: 'bi-chat-left-text' },
-            { id: 'image', label: 'Image', icon: 'bi-image' },
-            { id: 'video', label: 'Video', icon: 'bi-camera-video' },
-            { id: 'audio', label: 'Audio', icon: 'bi-volume-up' },
-            { id: 'file', label: 'File', icon: 'bi-file-earmark' },
-            { id: 'interactive', label: 'Interactive', icon: 'bi-grid' },
-            { id: 'ai_reply', label: 'AI Reply', icon: 'bi-robot' },
-            { id: 'condition', label: 'Condition', icon: 'bi-signpost-split' },
-            { id: 'template', label: 'Template Message', icon: 'bi-file-richtext' }
-        ];
-
-        types.forEach(t => {
-            const item = document.createElement('div');
-            item.className = 'menu-item';
-            item.innerHTML = `<i class="bi ${t.icon}"></i> ${t.label}`;
-            item.onclick = () => {
-                const nodeId = this.addNode(t.id, x, y);
-                if (fromNode) {
-                    this._createConnection(fromNode, fromPort, nodeId);
-                    this._drawConnections();
-                }
-                menu.remove();
-            };
-            menu.appendChild(item);
-        });
-
-        const cancel = document.createElement('div');
-        cancel.className = 'menu-item cancel';
-        cancel.innerHTML = `<i class="bi bi-x-circle"></i> Cancel`;
-        cancel.onclick = () => menu.remove();
-        menu.appendChild(cancel);
-
-        document.body.appendChild(menu);
-
-        // Close on click outside
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('mousedown', closeMenu);
-            }
-        };
-        setTimeout(() => document.addEventListener('mousedown', closeMenu), 10);
     }
 
     // ========== Sync Node Data from DOM ==========
@@ -566,16 +504,28 @@ class ChatbotFlowBuilder {
     // ========== Node HTML ==========
     _nodeHTML(node) {
         const labels = {
-            start: 'Start Bot Flow', text: 'Text', image: 'Image',
-            audio: 'Audio', video: 'Video', file: 'File',
-            button: 'Buttons', interactive: 'Interactive', ai_reply: 'AI Reply',
-            template: 'Template', condition: 'Condition', delay: 'Delay'
+            start: 'Start Bot Flow', 
+            text: 'Text', 
+            image: 'Image',
+            audio: 'Audio', 
+            video: 'Video', 
+            file: 'File',
+            button: 'Button', 
+            condition: 'Condition', 
+            delay: 'Delay',
+            interactive: 'Interactive'
         };
         const icons = {
-            start: 'bi-lightning-charge', text: 'bi-chat-left-text', image: 'bi-image',
-            audio: 'bi-volume-up', video: 'bi-camera-video', file: 'bi-file-earmark',
-            button: 'bi-grid-3x2-gap', interactive: 'bi-grid', ai_reply: 'bi-robot',
-            template: 'bi-file-richtext', condition: 'bi-signpost-split', delay: 'bi-clock'
+            start: 'bi-lightning-charge-fill', 
+            text: 'bi-chat-left-dots-fill', 
+            image: 'bi-image-fill',
+            audio: 'bi-volume-up-fill', 
+            video: 'bi-camera-video-fill', 
+            file: 'bi-file-earmark-fill',
+            button: 'bi-hand-index-thumb-fill', 
+            condition: 'bi-signpost-split-fill', 
+            delay: 'bi-clock-fill',
+            interactive: 'bi-chat-quote-fill'
         };
         let h = '';
 
@@ -593,10 +543,21 @@ class ChatbotFlowBuilder {
 
         // Stats
         h += `<div class="node-stats">
-            <div class="stat-item"><div class="stat-num">${node.stats.sent}</div><div class="stat-lbl">Sent</div></div>
-            <div class="stat-item"><div class="stat-num">${node.stats.delivered}</div><div class="stat-lbl">Delivered</div></div>
-            <div class="stat-item"><div class="stat-num">${node.stats.subscribers}</div><div class="stat-lbl">Subscribers</div></div>
-            <div class="stat-item"><div class="stat-num">${node.stats.errors}</div><div class="stat-lbl">Errors</div></div>
+            <div class="stat-item">
+                <i class="bi bi-send-fill" style="color:#64748b"></i>
+                <div class="stat-num">${node.stats.sent}</div>
+                <div class="stat-lbl">${node.type === 'button' ? 'Click' : 'Sent'}</div>
+            </div>
+            <div class="stat-item">
+                <i class="bi bi-person-check-fill" style="color:#3b82f6"></i>
+                <div class="stat-num">${node.stats.delivered}</div>
+                <div class="stat-lbl">${node.type === 'button' ? 'Subscribers' : 'Delivered'}</div>
+            </div>
+            <div class="stat-item">
+                <i class="bi bi-exclamation-triangle-fill" style="color:#ef4444"></i>
+                <div class="stat-num">${node.stats.subscribers}</div>
+                <div class="stat-lbl">${node.type === 'button' ? 'Errors' : 'Subscribers'}</div>
+            </div>
         </div>`;
 
         // Body
@@ -607,12 +568,21 @@ class ChatbotFlowBuilder {
         if (node.type === 'condition') {
             h += `<div class="node-port-row"><span class="port-label">✅ True</span><div class="port port-out" data-port="true" data-node="${node.id}"></div></div>`;
             h += `<div class="node-port-row"><span class="port-label">❌ False</span><div class="port port-out" data-port="false" data-node="${node.id}"></div></div>`;
+        } else if (node.type === 'button' || node.type === 'interactive') {
+            h += `<div class="node-port-row"><span class="port-label">Next</span><div class="port port-out" data-port="out" data-node="${node.id}"></div></div>`;
         } else {
             h += `<div class="node-port-row"><span class="port-label">Compose Next Message</span><div class="port port-out" data-port="out" data-node="${node.id}"></div></div>`;
         }
-        if (['text','image','video','file'].includes(node.type)) {
-            h += `<div class="node-port-row text-muted-row"><span class="port-label">Keyboard Button</span></div>`;
-            h += `<div class="node-port-row text-muted-row"><span class="port-label">Add Buttons</span></div>`;
+
+        if (node.type === 'interactive') {
+             (node.data.buttons || []).forEach((b, i) => {
+                h += `<div class="node-port-row"><span class="port-label">${this._esc(b)}</span><div class="port port-out" data-port="btn_${i}" data-node="${node.id}"></div></div>`;
+             });
+        }
+
+        if (node.type === 'button') {
+            h += `<div class="node-port-row text-muted-row"><span class="port-label">Next</span><div class="port port-out" data-port="next" data-node="${node.id}"></div></div>`;
+            h += `<div class="node-port-row text-muted-row"><span class="port-label">Subscribe to Sequence</span><div class="port port-out" data-port="seq" data-node="${node.id}"></div></div>`;
         }
         h += `</div>`;
         return h;
@@ -678,35 +648,18 @@ class ChatbotFlowBuilder {
                     <div class="node-field"><div class="field-label">Filename</div>
                     <input type="text" data-field="filename" value="${this._esc(node.data.filename||'')}" placeholder="document.pdf"></div>`;
 
-            case 'button': {
-                let s = `<div class="node-field"><div class="field-label">Message</div>
-                    <textarea data-field="message" rows="2" placeholder="Message before buttons" onmousedown="event.stopPropagation()">${this._esc(node.data.message||'')}</textarea></div>`;
-                s += '<div class="node-field"><div class="field-label">Buttons</div>';
-                (node.data.buttons||[]).forEach((b,i) => {
-                    s += `<div class="btn-row"><input type="text" value="${this._esc(b)}" data-btn-idx="${i}" placeholder="Button text"><button type="button" class="btn-remove" onclick="event.stopPropagation();builder.removeButton('${id}',${i})">×</button></div>`;
-                });
-                s += `<button type="button" class="btn-add-new" onclick="event.stopPropagation();builder.addButton('${id}')">+ Add Button</button></div>`;
-                return s;
-            }
-            case 'interactive': {
-                let s = `<div class="node-field"><div class="field-label">Message</div>
-                    <textarea data-field="message" rows="2" placeholder="Message before options" onmousedown="event.stopPropagation()">${this._esc(node.data.message||'')}</textarea></div>`;
-                s += '<div class="node-field"><div class="field-label">Quick Replies</div>';
-                (node.data.buttons||[]).forEach((b,i) => {
-                    s += `<div class="btn-row"><input type="text" value="${this._esc(b)}" data-btn-idx="${i}" placeholder="Reply text"><button type="button" class="btn-remove" onclick="event.stopPropagation();builder.removeButton('${id}',${i})">×</button></div>`;
-                });
-                s += `<button type="button" class="btn-add-new" onclick="event.stopPropagation();builder.addButton('${id}')">+ Add Reply</button></div>`;
-                return s;
-            }
-            case 'ai_reply':
-                return `<div class="node-field"><div class="field-label">AI Instruction / Prompt</div>
-                    <textarea data-field="prompt" rows="3" placeholder="e.g. You are a helpful sales assistant..." onmousedown="event.stopPropagation()">${this._esc(node.data.prompt||'')}</textarea></div>`;
+            case 'interactive':
+                return `${this._delayField(node)}
+                    <div class="node-field">
+                        <div class="field-label" style="color:#2563eb;font-weight:700">Visit Our Site</div>
+                        <div style="font-size:0.75rem;color:#64748b;margin-bottom:8px">if you are interested to visit our site</div>
+                    </div>`;
 
-            case 'template':
-                return `<div class="node-field"><div class="field-label">Template Name</div>
-                    <input type="text" data-field="name" value="${this._esc(node.data.name||'')}" placeholder="e.g. welcome_msg"></div>
-                    <div class="node-field"><div class="field-label">Language Code</div>
-                    <input type="text" data-field="language" value="${this._esc(node.data.language||'en')}" placeholder="en"></div>`;
+            case 'button':
+                return `<div class="node-field text-center py-2">
+                    <i class="bi bi-hand-index-thumb" style="font-size:2rem;color:#3b82f6;opacity:0.6"></i>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${this._esc(node.data.buttons[0] || 'Button')}</div>
+                </div>`;
 
             case 'condition':
                 return `<div class="node-field"><div class="field-label">Variable</div>
