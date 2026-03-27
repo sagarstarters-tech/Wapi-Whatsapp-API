@@ -154,6 +154,10 @@ $pageTitle = 'Chatbot Flow Builder';
 
 <script src="<?= asset('assets/js/chatbot-builder.js'); ?>"></script>
 <script>
+const baseUrl = '<?= baseUrl(); ?>';
+const CSRF_TOKEN_NAME = '<?= CSRF_TOKEN_NAME; ?>';
+const CSRF_VALUE = '<?= CSRF::generateToken(); ?>';
+
 document.addEventListener('DOMContentLoaded', function() {
     const canvasEl = document.getElementById('builderCanvas');
     builder = new ChatbotFlowBuilder(canvasEl);

@@ -822,13 +822,14 @@ class ChatbotFlowBuilder {
         const file = input.files[0];
         const formData = new FormData();
         formData.append('file', file);
+        formData.append(CSRF_TOKEN_NAME, CSRF_VALUE);
 
         const btn = input.parentElement;
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
         btn.disabled = true;
 
-        fetch(baseUrl + '/api/upload-image.php', {
+        fetch(baseUrl + 'api/upload-image.php', {
             method: 'POST',
             body: formData
         })
