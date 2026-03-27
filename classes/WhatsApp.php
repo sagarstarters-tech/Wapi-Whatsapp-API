@@ -332,7 +332,7 @@ class WhatsApp {
                 'type' => 'warning',
                 'title' => 'Low Credits',
                 'message' => "You have only {$balance} credits remaining. Please upgrade your plan to continue sending messages.",
-                'link' => '/wapi/dashboard/subscription.php'
+                'link' => '/dashboard/subscription.php'
             ]);
         }
     }

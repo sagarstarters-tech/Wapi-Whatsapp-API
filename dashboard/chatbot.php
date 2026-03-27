@@ -31,28 +31,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $matchType = $parsed['nodes']['node_start']['data']['matchType'] ?? 'contains';
 
-        if ($flowId > 0) {
-            $db->update('chatbot_flows', [
-                'name' => $flowName,
-                'trigger_keyword' => $keywords,
-                'match_type' => $matchType,
-                'response_type' => 'text',
-                'response_content' => $flowData
-            ], 'id = ? AND user_id = ?', [$flowId, $userId]);
-        } else {
-            $flowId = $db->insert('chatbot_flows', [
-                'user_id' => $userId,
-                'name' => $flowName,
-                'trigger_keyword' => $keywords,
-                'match_type' => $matchType,
-                'response_type' => 'text',
-                'response_content' => $flowData,
-                'is_active' => 1,
-                'priority' => 0
-            ]);
-        }
+        try {
+            if ($flowId > 0) {
+                $db->update('chatbot_flows', [
+                    'name' => $flowName,
+                    'trigger_keyword' => mb_substr($keywords, 0, 100), // Prevent too long error
+                    'match_type' => $matchType,
+                    'response_type' => 'text',
+                    'response_content' => $flowData
+                ], 'id = ? AND user_id = ?', [$flowId, $userId]);
+            } else {
+                $flowId = $db->insert('chatbot_flows', [
+                    'user_id' => $userId,
+                    'name' => $flowName,
+                    'trigger_keyword' => mb_substr($keywords, 0, 100), // Prevent too long error
+                    'match_type' => $matchType,
+                    'response_type' => 'text',
+                    'response_content' => $flowData,
+                    'is_active' => 1,
+                    'priority' => 0
+                ]);
+            }
 
-        echo json_encode(['success' => true, 'flow_id' => $flowId]);
+            echo json_encode(['success' => true, 'flow_id' => $flowId]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'DB Error: ' . $e->getMessage()]);
+        }
         exit;
     }
 

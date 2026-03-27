@@ -682,7 +682,7 @@ class ChatbotFlowBuilder {
         fd.append('flow_data', JSON.stringify(flowData));
         fd.append('csrf_token', document.getElementById('csrfToken').value);
 
-        fetch('/wapi/dashboard/chatbot.php', { method: 'POST', body: fd })
+        fetch('chatbot.php', { method: 'POST', body: fd })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
