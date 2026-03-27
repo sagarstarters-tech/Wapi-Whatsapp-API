@@ -625,10 +625,15 @@ class ChatbotFlowBuilder {
                     <div class="node-field">
                         <div class="media-preview">${node.data.url ? `<img src="${this._esc(node.data.url)}" alt="Preview" onerror="this.style.display='none'">` : '<i class="bi bi-image" style="font-size:2rem"></i>'}</div>
                         <div class="field-label">Resource URL</div>
-                        <input type="text" data-field="url" value="${this._esc(node.data.url||'')}" placeholder="https://example.com/image.jpg">
-                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" data-field="url" value="${this._esc(node.data.url||'')}" placeholder="https://example.com/image.jpg" style="flex:1">
+                        <label class="btn btn-primary" style="margin:0; padding:4px 10px; cursor:pointer;" title="Upload Image">
+                            <i class="bi bi-upload"></i>
+                            <input type="file" style="display:none" onchange="builder.uploadImage('${id}', this)" accept="image/*">
+                        </label>
+                    </div></div>
                     <div class="node-field"><div class="field-label">Caption</div>
-                    <input type="text" data-field="caption" value="${this._esc(node.data.caption||'')}" placeholder="Optional caption"></div>`;
+                    <textarea data-field="caption" rows="2" placeholder="Image caption...">${this._esc(node.data.caption||'')}</textarea></div>`;
 
             case 'audio':
                 return `${this._delayField(node)}
@@ -809,6 +814,40 @@ class ChatbotFlowBuilder {
         requestAnimationFrame(() => t.classList.add('show'));
         clearTimeout(t._tid);
         t._tid = setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // Image Upload
+    uploadImage(id, input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = input.parentElement;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        fetch(baseUrl + '/api/upload-image.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            if (data.success) {
+                this.nodes[id].data.url = data.url;
+                this.draw();
+            } else {
+                alert(data.message || 'Upload failed');
+            }
+        })
+        .catch(err => {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            alert('Error connecting to server');
+        });
     }
 }
 
