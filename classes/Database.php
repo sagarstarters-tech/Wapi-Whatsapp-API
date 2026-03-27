@@ -79,7 +79,7 @@ class Database {
      * Insert a row and return last insert ID
      */
     public function insert($table, $data) {
-        $columns = implode(', ', array_keys($data));
+        $columns = implode(', ', array_map(fn($col) => "`$col`", array_keys($data)));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
         $sql = "INSERT INTO `{$table}` ({$columns}) VALUES ({$placeholders})";
         $this->query($sql, array_values($data));
@@ -90,7 +90,7 @@ class Database {
      * Update rows
      */
     public function update($table, $data, $where, $whereParams = []) {
-        $set = implode(', ', array_map(fn($col) => "`{$col}` = ?", array_keys($data)));
+        $set = implode(', ', array_map(fn($col) => "`$col` = ?", array_keys($data)));
         $sql = "UPDATE `{$table}` SET {$set} WHERE {$where}";
         $params = array_merge(array_values($data), $whereParams);
         return $this->query($sql, $params)->rowCount();
