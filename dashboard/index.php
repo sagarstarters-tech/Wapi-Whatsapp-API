@@ -36,6 +36,9 @@ $recentMessages = $db->fetchAll("SELECT m.*, c.name as contact_name FROM message
 // API Keys count
 $apiKeysCount = $db->count('api_keys', "user_id = ? AND is_active = 1", [$userId]);
 
+// Chatbot Leads count
+$totalLeads = $db->count('chatbot_leads', 'user_id = ?', [$userId]);
+
 // Message chart data (last 7 days grouped by status)
 $chartData = $db->fetchAll("SELECT DATE(created_at) as date, status, COUNT(*) as count FROM messages WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(created_at), status ORDER BY date ASC", [$userId]);
 
@@ -181,10 +184,10 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="col-xl-3 col-sm-6">
                 <div class="stat-card">
-                    <div class="stat-icon info"><i class="bi bi-key-fill"></i></div>
+                    <div class="stat-icon info"><i class="bi bi-funnel-fill"></i></div>
                     <div>
-                        <div class="stat-value"><?= $apiKeysCount; ?></div>
-                        <div class="stat-label">Active API Keys</div>
+                        <div class="stat-value"><?= formatNumber($totalLeads); ?></div>
+                        <div class="stat-label">Chatbot Leads</div>
                     </div>
                 </div>
             </div>
@@ -242,6 +245,7 @@ include __DIR__ . '/../includes/header.php';
                         <h5 class="fw-bold mb-3">Quick Actions</h5>
                         <div class="d-grid gap-2">
                             <a href="<?= baseUrl('dashboard/messages.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-send-fill me-2"></i> Send Message</a>
+                            <a href="<?= baseUrl('dashboard/live-chat.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-chat-dots-fill me-2"></i> Live Chat</a>
                             <a href="<?= baseUrl('dashboard/bulk-messages.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-megaphone-fill me-2"></i> Bulk Message</a>
                             <a href="<?= baseUrl('dashboard/contacts.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-person-plus-fill me-2"></i> Add Contact</a>
                             <a href="<?= baseUrl('dashboard/api-keys.php'); ?>" class="btn btn-outline-primary text-start"><i class="bi bi-key-fill me-2"></i> Generate API Key</a>

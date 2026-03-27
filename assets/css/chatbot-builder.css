@@ -22,6 +22,7 @@
     --condition-node: #f97316;
     --delay-node: #6366f1;
     --interactive-node: #3b82f6;
+    --user-input-node: #f43f5e;
 }
 
 [data-theme="dark"] {
@@ -316,6 +317,7 @@
 .interactive-node .node-header { background: #fff; color: #1e293b; border-bottom: 1px solid #e2e8f0; }
 .interactive-node .node-icon { background: rgba(59,130,246,0.1); color: #3b82f6; }
 .interactive-node .node-delete { color: #64748b; }
+.user_input-node .node-header { background: var(--user-input-node); }
 
 /* ---- Stats Bar ---- */
 .node-stats {

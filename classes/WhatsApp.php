@@ -249,23 +249,39 @@ class WhatsApp {
         $text = $msg['text']['body'] ?? '';
         $msgType = $msg['type'] ?? 'text';
 
-        // Handle button clicks (interactive replies)
+        // Handle Quick Reply Buttons
         if ($msgType === 'interactive' && isset($msg['interactive']['button_reply'])) {
             $replyId = $msg['interactive']['button_reply']['id'] ?? '';
             $text = $msg['interactive']['button_reply']['title'] ?? '';
-            
-            // Check if this is a flow button (Format: flow_btn_{nodeId}_{btnIdx})
+
             if (strpos($replyId, 'flow_btn_') === 0) {
                 $parts = explode('_', $replyId);
                 $nodeId = $parts[2] . '_' . $parts[3] . '_' . $parts[4];
                 $btnIdx = $parts[5];
                 
-                // Find user and process next step
                 if (!$userId) {
                     $account = $this->db->fetch("SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'", [$phoneNumberId]);
                     if ($account) {
-                        $userId = $account['user_id'];
-                        $this->processFlowButtonClick($userId, $phoneNumberId, $account['access_token'], $from, $nodeId, $btnIdx);
+                        $this->processFlowButtonClick($account['user_id'], $phoneNumberId, $account['access_token'], $from, $nodeId, $btnIdx);
+                    }
+                }
+            }
+        }
+
+        // Handle List Response (interactive menu click)
+        if ($msgType === 'interactive' && isset($msg['interactive']['list_reply'])) {
+            $replyId = $msg['interactive']['list_reply']['id'] ?? '';
+            $text = $msg['interactive']['list_reply']['title'] ?? '';
+
+            if (strpos($replyId, 'flow_btn_') === 0) {
+                $parts = explode('_', $replyId);
+                $nodeId = $parts[2] . '_' . $parts[3] . '_' . $parts[4];
+                $btnIdx = $parts[5];
+                
+                if (!$userId) {
+                    $account = $this->db->fetch("SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'", [$phoneNumberId]);
+                    if ($account) {
+                        $this->processFlowButtonClick($account['user_id'], $phoneNumberId, $account['access_token'], $from, $nodeId, $btnIdx);
                     }
                 }
             }
@@ -289,9 +305,56 @@ class WhatsApp {
             'direction' => 'inbound'
         ]);
 
-        // Check chatbot auto-reply (only for text messages)
+        // Check chatbot auto-reply or User Input Capture
         if ($msgType === 'text') {
-            $this->processAutoReply($userId, $phoneNumberId, $from, $text);
+            $this->processIncomingText($userId, $phoneNumberId, $from, $text);
+        }
+    }
+
+    /**
+     * Centralized Entrance for incoming text
+     */
+    private function processIncomingText($userId, $phoneNumberId, $from, $incomingText) {
+        $accessToken = $this->db->fetchColumn("SELECT access_token FROM whatsapp_accounts WHERE phone_number_id = ?", [$phoneNumberId]);
+        if (!$accessToken) return;
+
+        // 1. Check if user is in an active session (waiting for input)
+        $session = $this->db->fetch("SELECT * FROM chatbot_sessions WHERE user_id = ? AND phone = ?", [$userId, $from]);
+        if ($session && !empty($session['current_node'])) {
+            $this->handleUserInput($userId, $phoneNumberId, $accessToken, $from, $session, $incomingText);
+            return;
+        }
+
+        // 2. Otherwise handle as normal auto-reply keyword trigger
+        $this->processAutoReply($userId, $phoneNumberId, $from, $incomingText);
+    }
+
+    /**
+     * Handle User Input Node (Capturing Variable)
+     */
+    private function handleUserInput($userId, $phoneNumberId, $accessToken, $to, $session, $text) {
+        $flow = $this->db->fetch("SELECT response_content FROM chatbot_flows WHERE id = ?", [$session['flow_id']]);
+        if (!$flow) return;
+        $flowData = json_decode($flow['response_content'], true);
+        $nodeId = $session['current_node'];
+        $node = $flowData['nodes'][$nodeId] ?? null;
+
+        if ($node && $node['type'] === 'user_input') {
+            $varName = $node['data']['variable'] ?? 'input';
+            
+            // Store lead/variable
+            $this->db->insert('chatbot_leads', [
+                'user_id' => $userId,
+                'phone' => $to,
+                'variable_name' => $varName,
+                'variable_value' => $text
+            ]);
+
+            // Clear session to allow next flow parts
+            $this->db->query("UPDATE chatbot_sessions SET current_node = NULL WHERE id = ?", [$session['id']]);
+
+            // Move to next node
+            $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $nodeId);
         }
     }
 
@@ -376,11 +439,25 @@ class WhatsApp {
     }
 
     /**
+     * Replace {{variable}} with actual values from chatbot_leads
+     */
+    private function replaceVariables($userId, $to, $text) {
+        $leads = $this->db->fetchAll("SELECT variable_name, variable_value FROM chatbot_leads WHERE user_id = ? AND phone = ?", [$userId, $to]);
+        foreach ($leads as $lead) {
+            $text = str_replace('{{' . $lead['variable_name'] . '}}', $lead['variable_value'], $text);
+        }
+        return $text;
+    }
+
+    /**
      * Execute a specific node in the chatbot flow
      */
-    private function executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $nodeId) {
+    private function executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $nodeId, $port = null) {
         // Find connections from this node
-        $connections = array_filter($flowData['connections'] ?? [], function($c) use ($nodeId) {
+        $connections = array_filter($flowData['connections'] ?? [], function($c) use ($nodeId, $port) {
+            if ($port !== null) {
+                return $c['fromNode'] === $nodeId && $c['fromPort'] === $port;
+            }
             return $c['fromNode'] === $nodeId;
         });
 
@@ -403,7 +480,8 @@ class WhatsApp {
 
         switch ($node['type']) {
             case 'text':
-                $this->sendText($userId, $phoneNumberId, $accessToken, $to, $data['message'] ?? '');
+                $msg = $this->replaceVariables($userId, $to, $data['message'] ?? '');
+                $this->sendText($userId, $phoneNumberId, $accessToken, $to, $msg);
                 $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
                 break;
 
@@ -427,6 +505,57 @@ class WhatsApp {
                 $this->sendDocument($userId, $phoneNumberId, $accessToken, $to, $data['url'] ?? '', $data['filename'] ?? '');
                 $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
                 break;
+
+            case 'user_input':
+                // Record session that we are waiting for input from this node
+                $this->db->query("INSERT INTO chatbot_sessions (user_id, phone, flow_id, current_node) VALUES (?, ?, (SELECT id FROM chatbot_flows WHERE user_id = ? AND response_content LIKE ? LIMIT 1), ?) 
+                                  ON DUPLICATE KEY UPDATE current_node = ?, flow_id = (SELECT id FROM chatbot_flows WHERE user_id = ? AND response_content LIKE ? LIMIT 1)", 
+                                  [$userId, $to, $userId, "%".$node['id']."%", $node['id'], $node['id'], $userId, "%".$node['id']."%"]);
+                
+                $this->sendText($userId, $phoneNumberId, $accessToken, $to, $data['message'] ?? 'Please response:');
+                break;
+
+            case 'condition':
+                $result = $this->handleConditionNode($userId, $to, $node);
+                $port = $result ? 'true' : 'false';
+                $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id'], $port);
+                break;
+
+            case 'delay':
+                $duration = (int)($data['duration'] ?? 5);
+                $unit = $data['unit'] ?? 'Sec';
+                if ($unit === 'Min') $duration *= 60;
+                if ($unit === 'Hour') $duration *= 3600;
+                
+                // For long delays, we would normally use a scheduler, but for small ones sleep is fine.
+                // Limit sleep to avoid script timeout
+                if ($duration > 30) $duration = 30; 
+                
+                sleep($duration);
+                $this->executeFlowStep($userId, $phoneNumberId, $accessToken, $to, $flowData, $node['id']);
+                break;
+        }
+    }
+
+    /**
+     * Logical If/Else handling for Condition Node
+     */
+    private function handleConditionNode($userId, $to, $node) {
+        $data = $node['data'] ?? [];
+        $varName = $data['variable'] ?? '';
+        $operator = $data['operator'] ?? 'equals';
+        $expectedValue = $data['value'] ?? '';
+
+        // Fetch the stored variable value
+        $actualValue = $this->db->fetchColumn("SELECT variable_value FROM chatbot_leads WHERE user_id = ? AND phone = ? AND variable_name = ? ORDER BY created_at DESC", [$userId, $to, $varName]);
+        
+        if ($actualValue === false) return false;
+
+        switch ($operator) {
+            case 'equals': return strtolower($actualValue) == strtolower($expectedValue);
+            case 'contains': return strpos(strtolower($actualValue), strtolower($expectedValue)) !== false;
+            case 'starts_with': return strpos(strtolower($actualValue), strtolower($expectedValue)) === 0;
+            default: return false;
         }
     }
 
@@ -443,7 +572,7 @@ class WhatsApp {
             'to' => $this->formatPhone($to),
             'type' => 'interactive',
             'interactive' => [
-                'body' => ['text' => $data['message'] ?? 'Please select an option:']
+                'body' => ['text' => $this->replaceVariables($userId, $to, $data['message'] ?? 'Please select an option:')]
             ]
         ];
 
@@ -461,6 +590,27 @@ class WhatsApp {
                 'parameters' => [
                     'display_text' => mb_substr(($data['buttons'][0] ?? 'Visit Website'), 0, 20),
                     'url' => $url
+                ]
+            ];
+        } else if (($data['display_type'] ?? 'button') === 'list') {
+            // WhatsApp List Message (Menu)
+            $options = $data['buttons'] ?? [];
+            $rows = [];
+            foreach ($options as $i => $btnText) {
+                if ($i >= 10) break;
+                $rows[] = [
+                    'id' => "flow_btn_{$node['id']}_{$i}",
+                    'title' => mb_substr($btnText, 0, 24)
+                ];
+            }
+            $payload['interactive']['type'] = 'list';
+            $payload['interactive']['action'] = [
+                'button' => 'Select Options',
+                'sections' => [
+                    [
+                        'title' => mb_substr($data['message'] ?? 'Options', 0, 24),
+                        'rows' => $rows
+                    ]
                 ]
             ];
         } else {

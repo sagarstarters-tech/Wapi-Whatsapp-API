@@ -130,6 +130,7 @@ $pageTitle = 'Chatbot Flow Builder';
         <button class="component-btn interactive-type" data-type="interactive"><i class="bi bi-chat-quote-fill"></i><span>Interactive</span></button>
         <button class="component-btn condition-type" data-type="condition"><i class="bi bi-signpost-split-fill"></i><span>Condition</span></button>
         <button class="component-btn delay-type" data-type="delay"><i class="bi bi-clock-fill"></i><span>Delay</span></button>
+        <button class="component-btn user-input-type" data-type="user_input"><i class="bi bi-keyboard-fill"></i><span>User Input</span></button>
     </div>
 
     <!-- Canvas -->
