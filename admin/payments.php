@@ -11,6 +11,17 @@ Auth::requireAdmin();
 $db = Database::getInstance();
 $settings = new Settings();
 
+// --- START: Auto-Migration for Live Database ---
+try {
+    $columnExists = $db->fetch("SHOW COLUMNS FROM `payments` LIKE 'plan_id'");
+    if (!$columnExists) {
+        $db->query("ALTER TABLE `payments` ADD COLUMN `plan_id` INT(11) NULL AFTER `user_id`");
+    }
+} catch (Exception $e) {
+    // Ignore error if it fails
+}
+// --- END: Auto-Migration ---
+
 $hideNav = true; // Prevents landing page nav from appearing in admin
 
 $search = sanitize($_GET['search'] ?? '');

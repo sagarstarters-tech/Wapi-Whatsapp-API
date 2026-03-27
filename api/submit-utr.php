@@ -9,8 +9,19 @@ require_once __DIR__ . '/../config/session.php';
 Auth::requireLogin();
 
 $db = Database::getInstance();
-$userId = $_SESSION['user_id'];
 
+// --- START: Auto-Migration for Live Database ---
+try {
+    $columnExists = $db->fetch("SHOW COLUMNS FROM `payments` LIKE 'plan_id'");
+    if (!$columnExists) {
+        $db->query("ALTER TABLE `payments` ADD COLUMN `plan_id` INT(11) NULL AFTER `user_id`");
+    }
+} catch (Exception $e) {
+    // Ignore error if it fails
+}
+// --- END: Auto-Migration ---
+
+$userId = $_SESSION['user_id'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $planId = sanitizeInt($_POST['plan_id'] ?? 0);
     $utr = sanitize($_POST['utr'] ?? '');
