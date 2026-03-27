@@ -201,10 +201,10 @@ class ChatbotFlowBuilder {
             audio:     { url: '', delay: 0, delayUnit: 'Sec' },
             video:     { url: '', caption: '', delay: 0, delayUnit: 'Sec' },
             file:      { url: '', filename: '', delay: 0, delayUnit: 'Sec' },
-            button:    { message: '', buttons: ['Visit store'] },
+            button:    { message: '', buttons: ['Visit store'], url: '' },
             condition: { variable: '', operator: 'equals', value: '' },
             delay:     { duration: 5, unit: 'Sec' },
-            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'] }
+            interactive: { message: 'Visit Our Site', description: 'if you are interested to visit our site', delay: 0, buttons: ['Buttons', 'List Messages', 'E-commerce'], url: '' }
         };
         this.nodes[id] = {
             id, type, x: Math.round(x), y: Math.round(y),
@@ -665,7 +665,9 @@ class ChatbotFlowBuilder {
                     <div class="node-field"><div class="field-label">Description</div>
                     <textarea data-field="description" rows="2" placeholder="e.g. if you are interested...">${this._esc(node.data.description||'')}</textarea></div>
                     <div class="node-field"><div class="field-label">Buttons (comma separated)</div>
-                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Button 1, Button 2"></div>`;
+                    <input type="text" value="${this._esc((node.data.buttons||[]).join(','))}" onchange="builder.updateInteractiveButtons('${id}', this.value)" placeholder="Button 1, Button 2"></div>
+                    <div class="node-field"><div class="field-label">Website Link (Optional)</div>
+                    <input type="text" data-field="url" value="${this._esc(node.data.url||'')}" placeholder="https://example.com"></div>`;
 
             case 'button':
                 return `${this._delayField(node)}
@@ -673,7 +675,9 @@ class ChatbotFlowBuilder {
                         <i class="bi bi-hand-index-thumb" style="font-size:1.5rem;color:#3b82f6;opacity:0.6"></i>
                     </div>
                     <div class="node-field"><div class="field-label">Button Text</div>
-                    <input type="text" value="${this._esc(node.data.buttons[0] || 'Button')}" oninput="builder.updateSingleButton('${id}', this.value)" placeholder="e.g. Visit store"></div>`;
+                    <input type="text" value="${this._esc(node.data.buttons[0] || 'Button')}" oninput="builder.updateSingleButton('${id}', this.value)" placeholder="e.g. Visit store"></div>
+                    <div class="node-field"><div class="field-label">Website Link (Optional)</div>
+                    <input type="text" data-field="url" value="${this._esc(node.data.url||'')}" placeholder="https://example.com"></div>`;
 
             case 'condition':
                 return `<div class="node-field"><div class="field-label">Variable</div>
