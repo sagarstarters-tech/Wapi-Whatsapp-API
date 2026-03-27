@@ -737,7 +737,7 @@ class ChatbotFlowBuilder {
         fd.append('flow_id', document.getElementById('flowId').value || '0');
         fd.append('flow_name', document.getElementById('flowName').value);
         fd.append('flow_data', JSON.stringify(flowData));
-        fd.append('csrf_token', document.getElementById('csrfToken').value);
+        fd.append('_csrf_token', document.getElementById('csrfToken').value);
 
         fetch('chatbot.php', { method: 'POST', body: fd })
             .then(r => r.json())

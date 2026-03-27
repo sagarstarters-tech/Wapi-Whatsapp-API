@@ -149,7 +149,7 @@ $pageTitle = 'Chatbot Flow Builder';
 
     <!-- Hidden fields -->
     <input type="hidden" id="flowId" value="<?= $editFlowId; ?>">
-    <input type="hidden" id="csrfToken" value="<?= CSRF::generateToken(); ?>">
+    <input type="hidden" id="csrfToken" name="<?= CSRF_TOKEN_NAME; ?>" value="<?= CSRF::generateToken(); ?>">
 </div>
 
 <script src="<?= asset('assets/js/chatbot-builder.js'); ?>"></script>
