@@ -114,8 +114,8 @@ class WhatsApp {
         }
 
         // Log message
-        $contactId = $this->db->fetchColumn("SELECT id FROM contacts WHERE user_id = ? AND phone = ?", [$userId, $this->formatPhone($to)]);
-        $waAccount = $this->db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE user_id = ? AND phone_number_id = ?", [$userId, $phoneNumberId]);
+        $contactId = $this->db->fetchColumn("SELECT id FROM contacts WHERE user_id = ? AND phone = ?", [$userId, $this->formatPhone($to)]) ?: null;
+        $waAccount = $this->db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE user_id = ? AND phone_number_id = ?", [$userId, $phoneNumberId]) ?: null;
 
         $messageId = $this->db->insert('messages', [
             'user_id' => $userId,

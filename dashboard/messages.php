@@ -28,17 +28,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $mediaUrl = sanitize($_POST['media_url'] ?? '');
 
     if (isAjax()) {
-        $wa = new WhatsApp();
-        $result = null;
+        try {
+            $wa = new WhatsApp();
+            $result = null;
 
-        switch ($type) {
-            case 'text': $result = $wa->sendText($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $content); break;
-            case 'image': $result = $wa->sendImage($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, $content); break;
-            case 'video': $result = $wa->sendVideo($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, $content); break;
-            case 'document': $result = $wa->sendDocument($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, sanitize($_POST['filename'] ?? ''), $content); break;
+            switch ($type) {
+                case 'text': $result = $wa->sendText($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $content); break;
+                case 'image': $result = $wa->sendImage($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, $content); break;
+                case 'video': $result = $wa->sendVideo($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, $content); break;
+                case 'document': $result = $wa->sendDocument($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, sanitize($_POST['filename'] ?? ''), $content); break;
+            }
+
+            jsonResponse($result);
+        } catch (\Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'System error: ' . $e->getMessage()]);
         }
-
-        jsonResponse($result);
     }
 }
 
