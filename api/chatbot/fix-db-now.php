@@ -11,8 +11,9 @@ try {
     $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
     
     // Sessions
-    $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `flow_id` INT AFTER `phone` ");
-    $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `current_node_id` VARCHAR(50) AFTER `user_id` ");
+    $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `state` VARCHAR(50) NOT NULL DEFAULT 'start' AFTER `phone`");
+    $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `flow_id` INT AFTER `state` ");
+    $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `current_node_id` VARCHAR(50) AFTER `flow_id` ");
 
     echo "<b>Success! Database fixed.</b>";
 } catch (Exception $e) {

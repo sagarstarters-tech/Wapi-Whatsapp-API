@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS `chatbot_flows` (
 
 -- Update Chatbot Sessions to track flows and nodes
 ALTER TABLE `chatbot_sessions` 
-ADD COLUMN IF NOT EXISTS `flow_id` INT AFTER `phone`,
-ADD COLUMN IF NOT EXISTS `current_node_id` VARCHAR(50) AFTER `state`;
+ADD COLUMN IF NOT EXISTS `state` VARCHAR(50) NOT NULL DEFAULT 'start' AFTER `phone`,
+ADD COLUMN IF NOT EXISTS `flow_id` INT AFTER `state`,
+ADD COLUMN IF NOT EXISTS `current_node_id` VARCHAR(50) AFTER `flow_id`;
