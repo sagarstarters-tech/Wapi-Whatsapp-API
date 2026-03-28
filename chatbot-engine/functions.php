@@ -9,13 +9,16 @@ require_once __DIR__ . '/config.php';
 /**
  * 1. Meta API Request Helper (using cURL)
  */
-function sendRequest($payload) {
+function sendRequest($payload, $phoneId = null, $token = null) {
     if (!$payload) return false;
 
-    // Optional: Log outgoing requests for debugging
-    error_log("Sending Request: " . json_encode($payload));
+    // Use parameters or fall back to constants
+    $targetPhoneId = $phoneId ?? PHONE_NUMBER_ID;
+    $targetToken = $token ?? WHATSAPP_API_TOKEN;
 
-    $url = "https://graph.facebook.com/" . WHATSAPP_API_VERSION . "/" . PHONE_NUMBER_ID . "/messages";
+    error_log("Sending Request with ID $targetPhoneId: " . json_encode($payload));
+
+    $url = "https://graph.facebook.com/" . WHATSAPP_API_VERSION . "/" . $targetPhoneId . "/messages";
     $ch = curl_init();
 
     curl_setopt_array($ch, [
@@ -25,7 +28,7 @@ function sendRequest($payload) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . WHATSAPP_API_TOKEN
+            'Authorization: Bearer ' . $targetToken
         ],
         CURLOPT_SSL_VERIFYPEER => true
     ]);
@@ -52,7 +55,7 @@ function sendRequest($payload) {
 /**
  * 2. Specialized Messaging Helpers
  */
-function sendText($phone, $message) {
+function sendText($phone, $message, $phoneId = null, $token = null) {
     $payload = [
         'messaging_product' => 'whatsapp',
         'recipient_type' => 'individual',
@@ -60,47 +63,46 @@ function sendText($phone, $message) {
         'type' => 'text',
         'text' => ['preview_url' => false, 'body' => $message]
     ];
-    return sendRequest($payload);
+    return sendRequest($payload, $phoneId, $token);
 }
 
-function sendImage($phone, $imageUrl, $caption = '') {
+function sendImage($phone, $imageUrl, $caption = '', $phoneId = null, $token = null) {
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'image',
         'image' => ['link' => $imageUrl, 'caption' => $caption]
     ];
-    return sendRequest($payload);
+    return sendRequest($payload, $phoneId, $token);
 }
 
-function sendAudio($phone, $audioUrl) {
+function sendAudio($phone, $audioUrl, $phoneId = null, $token = null) {
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'audio',
         'audio' => ['link' => $audioUrl]
     ];
-    return sendRequest($payload);
+    return sendRequest($payload, $phoneId, $token);
 }
 
-function sendVideo($phone, $videoUrl, $caption = '') {
+function sendVideo($phone, $videoUrl, $caption = '', $phoneId = null, $token = null) {
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'video',
         'video' => ['link' => $videoUrl, 'caption' => $caption]
     ];
-    return sendRequest($payload);
+    return sendRequest($payload, $phoneId, $token);
 }
 
-function sendDocument($phone, $docUrl, $filename = '') {
+function sendDocument($phone, $docUrl, $filename = '', $phoneId = null, $token = null) {
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'document',
         'document' => ['link' => $docUrl, 'filename' => $filename]
     ];
-    return sendRequest($payload);
+    return sendRequest($payload, $phoneId, $token);
 }
 
-function sendButtons($phone, $text, $buttonsData, $nodeId) {
+function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $token = null) {
     $buttons = [];
     foreach ($buttonsData as $key => $label) {
         if (count($buttons) >= 3) break;
-        // The ID will be formatted as "flow_node_ID_PORT" (e.g., flow_node_15_output_1)
-        $portIndex = str_replace('btn-', '', $key); // from btn-0, btn-1 etc
+        $portIndex = str_replace('btn-', '', $key); 
         $buttons[] = [
             'type' => 'reply',
             'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr($label, 0, 20)]
@@ -113,42 +115,34 @@ function sendButtons($phone, $text, $buttonsData, $nodeId) {
             'type' => 'button', 'body' => ['text' => $text], 'action' => ['buttons' => $buttons]
         ]
     ];
-    return sendRequest($payload);
+    return sendRequest($payload, $phoneId, $token);
 }
 
 /**
  * 3. Dynamic Flow Engine (JSON Parser)
  */
-function runFlow($phone, $userId, $flowId, $nodeId = null) {
+function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $token = null) {
     $db = Database::getInstance();
 
     // 1. Fetch the Flow JSON
     $flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = ?", [$flowId]);
-    if (!$flow) {
-        error_log("Flow not found for ID: " . $flowId);
-        return;
-    }
+    if (!$flow) return;
 
     $data = json_decode($flow['flow_json'], true);
     $nodes = $data['drawflow']['Home']['data'] ?? [];
 
     // 2. Identify Current Node
     if ($nodeId === null) {
-        // Find the "start" node (usually node ID 1 or the one with no inputs)
         foreach ($nodes as $nId => $nData) {
             if (empty($nData['inputs']['input_1']['connections'])) {
                 $nodeId = $nId;
                 break;
             }
         }
-        // Fallback to node 1 if no "headless" node is found
         if ($nodeId === null) $nodeId = 1;
     }
 
-    if (!isset($nodes[$nodeId])) {
-        error_log("Node ID not found: " . $nodeId);
-        return;
-    }
+    if (!isset($nodes[$nodeId])) return;
 
     $currentNode = $nodes[$nodeId];
     $nodeType = $currentNode['name'];
@@ -162,38 +156,36 @@ function runFlow($phone, $userId, $flowId, $nodeId = null) {
     
     switch ($nodeType) {
         case 'text':
-            sendText($phone, $nodeData['text'] ?? '');
+            sendText($phone, $nodeData['text'] ?? '', $phoneId, $token);
             break;
             
         case 'image':
-            sendImage($phone, $nodeData['image-url'] ?? '', $nodeData['caption'] ?? '');
+            sendImage($phone, $nodeData['image-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
             break;
 
         case 'interactive':
-            // Extraction of buttons: find all keys starting with btn-
             $buttonsData = [];
             foreach ($nodeData as $key => $val) {
                 if (strpos($key, 'btn-') === 0) $buttonsData[$key] = $val;
             }
-            sendButtons($phone, $nodeData['prompt'] ?? 'Select an option:', $buttonsData, $nodeId);
-            $isInteractive = true; // Wait for user reply
+            sendButtons($phone, $nodeData['prompt'] ?? 'Select an option:', $buttonsData, $nodeId, $phoneId, $token);
+            $isInteractive = true;
             break;
             
         case 'audio':
-            sendAudio($phone, $nodeData['audio-url'] ?? '');
+            sendAudio($phone, $nodeData['audio-url'] ?? '', $phoneId, $token);
             break;
 
         case 'video':
-            sendVideo($phone, $nodeData['video-url'] ?? '', $nodeData['caption'] ?? '');
+            sendVideo($phone, $nodeData['video-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
             break;
 
         case 'file':
-            sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document');
+            sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document', $phoneId, $token);
             break;
 
         case 'delay':
-            $delay = max(1, (int)($nodeData['delay-seconds'] ?? 2));
-            sleep($delay);
+            sleep(max(1, (int)($nodeData['delay-seconds'] ?? 2)));
             break;
     }
 
@@ -202,9 +194,8 @@ function runFlow($phone, $userId, $flowId, $nodeId = null) {
         $connections = $currentNode['outputs']['output_1']['connections'] ?? [];
         if (!empty($connections)) {
             $nextNodeId = $connections[0]['node'];
-            runFlow($phone, $userId, $flowId, $nextNodeId); // Recursion
+            runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
         } else {
-            // End of flow
             setSession($phone, $flowId, $nodeId, 'finished');
         }
     }
