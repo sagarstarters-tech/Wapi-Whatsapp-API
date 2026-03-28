@@ -70,6 +70,16 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
 
         </div>
 
+        <!-- Automations -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Automations</div>
+            <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="sidebar-link <?= $currentPage === 'chatbot-builder' ? 'active' : ''; ?>">
+                <i class="bi bi-robot"></i>
+                <span>Chatbot Builder</span>
+                <span class="badge rounded-pill bg-primary ms-auto" style="font-size: 0.6rem;">NEW</span>
+            </a>
+        </div>
+
         <!-- Contacts -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Contacts</div>
