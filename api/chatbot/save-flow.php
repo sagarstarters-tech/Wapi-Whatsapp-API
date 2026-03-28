@@ -44,25 +44,30 @@ function performSave($db, $userId, $flowName, $flowJson) {
 }
 
 try {
+    // Attempt Primary Save
     $flowId = performSave($db, $userId, $flowName, $flowJson);
     echo json_encode(['success' => true, 'message' => 'Flow saved successfully!', 'flow_id' => $flowId]);
 } catch (Exception $e) {
-    // If column missing, migrate and retry ONCE
-    if (strpos($e->getMessage(), 'Unknown column \'flow_json\'') !== false || strpos($e->getMessage(), '1054') !== false) {
+    // JIT Migration: If any chatbot columns are missing, auto-fix and retry
+    if (strpos($e->getMessage(), 'Unknown column') !== false || strpos($e->getMessage(), '1054') !== false) {
         try {
+            // Fix Chatbot Flows Table
             $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `flow_json` LONGTEXT AFTER `name` ");
             $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
             
+            // Fix Chatbot Sessions Table (Optional but important for engine)
+            $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `flow_id` INT AFTER `phone` ");
+            $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `current_node_id` VARCHAR(50) AFTER `user_id` ");
+
             // Retry Save
             $flowId = performSave($db, $userId, $flowName, $flowJson);
-            echo json_encode(['success' => true, 'message' => 'Flow saved successfully after schema update!', 'flow_id' => $flowId]);
-            exit;
+            echo json_encode(['success' => true, 'message' => 'Schema updated and Flow saved successfully!', 'flow_id' => $flowId]);
         } catch (Exception $migErr) {
             http_response_code(500);
-            die(json_encode(['success' => false, 'message' => 'Auto-migration failed: ' . $migErr->getMessage()]));
+            die(json_encode(['success' => false, 'message' => 'Auto-schema update failed: ' . $migErr->getMessage()]));
         }
+    } else {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
-
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
 }
