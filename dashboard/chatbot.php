@@ -14,6 +14,7 @@ $userId = $_SESSION['user_id'];
 $flows = $db->fetchAll("SELECT * FROM chatbot_flows WHERE user_id = ? ORDER BY created_at DESC", [$userId]);
 
 $pageTitle = 'Chatbot Automation';
+$extraCss = [asset('assets/css/dashboard.css')];
 include __DIR__ . '/../includes/header.php';
 ?>
 

@@ -10,6 +10,7 @@ Auth::requireLogin();
 $db = Database::getInstance();
 $userId = $_SESSION['user_id'];
 $flowId = isset($_GET['id']) ? sanitizeInt($_GET['id']) : 0;
+$hideNav = true; // Use dashboard full-width layout
 
 // If specific flow ID provided, fetch it
 $flow = null;
@@ -31,27 +32,32 @@ $extraJs = [
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="dashboard-wrapper">
+<div class="builder-root d-flex flex-column" style="height: 100vh; overflow: hidden; background: #f8fafc;">
     <!-- Builder Header -->
-    <header class="builder-header d-flex align-items-center justify-content-between px-4 py-2 border-bottom bg-white sticky-top" style="z-index: 100;">
+    <header class="builder-header d-flex align-items-center justify-content-between px-4 py-3 border-bottom bg-white shadow-sm" style="z-index: 1001; min-height: 70px;">
         <div class="d-flex align-items-center gap-3">
-            <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="btn btn-icon btn-sm"><i class="bi bi-chevron-left"></i></a>
+            <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Back to Dashboard"><i class="bi bi-arrow-left"></i></a>
             <div>
                 <h5 class="mb-0 fw-bold" id="flowNameDisplay"><?= e($flow['name'] ?? 'Untitled Flow'); ?></h5>
-                <span class="text-muted" style="font-size: 0.75rem;">Last saved: <span id="lastSavedTime">Never</span></span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted" style="font-size: 0.75rem;">Last saved: <span id="lastSavedTime">Never</span></span>
+                    <span class="badge bg-success" style="font-size: 0.65rem;">Auto-save ON</span>
+                </div>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-primary btn-sm" id="btnZoomOut"><i class="bi bi-dash-lg"></i></button>
-            <span class="text-muted px-2" id="zoomLevel">100%</span>
-            <button class="btn btn-outline-primary btn-sm" id="btnZoomIn"><i class="bi bi-plus-lg"></i></button>
-            <div class="vr mx-2"></div>
-            <button class="btn btn-outline-primary btn-sm" id="btnSaveDraft"><i class="bi bi-cloud-arrow-up"></i> Save Draft</button>
-            <button class="btn btn-primary btn-sm px-4" id="btnPublish"><i class="bi bi-rocket-takeoff-fill"></i> Publish Flow</button>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center bg-light rounded-pill p-1">
+                <button class="btn btn-icon btn-sm border-0" id="btnZoomOut"><i class="bi bi-dash-lg"></i></button>
+                <span class="text-muted px-2 small fw-bold" style="min-width: 50px; text-align: center;" id="zoomLevel">100%</span>
+                <button class="btn btn-icon btn-sm border-0" id="btnZoomIn"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="vr mx-1"></div>
+            <button class="btn btn-light btn-sm fw-semibold border px-3" id="btnSaveDraft"><i class="bi bi-cloud-check me-1"></i> Save Draft</button>
+            <button class="btn btn-primary btn-sm fw-bold px-4 shadow-sm" id="btnPublish"><i class="bi bi-rocket-takeoff-fill me-1"></i> Publish</button>
         </div>
     </header>
 
-    <div class="d-flex" style="height: calc(100vh - 64px);">
+    <div class="d-flex flex-grow-1" style="overflow: hidden;">
         <!-- Node Library Sidebar -->
         <aside class="builder-sidebar p-3">
             <div class="mb-4">
