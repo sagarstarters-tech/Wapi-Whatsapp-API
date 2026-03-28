@@ -13,8 +13,8 @@ function sendRequest($payload, $phoneId = null, $token = null) {
     if (!$payload) return false;
 
     // Use parameters or fall back to constants
-    $targetPhoneId = $phoneId ?? PHONE_NUMBER_ID;
-    $targetToken = $token ?? WHATSAPP_API_TOKEN;
+    $targetPhoneId = $phoneId ?? (defined('PHONE_NUMBER_ID') ? PHONE_NUMBER_ID : '');
+    $targetToken = $token ?? (defined('WHATSAPP_API_TOKEN') ? WHATSAPP_API_TOKEN : '');
 
     error_log("Sending Request with ID $targetPhoneId: " . json_encode($payload));
 
@@ -149,7 +149,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
     $nodeData = $currentNode['data'];
 
     // Update Session State
-    setSession($phone, $flowId, $nodeId, 'active');
+    setSession($phone, $userId, $flowId, $nodeId, 'active');
 
     // 3. Execute Node Action
     $isInteractive = false;
@@ -196,7 +196,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             $nextNodeId = $connections[0]['node'];
             runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
         } else {
-            setSession($phone, $flowId, $nodeId, 'finished');
+            setSession($phone, $userId, $flowId, $nodeId, 'finished');
         }
     }
 }
@@ -204,15 +204,15 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
 /**
  * 4. Improved Session Helpers
  */
-function setSession($phone, $flowId, $nodeId, $state) {
+function setSession($phone, $userId, $flowId, $nodeId, $state) {
     $db = Database::getInstance();
-    $sql = "INSERT INTO chatbot_sessions (phone, flow_id, current_node_id, state) VALUES (?, ?, ?, ?) 
+    $sql = "INSERT INTO chatbot_sessions (phone, user_id, flow_id, current_node_id, state) VALUES (?, ?, ?, ?, ?) 
             ON DUPLICATE KEY UPDATE flow_id = ?, current_node_id = ?, state = ?";
-    return $db->query($sql, [$phone, $flowId, $nodeId, $state, $flowId, $nodeId, $state]);
+    return $db->query($sql, [$phone, $userId, $flowId, $nodeId, $state, $flowId, $nodeId, $state]);
 }
 
-function getSession($phone) {
+function getSession($phone, $userId) {
     $db = Database::getInstance();
-    return $db->fetch("SELECT * FROM chatbot_sessions WHERE phone = ?", [$phone]);
+    return $db->fetch("SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ?", [$phone, $userId]);
 }
 ?>
