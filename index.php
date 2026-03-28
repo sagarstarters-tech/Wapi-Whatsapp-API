@@ -30,7 +30,7 @@ include __DIR__ . '/includes/header.php';
                         <?= e($settings->get('hero_title', 'Supercharge Your Business with WhatsApp API')); ?>
                     </h1>
                     <p class="hero-subtitle">
-                        <?= e($settings->get('hero_subtitle', 'Send bulk messages, automate replies, manage contacts and grow your business.')); ?>
+                        <?= e($settings->get('hero_subtitle', 'Send bulk messages, manage contacts and grow your business with our powerful WhatsApp API.')); ?>
                     </p>
                     <div class="d-flex gap-3 flex-wrap <?php if (empty($settings->get('hero_button_text'))): ?>d-none<?php endif; ?>">
                         <a href="<?= baseUrl($settings->get('hero_button_link', 'auth/register.php')); ?>" class="btn btn-primary btn-lg">
@@ -78,7 +78,7 @@ include __DIR__ . '/includes/header.php';
                                         <div class="wa-time">10:31 AM ✓✓</div>
                                     </div>
                                     <div class="wa-bubble received">
-                                        <div>Great choice! 🚀 With our API you can:<br>✅ Send bulk messages<br>✅ Automate replies<br>✅ Track analytics</div>
+                                        <div>Great choice! 🚀 With our API you can:<br>✅ Send bulk messages<br>✅ Manage contacts<br>✅ Track analytics</div>
                                         <div class="wa-time">10:31 AM</div>
                                     </div>
                                     <div class="wa-bubble sent">

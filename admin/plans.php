@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             'contacts_limit' => sanitizeInt($_POST['contacts_limit']),
             'api_calls_limit' => sanitizeInt($_POST['api_calls_limit']),
             'templates_limit' => sanitizeInt($_POST['templates_limit']),
-            'chatbot_enabled' => isset($_POST['chatbot_enabled']) ? 1 : 0,
+
             'bulk_messaging' => isset($_POST['bulk_messaging']) ? 1 : 0,
             'webhook_enabled' => isset($_POST['webhook_enabled']) ? 1 : 0,
             'analytics_enabled' => isset($_POST['analytics_enabled']) ? 1 : 0,
@@ -139,7 +139,7 @@ include __DIR__ . '/../includes/header.php';
                         
                         <div class="col-12 d-flex flex-wrap gap-4">
                             <?php 
-                            $toggles = ['chatbot_enabled' => 'Chatbot', 'bulk_messaging' => 'Bulk Messaging', 'webhook_enabled' => 'Webhooks', 'analytics_enabled' => 'Analytics', 'priority_support' => 'Priority Support', 'is_popular' => 'Popular Badge', 'is_active' => 'Active'];
+                            $toggles = ['bulk_messaging' => 'Bulk Messaging', 'webhook_enabled' => 'Webhooks', 'analytics_enabled' => 'Analytics', 'priority_support' => 'Priority Support', 'is_popular' => 'Popular Badge', 'is_active' => 'Active'];
                             foreach ($toggles as $key => $label):
                             ?>
                             <div class="form-check">

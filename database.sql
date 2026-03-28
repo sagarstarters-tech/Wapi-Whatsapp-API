@@ -98,7 +98,7 @@ CREATE TABLE `plans` (
     `contacts_limit` INT DEFAULT 500,
     `api_calls_limit` INT DEFAULT 5000,
     `templates_limit` INT DEFAULT 10,
-    `chatbot_enabled` TINYINT(1) DEFAULT 0,
+    `templates_limit` INT DEFAULT 10,
     `bulk_messaging` TINYINT(1) DEFAULT 0,
     `webhook_enabled` TINYINT(1) DEFAULT 0,
     `analytics_enabled` TINYINT(1) DEFAULT 0,
@@ -297,25 +297,7 @@ CREATE TABLE `templates` (
     INDEX `idx_user` (`user_id`)
 ) ENGINE=InnoDB;
 
--- ============================================
--- 15. Chatbot Flows
--- ============================================
-CREATE TABLE `chatbot_flows` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT NOT NULL,
-    `name` VARCHAR(100) NOT NULL,
-    `trigger_keyword` VARCHAR(100) NOT NULL,
-    `match_type` ENUM('exact', 'contains', 'starts_with') DEFAULT 'contains',
-    `response_type` ENUM('text', 'image', 'template') DEFAULT 'text',
-    `response_content` TEXT NOT NULL,
-    `media_url` VARCHAR(500) DEFAULT NULL,
-    `is_active` TINYINT(1) DEFAULT 1,
-    `priority` INT DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    INDEX `idx_user_active` (`user_id`, `is_active`)
-) ENGINE=InnoDB;
+
 
 -- ============================================
 -- 16. Credits Table
@@ -431,7 +413,7 @@ INSERT INTO `users` (`uuid`, `name`, `email`, `password`, `role`, `status`, `ema
 INSERT INTO `settings` (`setting_key`, `setting_value`, `setting_group`, `setting_type`) VALUES
 ('site_name', 'WAPI - WhatsApp API Platform', 'general', 'text'),
 ('site_tagline', 'Powerful WhatsApp Business API for your business', 'general', 'text'),
-('site_description', 'Complete WhatsApp Business API solution for sending messages, managing contacts, and automating customer communication.', 'general', 'textarea'),
+('site_description', 'Complete WhatsApp Business API solution for sending messages, managing contacts, and tracking communication.', 'general', 'textarea'),
 ('site_logo', '/assets/images/logo.png', 'general', 'image'),
 ('site_favicon', '/assets/images/favicon.png', 'general', 'image'),
 ('primary_color', '#6c63ff', 'theme', 'color'),
@@ -457,7 +439,7 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `setting_group`, `settin
 ('google_analytics_id', '', 'analytics', 'text'),
 ('meta_keywords', 'whatsapp api, whatsapp business api, bulk whatsapp, whatsapp saas', 'seo', 'text'),
 ('hero_title', 'Supercharge Your Business with WhatsApp API', 'landing', 'text'),
-('hero_subtitle', 'Send bulk messages, automate replies, manage contacts and grow your business with our powerful WhatsApp Business API platform.', 'landing', 'textarea'),
+('hero_subtitle', 'Send bulk messages, manage contacts and grow your business with our powerful WhatsApp Business API platform.', 'landing', 'textarea'),
 ('hero_button_text', 'Get Started Free', 'landing', 'text'),
 ('hero_button_link', '/wapi/auth/register.php', 'landing', 'text'),
 ('hero_image', '/assets/images/hero-illustration.svg', 'landing', 'image'),
@@ -474,7 +456,7 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `setting_group`, `settin
 -- Default Features
 INSERT INTO `features` (`icon`, `title`, `description`, `sort_order`) VALUES
 ('bi-chat-dots-fill', 'Bulk Messaging', 'Send thousands of WhatsApp messages in one click with our high-speed bulk messaging engine.', 1),
-('bi-robot', 'Smart Chatbot', 'Set up automated replies and chatbot flows without any coding knowledge.', 2),
+
 ('bi-graph-up-arrow', 'Real-time Analytics', 'Track message delivery, open rates, and engagement with beautiful dashboards.', 3),
 ('bi-shield-check', 'Official API', 'Built on Meta''s official WhatsApp Cloud API for reliability and compliance.', 4),
 ('bi-people-fill', 'Contact Management', 'Organize contacts into groups, add tags, and manage your audience effortlessly.', 5),
@@ -484,9 +466,9 @@ INSERT INTO `features` (`icon`, `title`, `description`, `sort_order`) VALUES
 
 -- Default Plans
 INSERT INTO `plans` (`name`, `slug`, `description`, `monthly_price`, `yearly_price`, `message_limit`, `contacts_limit`, `api_calls_limit`, `templates_limit`, `chatbot_enabled`, `bulk_messaging`, `webhook_enabled`, `analytics_enabled`, `priority_support`, `badge_color`, `is_popular`, `sort_order`) VALUES
-('Starter', 'starter', 'Perfect for small businesses getting started with WhatsApp API', 999.00, 9990.00, 1000, 500, 5000, 5, 0, 0, 0, 0, 0, '#28a745', 0, 1),
-('Professional', 'professional', 'For growing businesses that need more power and features', 2499.00, 24990.00, 5000, 2500, 25000, 25, 1, 1, 1, 1, 0, '#6c63ff', 1, 2),
-('Business', 'business', 'For enterprises that need unlimited power and priority support', 4999.00, 49990.00, 25000, 10000, 100000, 100, 1, 1, 1, 1, 1, '#ff6b35', 0, 3);
+('Starter', 'starter', 'Perfect for small businesses getting started with WhatsApp API', 999.00, 9990.00, 1000, 500, 5000, 5, 0, 0, 0, 0, '#28a745', 0, 1),
+('Professional', 'professional', 'For growing businesses that need more power and features', 2499.00, 24990.00, 5000, 2500, 25000, 25, 1, 1, 1, 0, '#6c63ff', 1, 2),
+('Business', 'business', 'For enterprises that need unlimited power and priority support', 4999.00, 49990.00, 25000, 10000, 100000, 100, 1, 1, 1, 1, '#ff6b35', 0, 3);
 
 -- Default Plan Features
 INSERT INTO `plan_features` (`plan_id`, `feature_text`, `is_included`, `sort_order`) VALUES
@@ -495,7 +477,6 @@ INSERT INTO `plan_features` (`plan_id`, `feature_text`, `is_included`, `sort_ord
 (1, '5 Templates', 1, 3),
 (1, 'Basic Analytics', 1, 4),
 (1, 'Email Support', 1, 5),
-(1, 'Chatbot', 0, 6),
 (1, 'Bulk Messaging', 0, 7),
 (1, 'Webhook Support', 0, 8),
 (2, '5,000 Messages/month', 1, 1),
@@ -503,7 +484,6 @@ INSERT INTO `plan_features` (`plan_id`, `feature_text`, `is_included`, `sort_ord
 (2, '25 Templates', 1, 3),
 (2, 'Advanced Analytics', 1, 4),
 (2, 'Priority Email Support', 1, 5),
-(2, 'Smart Chatbot', 1, 6),
 (2, 'Bulk Messaging', 1, 7),
 (2, 'Webhook Support', 1, 8),
 (3, '25,000 Messages/month', 1, 1),
@@ -511,14 +491,13 @@ INSERT INTO `plan_features` (`plan_id`, `feature_text`, `is_included`, `sort_ord
 (3, '100 Templates', 1, 3),
 (3, 'Full Analytics Suite', 1, 4),
 (3, '24/7 Priority Support', 1, 5),
-(3, 'Advanced Chatbot', 1, 6),
 (3, 'Unlimited Bulk Messaging', 1, 7),
 (3, 'Webhook + API Access', 1, 8);
 
 -- Default Testimonials
 INSERT INTO `testimonials` (`name`, `company`, `designation`, `content`, `rating`, `sort_order`) VALUES
 ('Rahul Sharma', 'TechVista Solutions', 'CEO', 'WAPI has transformed how we communicate with our customers. The bulk messaging feature alone saved us 20 hours per week!', 5, 1),
-('Priya Patel', 'GreenLeaf Organics', 'Marketing Head', 'The chatbot automation is incredible. Our response time dropped from hours to seconds. Highly recommended!', 5, 2),
+
 ('Amit Kumar', 'FastShip Logistics', 'CTO', 'The API integration was seamless. We connected our CRM in just 2 hours. Best WhatsApp API platform out there.', 5, 3),
 ('Sneha Reddy', 'EduPro Academy', 'Operations Manager', 'Managing 50,000+ student contacts is now effortless. The analytics dashboard gives us real insights.', 4, 4);
 
