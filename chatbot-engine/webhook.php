@@ -1,7 +1,7 @@
 <?php
 /**
- * WhatsApp Chatbot Webhook Handler
- * This script processes incoming messages from the Meta WhatsApp Cloud API.
+ * WAPI SaaS - WhatsApp Webhook (V2 Full Integration)
+ * Processes incoming messages and routes them through the visual flow engine.
  */
 
 header('Content-Type: application/json');
@@ -25,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // 2. Incoming Messages Handler (POST method)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Read the raw JSON input data
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
 
@@ -34,38 +33,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die();
     }
 
-    // Extract necessary information from the Meta JSON payload
-    // Structure: entry[0].changes[0].value.messages[0]
     $entry = $data['entry'][0]['changes'][0]['value'] ?? [];
     $messages = $entry['messages'] ?? [];
+    $phoneNumberId = $entry['metadata']['phone_number_id'] ?? '';
+
+    // Find User / Account associated with this phone number
+    $db = Database::getInstance();
+    $account = $db->fetch("SELECT user_id FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'", [$phoneNumberId]);
+    if (!$account) {
+        error_log("No active WhatsApp account found for ID: " . $phoneNumberId);
+        die();
+    }
+    $userId = $account['user_id'];
 
     if (!empty($messages)) {
         foreach ($messages as $msg) {
-            $from = $msg['from'] ?? ''; // Sender's phone number
-            $type = $msg['type'] ?? 'text'; // Message type (text / interactive / etc)
+            $from = $msg['from'] ?? '';
+            $type = $msg['type'] ?? 'text';
 
-            // Handle Interaction Replies (Button clicks)
+            // Handle Interactive Replied (Flow Buttons)
             if ($type === 'interactive' && isset($msg['interactive']['button_reply'])) {
-                $buttonId = $msg['interactive']['button_reply']['id'] ?? '';
-                runFlow($from, $buttonId); // Case matching flow logic
-            }
-            // Handle Text Messages
+                $replyId = $msg['interactive']['button_reply']['id'] ?? '';
+                
+                // Expected Format: flow_btn_{nodeId}_{portIndex}
+                if (strpos($replyId, 'flow_btn_') === 0) {
+                    $parts = explode('_', $replyId);
+                    $flowNodeId = $parts[2];
+                    $portIndex = (int)$parts[3];
+
+                    // Find the user's master flow (currently selecting first one)
+                    $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id ASC LIMIT 1", [$userId]);
+                    if (!$flow) continue;
+
+                    $flowData = json_decode($flow['flow_json'], true);
+                    $nodes = $flowData['drawflow']['Home']['data'] ?? [];
+                    
+                    // Look for connections on the specific output port
+                    $outputName = 'output_' . ($portIndex + 1);
+                    $connections = $nodes[$flowNodeId]['outputs'][$outputName]['connections'] ?? [];
+
+                    if (!empty($connections)) {
+                        $nextNodeId = $connections[0]['node'];
+                        runFlow($from, $userId, $flow['id'], $nextNodeId);
+                    }
+                }
+            } 
+            // Handle Incoming Text (Keywords / Restart)
             elseif ($type === 'text') {
                 $textBody = strtolower(trim($msg['text']['body'] ?? ''));
 
-                // Handle basic commands or keyword triggers
-                if ($textBody === 'start' || $textBody === 'hi' || $textBody === 'menu') {
-                    runFlow($from, 'start');
-                } else {
-                    // Check previous user session if available
-                    $currentState = getSession($from);
-                    runFlow($from, $currentState === 'start' ? 'unknown' : $currentState);
-                }
+                    // Find User's active flow
+                    $flow = $db->fetch("SELECT id FROM chatbot_flows WHERE user_id = ? ORDER BY id ASC LIMIT 1", [$userId]);
+                    if (!$flow) continue;
+
+                    if ($textBody === 'hi' || $textBody === 'start' || $textBody === 'menu') {
+                        // Reset session and start from root
+                        runFlow($from, $userId, $flow['id'], null);
+                    } else {
+                        // Resume from current session if exists
+                        $session = getSession($from);
+                        if ($session && $session['state'] === 'active' && $session['flow_id'] == $flow['id']) {
+                            // Find connections of the current node
+                            $flowData = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = ?", [$session['flow_id']]);
+                            $data = json_decode($flowData['flow_json'], true);
+                            $nodes = $data['drawflow']['Home']['data'] ?? [];
+                            
+                            $currNode = $nodes[$session['current_node_id']] ?? null;
+                            if ($currNode && $currNode['name'] === 'interactive') {
+                                // Ignore text if waiting for button click, OR handle keyword matching
+                                sendText($from, "Please click one of the buttons above to proceed. Or type 'start' to reset.");
+                            } else {
+                                runFlow($from, $userId, $flow['id'], $session['current_node_id']);
+                            }
+                        } else {
+                            // Logic for unknown keywords
+                            runFlow($from, $userId, $flow['id'], null);
+                        }
+                    }
             }
         }
     }
 
-    // Acknowledge receipt to Meta API (Status 200 OK)
     http_response_code(200);
     echo json_encode(['status' => 'success']);
 }

@@ -1,7 +1,7 @@
 <?php
 /**
- * WhatsApp Chatbot Core Functions
- * Handles all logic for sending messages via Meta Cloud API and managing user states.
+ * WAPI SaaS - WhatsApp Chatbot Core Functions (V2 Refactored)
+ * Dynamic Flow Engine and Messaging Helpers.
  */
 
 require_once __DIR__ . '/config.php';
@@ -11,6 +11,9 @@ require_once __DIR__ . '/config.php';
  */
 function sendRequest($payload) {
     if (!$payload) return false;
+
+    // Optional: Log outgoing requests for debugging
+    error_log("Sending Request: " . json_encode($payload));
 
     $url = "https://graph.facebook.com/" . WHATSAPP_API_VERSION . "/" . PHONE_NUMBER_ID . "/messages";
     $ch = curl_init();
@@ -28,6 +31,7 @@ function sendRequest($payload) {
     ]);
 
     $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
     curl_close($ch);
 
@@ -37,8 +41,8 @@ function sendRequest($payload) {
     }
 
     $result = json_decode($response, true);
-    if (isset($result['error'])) {
-        error_log("Meta API Response Error: " . json_encode($result['error']));
+    if ($httpCode >= 400 && isset($result['error'])) {
+        error_log("Meta API Response Error (HTTP " . $httpCode . "): " . json_encode($result['error']));
         return false;
     }
 
@@ -46,7 +50,7 @@ function sendRequest($payload) {
 }
 
 /**
- * 2. Send Plain Text Message
+ * 2. Specialized Messaging Helpers
  */
 function sendText($phone, $message) {
     $payload = [
@@ -56,109 +60,168 @@ function sendText($phone, $message) {
         'type' => 'text',
         'text' => ['preview_url' => false, 'body' => $message]
     ];
-
     return sendRequest($payload);
 }
 
-/**
- * 3. Send Image Message
- */
 function sendImage($phone, $imageUrl, $caption = '') {
     $payload = [
-        'messaging_product' => 'whatsapp',
-        'recipient_type' => 'individual',
-        'to' => $phone,
-        'type' => 'image',
+        'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'image',
         'image' => ['link' => $imageUrl, 'caption' => $caption]
     ];
-
     return sendRequest($payload);
 }
 
-/**
- * 4. Send Interactive Buttons (Quick Replies)
- */
-function sendButtons($phone, $text, $buttonLabels) {
+function sendAudio($phone, $audioUrl) {
+    $payload = [
+        'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'audio',
+        'audio' => ['link' => $audioUrl]
+    ];
+    return sendRequest($payload);
+}
+
+function sendVideo($phone, $videoUrl, $caption = '') {
+    $payload = [
+        'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'video',
+        'video' => ['link' => $videoUrl, 'caption' => $caption]
+    ];
+    return sendRequest($payload);
+}
+
+function sendDocument($phone, $docUrl, $filename = '') {
+    $payload = [
+        'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'document',
+        'document' => ['link' => $docUrl, 'filename' => $filename]
+    ];
+    return sendRequest($payload);
+}
+
+function sendButtons($phone, $text, $buttonsData, $nodeId) {
     $buttons = [];
-    foreach ($buttonLabels as $id => $label) {
-        if (count($buttons) >= 3) break; // Meta limit: 3 buttons
+    foreach ($buttonsData as $key => $label) {
+        if (count($buttons) >= 3) break;
+        // The ID will be formatted as "flow_node_ID_PORT" (e.g., flow_node_15_output_1)
+        $portIndex = str_replace('btn-', '', $key); // from btn-0, btn-1 etc
         $buttons[] = [
             'type' => 'reply',
-            'reply' => ['id' => $id, 'title' => mb_substr($label, 0, 20)]
+            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr($label, 0, 20)]
         ];
     }
 
     $payload = [
-        'messaging_product' => 'whatsapp',
-        'recipient_type' => 'individual',
-        'to' => $phone,
-        'type' => 'interactive',
+        'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'interactive',
         'interactive' => [
-            'type' => 'button',
-            'body' => ['text' => $text],
-            'action' => ['buttons' => $buttons]
+            'type' => 'button', 'body' => ['text' => $text], 'action' => ['buttons' => $buttons]
         ]
     ];
-
     return sendRequest($payload);
 }
 
 /**
- * 5. State-Based Flow Engine
+ * 3. Dynamic Flow Engine (JSON Parser)
  */
-function runFlow($phone, $step) {
+function runFlow($phone, $userId, $flowId, $nodeId = null) {
     $db = Database::getInstance();
-    $step = strtolower(trim($step));
 
-    switch ($step) {
-        case 'start':
-            // Update session state
-            setSession($phone, 'start');
+    // 1. Fetch the Flow JSON
+    $flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = ?", [$flowId]);
+    if (!$flow) {
+        error_log("Flow not found for ID: " . $flowId);
+        return;
+    }
+
+    $data = json_decode($flow['flow_json'], true);
+    $nodes = $data['drawflow']['Home']['data'] ?? [];
+
+    // 2. Identify Current Node
+    if ($nodeId === null) {
+        // Find the "start" node (usually node ID 1 or the one with no inputs)
+        foreach ($nodes as $nId => $nData) {
+            if (empty($nData['inputs']['input_1']['connections'])) {
+                $nodeId = $nId;
+                break;
+            }
+        }
+        // Fallback to node 1 if no "headless" node is found
+        if ($nodeId === null) $nodeId = 1;
+    }
+
+    if (!isset($nodes[$nodeId])) {
+        error_log("Node ID not found: " . $nodeId);
+        return;
+    }
+
+    $currentNode = $nodes[$nodeId];
+    $nodeType = $currentNode['name'];
+    $nodeData = $currentNode['data'];
+
+    // Update Session State
+    setSession($phone, $flowId, $nodeId, 'active');
+
+    // 3. Execute Node Action
+    $isInteractive = false;
+    
+    switch ($nodeType) {
+        case 'text':
+            sendText($phone, $nodeData['text'] ?? '');
+            break;
             
-            // Send Greeting + Image + Selection
-            sendText($phone, "Hello! Welcome to our automated assistant. 🤖");
-            sendImage($phone, "https://picsum.photos/800/400", "How can we help you today?");
-            sendButtons($phone, "Please select an option below:", [
-                'buy' => '🛒 Buy Product',
-                'agent' => '📞 Talk to Agent'
-            ]);
+        case 'image':
+            sendImage($phone, $nodeData['image-url'] ?? '', $nodeData['caption'] ?? '');
             break;
 
-        case 'buy':
-            setSession($phone, 'buy');
-            sendText($phone, "Our store is coming soon! 🛍️\nUse the 'agent' button if you have specific product queries.");
-            // Loop back to main menu after a small delay simulation (just sending buttons again for now)
-            sendButtons($phone, "Anything else?", [
-                'start' => '🔙 Back to Menu',
-                'agent' => '📞 Talk to Agent'
-            ]);
+        case 'interactive':
+            // Extraction of buttons: find all keys starting with btn-
+            $buttonsData = [];
+            foreach ($nodeData as $key => $val) {
+                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = $val;
+            }
+            sendButtons($phone, $nodeData['prompt'] ?? 'Select an option:', $buttonsData, $nodeId);
+            $isInteractive = true; // Wait for user reply
+            break;
+            
+        case 'audio':
+            sendAudio($phone, $nodeData['audio-url'] ?? '');
             break;
 
-        case 'agent':
-            setSession($phone, 'agent');
-            sendText($phone, "Understood. 🔄 Connecting you to our support team. An agent will reach out manually soon!");
+        case 'video':
+            sendVideo($phone, $nodeData['video-url'] ?? '', $nodeData['caption'] ?? '');
             break;
 
-        default:
-            // Fallback for unknown input
-            sendText($phone, "Sorry, I didn't catch that. Please use the menu buttons.");
-            runFlow($phone, 'start');
+        case 'file':
+            sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document');
             break;
+
+        case 'delay':
+            $delay = max(1, (int)($nodeData['delay-seconds'] ?? 2));
+            sleep($delay);
+            break;
+    }
+
+    // 4. Move to Next Node (if not interactive)
+    if (!$isInteractive) {
+        $connections = $currentNode['outputs']['output_1']['connections'] ?? [];
+        if (!empty($connections)) {
+            $nextNodeId = $connections[0]['node'];
+            runFlow($phone, $userId, $flowId, $nextNodeId); // Recursion
+        } else {
+            // End of flow
+            setSession($phone, $flowId, $nodeId, 'finished');
+        }
     }
 }
 
 /**
- * Session Management
+ * 4. Improved Session Helpers
  */
-function setSession($phone, $state) {
+function setSession($phone, $flowId, $nodeId, $state) {
     $db = Database::getInstance();
-    return $db->query("INSERT INTO chatbot_sessions (phone, state) VALUES (?, ?) 
-                       ON DUPLICATE KEY UPDATE state = ?", [$phone, $state, $state]);
+    $sql = "INSERT INTO chatbot_sessions (phone, flow_id, current_node_id, state) VALUES (?, ?, ?, ?) 
+            ON DUPLICATE KEY UPDATE flow_id = ?, current_node_id = ?, state = ?";
+    return $db->query($sql, [$phone, $flowId, $nodeId, $state, $flowId, $nodeId, $state]);
 }
 
 function getSession($phone) {
     $db = Database::getInstance();
-    $session = $db->fetch("SELECT state FROM chatbot_sessions WHERE phone = ?", [$phone]);
-    return $session ? $session['state'] : 'start';
+    return $db->fetch("SELECT * FROM chatbot_sessions WHERE phone = ?", [$phone]);
 }
 ?>
