@@ -6,10 +6,12 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/session.php';
 
-// Temporarily disabled auth for automated fix
-// if (!Auth::isLoggedIn()) {
-//     die("Unauthorized access. Please login to your dashboard first.");
-// }
+// PUBLIC ACCESS FOR EMERGENCY FIX
+/*
+if (!Auth::isLoggedIn()) {
+    die("Unauthorized access. Please login to your dashboard first.");
+}
+*/
 
 $db = Database::getInstance();
 
