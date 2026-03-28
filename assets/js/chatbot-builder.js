@@ -8,19 +8,32 @@ const id = document.getElementById("drawflow-canvas");
 
 // Initialize Drawflow
 document.addEventListener("DOMContentLoaded", () => {
-    editor = new Drawflow(id);
+    const canvas = document.getElementById("drawflow-canvas");
+    if (!canvas) {
+        console.error("Drawflow canvas not found!");
+        return;
+    }
+    
+    editor = new Drawflow(canvas);
     editor.reroute = true;
     editor.start();
 
     // Event Listeners
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
-        setupNodeInteractions(nodeId);
     });
 
-    editor.on('nodeSelected', function(nodeId) {
-        console.log("Node selected " + nodeId);
-    });
+    // Fix for port interaction: ensure ports are clickable even if node has inputs
+    canvas.addEventListener('mousedown', (e) => {
+        // Find if target is a Drawflow port (input/output)
+        if (e.target.classList.contains('input') || e.target.classList.contains('output')) {
+             return; // Let Drawflow handle it
+        }
+
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            e.stopPropagation();
+        }
+    }, true);
 });
 
 /**
@@ -174,7 +187,8 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     let inputs = 1; let outputs = 1;
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
-    if (type === 'interactive') outputs = 0;
+    // Interactive nodes now start with 1 output for a "Default" path
+    if (type === 'interactive') outputs = 1; 
 
     editor.addNode(type, inputs, outputs, pos_x, pos_y, type, {}, template);
 }
