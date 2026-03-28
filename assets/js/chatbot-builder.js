@@ -65,15 +65,37 @@ function getNodeTemplate(type) {
         case 'interactive':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-ui-checks-grid warning"></i> Interactive Buttons</div>
+                    <div class="node-header bg-warning text-white"><i class="bi bi-ui-checks-grid"></i> Quick Replies</div>
                     <div class="node-body">
-                        <label>Question / Prompt</label>
-                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Ask a question..." df-prompt>
-                        <label>Buttons</label>
+                        <label>Message Body</label>
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Greeting/Prompt..." df-prompt>
+                        <label>Reply Buttons</label>
                         <div id="btn-list" class="btn-list"></div>
-                        <button class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="addButtonToNode(this)">
-                            <i class="bi bi-plus-circle"></i> Add Button
+                        <button class="btn btn-outline-warning btn-sm w-100 mt-2" onclick="addButtonToNode(this)">
+                            <i class="bi bi-plus-circle"></i> Add Reply Button
                         </button>
+                    </div>
+                </div>
+            `;
+        case 'cta':
+            return `
+                <div class="node-root">
+                    <div class="node-header bg-info text-white"><i class="bi bi-box-arrow-up-right"></i> Buttons (CTA)</div>
+                    <div class="node-body">
+                        <label>Message Body</label>
+                        <textarea class="form-control mb-2" rows="2" placeholder="Promotion/Offer text..." df-message></textarea>
+                        
+                        <div class="cta-input mb-2 p-2 rounded bg-light border">
+                            <label class="d-flex align-items-center gap-1"><i class="bi bi-link-45deg"></i> Website Button</label>
+                            <input type="text" class="form-control form-control-sm mb-1" placeholder="Button Title (e.g. Buy Now)" df-link-title>
+                            <input type="text" class="form-control form-control-sm" placeholder="https://..." df-link-url>
+                        </div>
+                        
+                        <div class="cta-input p-2 rounded bg-light border">
+                            <label class="d-flex align-items-center gap-1"><i class="bi bi-telephone-fill" style="font-size: 0.6rem;"></i> Call Button</label>
+                            <input type="text" class="form-control form-control-sm mb-1" placeholder="Button Title (e.g. Call Us)" df-call-title>
+                            <input type="text" class="form-control form-control-sm" placeholder="+91..." df-call-number>
+                        </div>
                     </div>
                 </div>
             `;

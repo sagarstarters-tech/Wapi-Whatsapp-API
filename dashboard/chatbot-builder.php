@@ -85,7 +85,11 @@ include __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="interactive">
                     <i class="bi bi-ui-checks-grid warning"></i>
-                    <span>Interactive Buttons</span>
+                    <span>Quick Replies</span>
+                </div>
+                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="cta">
+                    <i class="bi bi-box-arrow-up-right info"></i>
+                    <span>Buttons (CTA)</span>
                 </div>
                 <hr class="my-3 opacity-10">
                 <div class="sidebar-label">Logic</div>
