@@ -1,21 +1,19 @@
 /**
  * WAPI SaaS - Visual Chatbot Builder Premium CSS
- * Designed for a clean, modern, and interactive experience.
+ * Designed for a clean, modern, and interactive experience matching reference UI.
  */
 
 :root {
-    --builder-header-height: 60px;
-    --builder-sidebar-width: 250px;
-    --builder-bg: #f8fafc;
-    --node-border: #e2e8f0;
-    --node-bg: #ffffff;
-    --primary: #6c63ff;
-    --secondary: #64748b;
-    --success: #10b981;
-    --danger: #ef4444;
-    --warning: #f59e0b;
-    --info: #0ea5e9;
+    --builder-top-height: 56px;
+    --builder-bg: #EAECEF;
+    --node-border: #D1D5DB;
+    --node-bg: #f8f9fa;
+    --primary: #4B6EAF;
     --whatsapp: #25d366;
+}
+
+body {
+    background-color: var(--builder-bg);
 }
 
 /* Layout Wrapper */
@@ -27,110 +25,56 @@
     flex-direction: column;
 }
 
-/* Header / Toolbar */
-.builder-header {
-    height: var(--builder-header-height);
-    background: #fff;
-    border-bottom: 1px solid #eef2f6;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
+/* Top Palette Toolbar */
+.top-palette {
+    height: var(--builder-top-height);
+    background: #EAECEF;
+    border-bottom: 2px dashed #D1D5DB;
     z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-.builder-layout {
-    display: flex;
-    height: calc(100vh - var(--builder-header-height));
-    flex: 1;
-}
-
-/* Sidebar Styling */
-.builder-sidebar {
-    width: var(--builder-sidebar-width);
-    background: #fff;
-    border-right: 1px solid #eef2f6;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    z-index: 50;
-}
-
-.sidebar-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--secondary);
-    letter-spacing: 0.05rem;
-    margin-bottom: 12px;
-}
-
-.node-palette {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.drag-drawflow {
+.drag-items-row .icon-item {
+    width: 36px;
+    height: 36px;
+    background-color: #fff;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 15px;
-    background: #fff;
-    border: 1px solid #eef2f6;
-    border-radius: 12px;
+    justify-content: center;
     cursor: grab;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.drag-drawflow i {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
     font-size: 1.1rem;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
 }
 
-.drag-drawflow:hover {
-    border-color: var(--primary);
-    background: #fdfdff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(108, 99, 255, 0.08);
+.drag-items-row .icon-item:hover {
+    transform: scale(1.1);
 }
 
-.drag-drawflow:active {
-    cursor: grabbing;
+.action-circle-btn {
+    width: 32px;
+    height: 32px;
+    background-color: #DAE0E5;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4B6EAF;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-.builder-tips {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 15px;
-    border: 1px dashed #cbd5e1;
-}
-
-.builder-tips h6 {
-    font-size: 0.85rem;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.builder-tips p {
-    font-size: 0.75rem;
-    color: var(--secondary);
-    margin: 0;
-    line-height: 1.4;
+.action-circle-btn:hover {
+    background-color: #C0C8D1;
+    color: #4B6EAF;
 }
 
 /* Canvas Area */
 .builder-canvas-area {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    background-color: #f8fafc;
-    background-image: 
-        radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+    background-color: #EAECEF;
+    background-image: radial-gradient(circle, #D1D5DB 1px, transparent 1px);
     background-size: 25px 25px;
 }
 
@@ -139,200 +83,169 @@
     height: 100%;
 }
 
-/* Drawflow Editor Overrides */
+/* Drawflow Node Override */
 .drawflow {
     background: transparent !important;
 }
 
 .drawflow .drawflow-node {
-    background: #fff;
-    border: 1.5px solid var(--node-border);
-    border-radius: 16px;
-    min-width: 220px;
+    background: #eef2f6; 
+    border: 1px solid #c8d3e0;
+    border-radius: 12px;
+    min-width: 260px;
     padding: 0;
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     transition: box-shadow 0.2s, border-color 0.2s;
 }
 
-.drawflow .drawflow-node:hover {
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-}
-
 .drawflow .drawflow-node.selected {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+    border-color: #32ADE6;
+    box-shadow: 0 0 0 2px rgba(50, 173, 230, 0.2);
 }
 
-/* Node Internal Design */
-.node-header {
+/* Header inside Node */
+.node-header-custom {
     padding: 10px 15px;
-    border-bottom: 1px solid #f1f5f9;
-    background: #fff;
-    border-radius: 16px 16px 0 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    border-bottom: 1px dashed #c8d3e0;
     font-weight: 700;
-    font-size: 0.85rem;
-}
-
-.node-header i {
-    font-size: 1rem;
-}
-
-.node-body {
-    padding: 15px;
-}
-
-.node-body label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #64748b;
-    margin-bottom: 4px;
-    display: block;
-}
-
-.node-body .form-control {
-    font-size: 0.85rem;
-    border-radius: 8px;
-    border-color: #e2e8f0;
-}
-
-/* Connector Ports */
-.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
-    width: 16px; /* Increased from 12px */
-    height: 16px; /* Increased from 12px */
-    border: 3px solid #fff;
-    background: #cbd5e1;
-    border-radius: 50%;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 10; /* Ensure ports are above node content */
-    cursor: crosshair;
-}
-
-.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
-    background: var(--whatsapp);
-    transform: scale(1.5);
-    border-color: #fff;
-    box-shadow: 0 0 10px rgba(37, 211, 102, 0.4);
-}
-
-.drawflow .drawflow-node .input {
-    left: -8px; /* Adjusted for 16px width */
-}
-
-.drawflow .drawflow-node .output {
-    right: -8px; /* Adjusted for 16px width */
-}
-
-/* Ensure node content doesn't hide ports */
-.drawflow-node .drawflow_content_node {
-    z-index: 1;
-    position: relative;
-    pointer-events: all; /* Allow interactions with inputs */
-}
-
-/* Connection Lines */
-.drawflow .connection .main-path {
-    stroke: #cbd5e1;
-    stroke-width: 4px; /* Slightly thicker */
-    transition: stroke 0.3s;
-    pointer-events: none;
-}
-
-.drawflow .connection.selected .main-path {
-    stroke: var(--primary);
-}
-
-/* Image Preview */
-.node-preview {
-    width: 100%;
-    height: 100px;
-    background: #f1f5f9;
-    border-radius: 8px;
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-    border: 1px solid #e2e8f0;
-}
-
-.node-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.node-preview .placeholder {
-    color: #94a3b8;
-    font-size: 2rem;
-}
-
-/* Interactive Node Specifics */
-.btn-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.btn-item {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.btn-item .remove-btn {
-    color: var(--danger);
-    cursor: pointer;
     font-size: 0.9rem;
+    color: #1F2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fdfdfd;
+    border-radius: 12px 12px 0 0;
 }
 
-.btn-item .remove-btn:hover {
-    opacity: 0.8;
+.node-header-custom.interactive-hd { color: #0f4c81; }
+.node-header-custom.button-hd { color: #1e3a8a; }
+
+/* Stats Row */
+.node-stats-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #fdfdfd;
+    color: #6B7280;
 }
 
-/* Canvas Controls */
-.canvas-controls {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
+.node-stats-row .stat-col {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    gap: 2px;
+}
+
+.node-stats-row .stat-col i {
+    font-size: 0.8rem;
+}
+
+.node-stats-row .stat-col:nth-child(1) i { color: #32ADE6; }
+.node-stats-row .stat-col:nth-child(2) i { color: #34C759; }
+.node-stats-row .stat-col:nth-child(3) i { color: #4B6EAF; }
+.node-stats-row .stat-col:nth-child(4) i { color: #FF3B30; }
+
+/* Delay Row */
+.node-delay-row {
+    background-color: #E0E7FF;
+    color: #4B6EAF;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 15px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Body Content */
+.node-body-content {
+    padding: 15px;
+    background: #fdfdfd;
+    border-radius: 0 0 12px 12px;
+}
+
+.node-message-box {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #334155;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* Ports Re-styling */
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #64748b;
+    background: #fff;
+    border-radius: 50%;
+    transition: all 0.2s;
     z-index: 10;
 }
 
-.canvas-controls button {
-    width: 40px;
-    height: 40px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
+.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
+    background: #32ADE6;
+    border-color: #fff;
+    transform: scale(1.3);
+}
+
+/* Port Labels inside nodes matching reference */
+.port-labels-container {
+    padding: 8px 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f8fafc;
+    border-top: 1px dashed #cbd5e1;
+    border-radius: 0 0 12px 12px;
+}
+
+.port-label-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 20px;
+    position: relative;
+}
+
+.drawflow .connection .main-path {
+    stroke: #94a3b8;
+    stroke-width: 3px;
+}
+.drawflow .connection.selected .main-path {
+    stroke: #32ADE6;
+    stroke-width: 4px;
+}
+
+/* Specific Block Previews */
+.ref-preview {
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+.ref-preview img {
+    width: 100%;
+    display: block;
+}
+.ref-preview-audio {
+    background: #EAECEF;
+    border-radius: 30px;
+    padding: 8px 15px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    color: var(--secondary);
-    transition: all 0.2s;
+    gap: 10px;
+    color: #4B6EAF;
+    font-size: 0.8rem;
+    font-weight: bold;
 }
-
-.canvas-controls button:hover {
-    color: var(--primary);
-    background: #f8fafc;
-}
-
-/* Responsive Overrides */
-@media (max-width: 991px) {
-    .builder-sidebar {
-        width: 180px;
-    }
+.ref-url-label {
+    font-size: 0.65rem;
+    color: #32ADE6;
+    word-break: break-all;
+    margin-top: 5px;
 }

@@ -69,128 +69,164 @@ function restoreInteractivePorts(nodeId) {
 }
 
 /**
- * 1. Node Templates Management
+ * 1. Node Templates Management - Redesigned UI
  */
+function getDrawflowStats() {
+    return `
+        <div class="node-stats-row border-bottom">
+            <div class="stat-col"><i class="bi bi-send"></i><span>0</span></div>
+            <div class="stat-col"><i class="bi bi-check2-all"></i><span>0</span></div>
+            <div class="stat-col"><i class="bi bi-person"></i><span>0</span></div>
+            <div class="stat-col"><i class="bi bi-exclamation-triangle"></i><span>0</span></div>
+        </div>
+        <div class="node-delay-row">
+            <span>... Delay</span><span>0 Sec</span>
+        </div>
+    `;
+}
+
 function getNodeTemplate(type) {
     switch (type) {
         case 'start':
             return `
                 <div class="node-root">
-                    <div class="node-header bg-success text-white"><i class="bi bi-play-circle-fill"></i> Start / Trigger</div>
-                    <div class="node-body">
-                        <label class="mb-1 small fw-bold">Trigger Keywords</label>
+                    <div class="node-header-custom"><i class="bi bi-play-circle-fill" style="color:#32ADE6;"></i> Start Bot Flow</div>
+                    <div class="node-body-content" style="padding:10px;">
+                        <input type="text" class="form-control form-control-sm mb-2 text-center" style="background:#e2e8f0; font-weight:bold;" value="Demo_bot" disabled>
+                        <div class="small fw-bold text-muted mb-1">Bot trigger keywords</div>
                         <input type="text" class="form-control form-control-sm mb-2" placeholder="Hi, Hello, Start..." df-keywords>
-                        <p class="text-muted mb-0" style="font-size: 0.65rem;">Flow starts when user sends any of these keywords (comma separated). Leave empty for any message.</p>
+                        <div class="small fw-bold text-muted mb-1">Keyword matching type</div>
+                        <select class="form-select form-select-sm mb-2"><option>Exact keyword match</option><option>Contains match</option></select>
                     </div>
                 </div>
             `;
         case 'text':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-chat-left-text whatsapp"></i> Text Message</div>
-                    <div class="node-body">
-                        <label>Message Body</label>
+                    <div class="node-header-custom"><i class="bi bi-filter-left" style="color:#4B6EAF;"></i> Text</div>
+                    ${getDrawflowStats()}
+                    <div class="node-body-content">
                         <textarea class="form-control" rows="3" placeholder="Type your message..." df-text></textarea>
+                    </div>
+                    <div class="port-labels-container">
+                        <div class="port-label-row">
+                            <span class="text-start">Message</span>
+                            <span class="text-end">Compose Next Message</span>
+                        </div>
                     </div>
                 </div>
             `;
         case 'image':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-image success"></i> Image</div>
-                    <div class="node-body">
-                        <label>Image URL (Public)</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Paste image URL here" df-image-url onchange="updatePreview(this)">
-                        <div class="node-preview mt-2" id="preview-image">
-                            <i class="bi bi-image placeholder"></i>
+                    <div class="node-header-custom"><i class="bi bi-image" style="color:#8C52FF;"></i> Image</div>
+                    ${getDrawflowStats()}
+                    <div class="node-body-content">
+                        <div class="ref-preview" id="preview-image">
+                            <!-- Image URL will be appended here via updatePreview -->
+                            <i class="bi bi-image" style="font-size:3rem; color:#9ca3af; display:block; text-align:center; padding:20px;"></i>
                         </div>
+                        <div class="ref-url-label">Resource URL</div>
+                        <input type="text" class="form-control form-control-sm mt-1" placeholder="https://..." df-image-url onchange="updatePreview(this)">
+                    </div>
+                    <div class="port-labels-container">
+                        <div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end text-muted" style="font-size:0.65rem;">Keyboard Button</span></div>
                     </div>
                 </div>
             `;
         case 'interactive':
             return `
                 <div>
-                    <div class="node-header bg-warning text-white"><i class="bi bi-ui-checks-grid"></i> Quick Replies</div>
-                    <div class="node-body">
-                        <label>Message Body</label>
-                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Greeting/Prompt..." df-prompt>
-                        <label>Reply Buttons</label>
-                        <div id="btn-list" class="btn-list"></div>
-                        <button class="btn btn-outline-warning btn-sm w-100 mt-2" onclick="addButtonToNode(this)">
-                            <i class="bi bi-plus-circle"></i> Add Reply Button
-                        </button>
+                    <div class="node-header-custom interactive-hd"><i class="bi bi-menu-button-wide-fill"></i> Interactive</div>
+                    ${getDrawflowStats()}
+                    <div class="node-body-content p-2">
+                        <div class="node-message-box">
+                            <strong>Visit Our Site</strong><br>
+                            If you are interested to visit our site
+                        </div>
+                        <textarea class="form-control d-none" df-prompt>Visit Our Site - If you are interested</textarea>
+                    </div>
+                    <div class="port-labels-container">
+                        <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end">Next</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end fw-bold">Buttons</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">List Messages</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">E-commerce</span></div>
                     </div>
                 </div>
             `;
         case 'cta':
             return `
                 <div class="node-root">
-                    <div class="node-header bg-info text-white"><i class="bi bi-box-arrow-up-right"></i> Buttons (CTA)</div>
-                    <div class="node-body">
-                        <label>Message Body</label>
-                        <textarea class="form-control mb-2" rows="2" placeholder="Promotion/Offer text..." df-message></textarea>
-                        
-                        <div class="cta-input mb-2 p-2 rounded bg-light border">
-                            <label class="d-flex align-items-center gap-1"><i class="bi bi-link-45deg"></i> Website Button</label>
-                            <input type="text" class="form-control form-control-sm mb-1" placeholder="Button Title (e.g. Buy Now)" df-link-title>
-                            <input type="text" class="form-control form-control-sm" placeholder="https://..." df-link-url>
-                        </div>
-                        
-                        <div class="cta-input p-2 rounded bg-light border">
-                            <label class="d-flex align-items-center gap-1"><i class="bi bi-telephone-fill" style="font-size: 0.6rem;"></i> Call Button</label>
-                            <input type="text" class="form-control form-control-sm mb-1" placeholder="Button Title (e.g. Call Us)" df-call-title>
-                            <input type="text" class="form-control form-control-sm" placeholder="+91..." df-call-number>
-                        </div>
+                    <div class="node-header-custom button-hd"><i class="bi bi-cursor-fill"></i> Button</div>
+                    <div class="node-stats-row border-bottom">
+                        <div class="stat-col"><i class="bi bi-hand-index"></i><span>0</span></div>
+                        <div class="stat-col"><i class="bi bi-person"></i><span>0</span></div>
+                        <div class="stat-col"><i class="bi bi-exclamation-triangle border-danger text-danger"></i><span>0</span></div>
+                    </div>
+                    <div class="node-body-content py-4 text-center">
+                        <i class="bi bi-hand-index-thumb" style="font-size:2rem; opacity:0.5;"></i>
+                        <input type="hidden" df-message value="Button Event">
+                    </div>
+                    <div class="port-labels-container">
+                        <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end text-muted">Next</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end">Subscribe to Sequence</span></div>
                     </div>
                 </div>
             `;
         case 'audio':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-mic info"></i> Audio</div>
-                    <div class="node-body">
-                        <label>Audio URL</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Paste audio URL here" df-audio-url>
+                    <div class="node-header-custom"><i class="bi bi-mic-fill" style="color:#FFB020;"></i> Audio</div>
+                    ${getDrawflowStats()}
+                    <div class="node-body-content">
+                        <div class="ref-preview-audio mb-2">
+                            <i class="bi bi-play-circle-fill text-primary" style="font-size:1.5rem;"></i>
+                            <div class="flex-grow-1" style="height:3px; background:#c8d3e0; border-radius:3px;"></div>
+                            <i class="bi bi-volume-up-fill"></i>
+                        </div>
+                        <div class="ref-url-label">Resource URL</div>
+                        <input type="text" class="form-control form-control-sm mt-1" placeholder="Audio URL..." df-audio-url>
                     </div>
+                    <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
                 </div>
             `;
         case 'video':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-play-circle-fill danger"></i> Video</div>
-                    <div class="node-body">
-                        <label>Video URL</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Paste video URL here" df-video-url>
+                    <div class="node-header-custom"><i class="bi bi-youtube" style="color:#FF3B30;"></i> Video</div>
+                    ${getDrawflowStats()}
+                    <div class="node-body-content">
+                        <div class="ref-preview bg-dark d-flex align-items-center justify-content-center" style="height:80px;">
+                            <i class="bi bi-play-circle text-white fs-3"></i>
+                        </div>
+                        <div class="ref-url-label">Resource URL</div>
+                        <input type="text" class="form-control form-control-sm mt-1" placeholder="Video URL..." df-video-url>
                     </div>
+                    <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
                 </div>
             `;
         case 'file':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-file-earmark-arrow-up primary"></i> Document</div>
-                    <div class="node-body">
-                        <label>File URL</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Paste document URL here" df-file-url>
+                    <div class="node-header-custom"><i class="bi bi-paperclip" style="color:#34C759;"></i> File</div>
+                    ${getDrawflowStats()}
+                    <div class="node-body-content text-center py-3">
+                        <i class="bi bi-folder-fill" style="font-size:3rem; color:#FF9500;"></i>
+                        <div class="mt-2 text-muted" style="font-size:0.65rem;">NewBuilder... .docx</div>
+                        <div class="ref-url-label text-start mt-3">Resource URL</div>
+                        <input type="text" class="form-control form-control-sm mt-1" placeholder="File URL..." df-file-url>
                     </div>
+                    <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
                 </div>
             `;
         case 'condition':
             return `
                 <div>
-                    <div class="node-header"><i class="bi bi-diagram-2 secondary"></i> Condition</div>
-                    <div class="node-body">
-                        <label>Keyword Check</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="e.g. Sales" df-keyword>
-                    </div>
-                </div>
-            `;
-        case 'delay':
-            return `
-                <div>
-                    <div class="node-header"><i class="bi bi-hourglass-split info"></i> Delay</div>
-                    <div class="node-body">
-                        <label>Wait Duration (Seconds)</label>
-                        <input type="number" class="form-control" value="2" min="1" max="60" df-delay-seconds>
+                    <div class="node-header-custom"><i class="bi bi-chevron-right" style="color:#AF52DE;"></i> Condition</div>
+                    <div class="node-body-content">
+                        <label class="small fw-bold">Logic</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="if keyword == X" df-keyword>
                     </div>
                 </div>
             `;
@@ -219,8 +255,8 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     let inputs = 1; let outputs = 1;
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
-    // Interactive nodes now start with 1 output for a "Default" path
-    if (type === 'interactive') outputs = 1; 
+    if (type === 'interactive') outputs = 4;
+    if (type === 'cta') outputs = 2;
 
     editor.addNode(type, inputs, outputs, pos_x, pos_y, type, {}, template);
 }

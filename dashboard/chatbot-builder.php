@@ -25,120 +25,86 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="builder-wrapper">
-    <!-- Builder Header / Toolbar -->
-    <header class="builder-header">
-        <div class="d-flex align-items-center gap-3">
-            <a href="<?= baseUrl('dashboard/'); ?>" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Back to Dashboard">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <h5 class="mb-0 fw-bold">Chatbot Flow Builder 🤖</h5>
+    <!-- Top Palette Toolbar -->
+    <header class="top-palette align-items-center bg-light border-bottom px-3 py-2 d-flex justify-content-between">
+        <div class="d-flex align-items-center gap-2 drag-items-row">
+            <!-- Brand / Logo Icon (Optional) -->
+            <div class="brand-icon me-3 bg-white border rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 40px; height: 40px;">
+                <i class="bi bi-robot text-primary fs-5"></i>
+            </div>
+            
+            <!-- Draggable Icons -->
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="text" title="Text Message">
+                <i class="bi bi-fonts" style="color: #4B6EAF;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="image" title="Image">
+                <i class="bi bi-image" style="color: #8C52FF;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="audio" title="Audio">
+                <i class="bi bi-mic-fill" style="color: #FFB020;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="video" title="Video">
+                <i class="bi bi-youtube" style="color: #FF3B30;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="file" title="File">
+                <i class="bi bi-paperclip" style="color: #34C759;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="interactive" title="Buttons">
+                <i class="bi bi-ui-radios" style="color: #FF9500;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="condition" title="Condition">
+                <i class="bi bi-chevron-right" style="color: #AF52DE;"></i>
+            </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="start" title="Start Flow">
+                <i class="bi bi-play-circle-fill" style="color: #32ADE6;"></i>
+            </div>
         </div>
         
-        <div class="builder-actions">
-            <button class="btn btn-light btn-sm px-3" onclick="clearCanvas()">
-                <i class="bi bi-trash3 me-1"></i> Clear
+        <div class="d-flex align-items-center gap-2 builder-actions">
+            <!-- Back Button -->
+            <a href="<?= baseUrl('dashboard/'); ?>" class="action-circle-btn" title="Back to Dashboard">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <!-- Reset Button -->
+            <button class="action-circle-btn" onclick="clearCanvas()" title="Clear Canvas">
+                <i class="bi bi-x-lg"></i>
             </button>
-            <button class="btn btn-light btn-sm px-3" onclick="loadFlow()">
-                <i class="bi bi-folder2-open me-1"></i> Load
-            </button>
-            <button class="btn btn-outline-primary btn-sm px-3" onclick="exportJSON()">
-                <i class="bi bi-code-slash me-1"></i> Export JSON
-            </button>
-            <button class="btn btn-primary btn-sm px-4 shadow-sm" onclick="saveFlow()">
-                <i class="bi bi-cloud-check me-1"></i> Save Flow
+            <!-- Flow Name Input -->
+            <input type="text" id="flowNameInput" class="form-control form-control-sm text-center mx-2" value="Demo_bot" style="width: 150px; font-weight: 500;">
+            
+            <!-- Save Button -->
+            <button class="btn btn-sm btn-success d-flex align-items-center px-3" onclick="saveFlow()" style="font-weight: 500;">
+                <i class="bi bi-save2 me-2"></i> Save
             </button>
         </div>
     </header>
 
-    <div class="builder-layout">
-        <!-- Sidebar: Node Palette -->
-        <aside class="builder-sidebar">
-            <div class="sidebar-label">Trigger</div>
-            <div class="node-palette mb-3">
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="start">
-                    <i class="bi bi-play-circle-fill text-success"></i>
-                    <span>Start / Trigger</span>
-                </div>
+    <div class="builder-layout d-flex h-100">
+        <!-- Configuration Panel (Hidden by default, slides in from left) -->
+        <aside class="config-sidebar bg-light border-end d-none" id="configSidebar" style="width: 350px; flex-shrink: 0; display: flex; flex-direction: column;">
+            <div class="config-header bg-secondary text-white text-center py-2 px-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold m-auto">Configure Button</h6>
             </div>
-
-            <div class="sidebar-label">Pills / Components</div>
-            <div class="node-palette">
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="text">
-                    <i class="bi bi-chat-left-text whatsapp"></i>
-                    <span>Text Message</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="image">
-                    <i class="bi bi-image success"></i>
-                    <span>Image</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="audio">
-                    <i class="bi bi-mic info"></i>
-                    <span>Audio</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="video">
-                    <i class="bi bi-play-circle-fill danger"></i>
-                    <span>Video</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="file">
-                    <i class="bi bi-file-earmark-arrow-up primary"></i>
-                    <span>File / Doc</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="interactive">
-                    <i class="bi bi-ui-checks-grid warning"></i>
-                    <span>Quick Replies</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="cta">
-                    <i class="bi bi-box-arrow-up-right info"></i>
-                    <span>Buttons (CTA)</span>
-                </div>
-                <hr class="my-3 opacity-10">
-                <div class="sidebar-label">Logic</div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="condition">
-                    <i class="bi bi-diagram-2 secondary"></i>
-                    <span>Condition</span>
-                </div>
-                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="delay">
-                    <i class="bi bi-hourglass-split info"></i>
-                    <span>Delay</span>
-                </div>
+            <div class="config-body p-3 flex-grow-1 overflow-auto" id="configBody">
+                <!-- Dynamic Content Form will load here -->
             </div>
-            
-            <div class="builder-tips mt-auto">
-                <h6><i class="bi bi-lightbulb"></i> Tip</h6>
-                <p>Drag components onto the canvas and connect their ports to build logic flow.</p>
+            <div class="config-footer p-3 border-top d-flex justify-content-between align-items-center bg-white">
+                <button class="btn btn-primary btn-sm px-4" onclick="saveConfig()"><i class="bi bi-save me-1"></i> Save</button>
+                <button class="btn btn-light border btn-sm px-3" onclick="closeConfig()"><i class="bi bi-x-circle me-1"></i> Close</button>
             </div>
         </aside>
 
         <!-- Main Canvas Area -->
-        <main class="builder-canvas-area" id="drawflow-canvas" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <main class="builder-canvas-area flex-grow-1 position-relative" id="drawflow-canvas" ondrop="drop(event)" ondragover="allowDrop(event)">
             <!-- Drawflow will be initialized here -->
             
             <!-- Canvas Controls -->
-            <div class="canvas-controls">
-                <button onclick="editor.zoom_out()"><i class="bi bi-dash-lg"></i></button>
-                <button onclick="editor.zoom_reset()"><i class="bi bi-aspect-ratio"></i></button>
-                <button onclick="editor.zoom_in()"><i class="bi bi-plus-lg"></i></button>
+            <div class="canvas-controls position-absolute bottom-0 end-0 m-3">
+                <button class="btn btn-light shadow-sm me-1" onclick="editor.zoom_out()"><i class="bi bi-dash-lg"></i></button>
+                <button class="btn btn-light shadow-sm me-1" onclick="editor.zoom_reset()"><i class="bi bi-aspect-ratio"></i></button>
+                <button class="btn btn-light shadow-sm" onclick="editor.zoom_in()"><i class="bi bi-plus-lg"></i></button>
             </div>
         </main>
-    </div>
-</div>
-
-<!-- Modal for JSON Export (Preview) -->
-<div class="modal fade" id="jsonModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Exported Flow JSON</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                <pre id="jsonOutput" class="m-0 p-4 bg-dark text-success" style="max-height: 500px; overflow: auto; font-size: 0.85rem; border-radius: 0 0 8px 8px;"></pre>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="copyJSON()">Copy to Clipboard</button>
-            </div>
-        </div>
     </div>
 </div>
 
