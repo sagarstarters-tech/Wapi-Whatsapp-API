@@ -53,6 +53,14 @@ include __DIR__ . '/../includes/header.php';
     <div class="builder-layout">
         <!-- Sidebar: Node Palette -->
         <aside class="builder-sidebar">
+            <div class="sidebar-label">Trigger</div>
+            <div class="node-palette mb-3">
+                <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="start">
+                    <i class="bi bi-play-circle-fill text-success"></i>
+                    <span>Start / Trigger</span>
+                </div>
+            </div>
+
             <div class="sidebar-label">Pills / Components</div>
             <div class="node-palette">
                 <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="text">

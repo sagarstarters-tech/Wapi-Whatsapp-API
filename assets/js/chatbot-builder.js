@@ -28,6 +28,17 @@ document.addEventListener("DOMContentLoaded", () => {
  */
 function getNodeTemplate(type) {
     switch (type) {
+        case 'start':
+            return `
+                <div class="node-root">
+                    <div class="node-header bg-success text-white"><i class="bi bi-play-circle-fill"></i> Start / Trigger</div>
+                    <div class="node-body text-center py-4">
+                        <div class="text-success mb-2" style="font-size: 2.5rem;"><i class="bi bi-lightning-charge-fill"></i></div>
+                        <p class="mb-0 small fw-bold">Incoming Message</p>
+                        <p class="text-muted" style="font-size: 0.65rem;">When a user sends any message</p>
+                    </div>
+                </div>
+            `;
         case 'text':
             return `
                 <div>
@@ -139,6 +150,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
 
     const template = getNodeTemplate(type);
     let inputs = 1; let outputs = 1;
+    if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
     if (type === 'interactive') outputs = 0;
 
