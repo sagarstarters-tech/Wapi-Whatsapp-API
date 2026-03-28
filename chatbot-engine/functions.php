@@ -156,32 +156,43 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
     
     switch ($nodeType) {
         case 'text':
-            sendText($phone, $nodeData['text'] ?? '', $phoneId, $token);
+            $res = sendText($phone, $nodeData['text'] ?? '', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'text', $nodeData['text'] ?? '', $res);
             break;
             
         case 'image':
-            sendImage($phone, $nodeData['image-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
+            $res = sendImage($phone, $nodeData['image-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'image', 'Image', $res, $nodeData['image-url'] ?? '');
             break;
-
+            
         case 'interactive':
             $buttonsData = [];
             foreach ($nodeData as $key => $val) {
                 if (strpos($key, 'btn-') === 0) $buttonsData[$key] = $val;
             }
-            sendButtons($phone, $nodeData['prompt'] ?? 'Select an option:', $buttonsData, $nodeId, $phoneId, $token);
+            $res = sendButtons($phone, $nodeData['prompt'] ?? 'Select an option:', $buttonsData, $nodeId, $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $nodeData['prompt'] ?? 'Interactive Buttons', $res);
             $isInteractive = true;
             break;
             
         case 'audio':
-            sendAudio($phone, $nodeData['audio-url'] ?? '', $phoneId, $token);
+            $res = sendAudio($phone, $nodeData['audio-url'] ?? '', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'audio', 'Audio', $res, $nodeData['audio-url'] ?? '');
             break;
-
+            
         case 'video':
-            sendVideo($phone, $nodeData['video-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
+            $res = sendVideo($phone, $nodeData['video-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'video', 'Video', $res, $nodeData['video-url'] ?? '');
             break;
-
+            
         case 'file':
-            sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document', $phoneId, $token);
+            $res = sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'document', 'Document', $res, $nodeData['file-url'] ?? '');
+            break;
+            
+        case 'cta':
+            $res = sendText($phone, $nodeData['message'] ?? 'Click the link:', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'text', $nodeData['message'] ?? 'CTA', $res);
             break;
 
         case 'delay':
@@ -214,5 +225,30 @@ function setSession($phone, $userId, $flowId, $nodeId, $state) {
 function getSession($phone, $userId) {
     $db = Database::getInstance();
     return $db->fetch("SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ?", [$phone, $userId]);
+}
+
+/**
+ * Log automated chatbot message to the dashboard messages table
+ */
+function logChatbotMessage($userId, $to, $type, $content, $apiResponse, $mediaUrl = null) {
+    if (!$apiResponse || !isset($apiResponse['messages'][0]['id'])) return;
+    
+    $db = Database::getInstance();
+    try {
+        $db->insert('messages', [
+            'user_id' => $userId,
+            'message_id' => $apiResponse['messages'][0]['id'],
+            'to_number' => $to,
+            'type' => $type,
+            'content' => $content,
+            'media_url' => $mediaUrl,
+            'status' => 'sent',
+            'direction' => 'outbound'
+        ]);
+        // Also deduct credit if possible
+        $db->query("UPDATE whatsapp_accounts SET credit_balance = credit_balance - 1 WHERE user_id = ?", [$userId]);
+    } catch (Exception $e) {
+        error_log("Failed to log chatbot message: " . $e->getMessage());
+    }
 }
 ?>
