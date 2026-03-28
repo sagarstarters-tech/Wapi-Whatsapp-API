@@ -82,49 +82,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } 
-            // Handle Incoming Text (Keywords / Restart / Continue)
+            // 2. Handle Incoming Text (Keywords / Restart / Continue)
             elseif ($type === 'text') {
                 $textBody = strtolower(trim($msg['text']['body'] ?? ''));
+                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Text body: '$textBody'\n", FILE_APPEND);
 
                 // Find User's active flow
-                $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id ASC LIMIT 1", [$userId]);
-                if (!$flow) continue;
-
-                $flowData = json_decode($flow['flow_json'], true);
-                $nodes = $flowData['drawflow']['Home']['data'] ?? [];
-                
-                // 1. Check if input matches any "Start" node keywords
-                $startNodeId = null;
-                $isTrigger = false;
-                
-                foreach ($nodes as $nId => $nData) {
-                    if ($nData['name'] === 'start') {
-                        $keywords = strtolower($nData['data']['keywords'] ?? '');
-                        $keywordArr = array_map('trim', explode(',', $keywords));
-                        
-                        // If keywords are empty, 'hi'/'start' are defaults, otherwise match the list
-                        if (empty($keywords) && in_array($textBody, ['hi', 'hello', 'start', 'menu'])) {
-                            $isTrigger = true;
-                            $startNodeId = $nId;
-                        } elseif (in_array($textBody, $keywordArr)) {
-                            $isTrigger = true;
-                            $startNodeId = $nId;
+                $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
+                if ($flow) {
+                    $flowData = json_decode($flow['flow_json'], true);
+                    $nodes = $flowData['drawflow']['Home']['data'] ?? [];
+                    $isTrigger = false; $startNodeId = null;
+                    
+                    foreach ($nodes as $nId => $nData) {
+                        if ($nData['name'] === 'start') {
+                            $keywords = strtolower($nData['data']['keywords'] ?? '');
+                            if (empty($keywords)) {
+                                if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
+                                    $isTrigger = true; $startNodeId = $nId; break;
+                                }
+                            } else {
+                                $keywordArr = array_map('trim', explode(',', $keywords));
+                                $keywordArr = array_map('strtolower', $keywordArr);
+                                if (in_array($textBody, $keywordArr)) {
+                                    $isTrigger = true; $startNodeId = $nId; break;
+                                }
+                            }
                         }
-                        if ($isTrigger) break;
                     }
-                }
 
-                if ($isTrigger) {
-                    // Start or Reset session
-                    runFlow($from, $userId, $flow['id'], $startNodeId, $phoneNumberId, $accessToken);
-                } else {
-                    // 2. Resume from current session if exists
-                    $session = getSession($from);
-                    if ($session && $session['state'] === 'active' && $session['flow_id'] == $flow['id']) {
-                         runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
+                    if ($isTrigger) {
+                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Trigger matched node: $startNodeId\n", FILE_APPEND);
+                        runFlow($from, $userId, $flow['id'], $startNodeId, $phoneNumberId, $accessToken);
                     } else {
-                         // Default fallback: Trigger flow from start if no active session
-                         runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                        $session = getSession($from, $userId);
+                        if ($session && ($session['state'] ?? '') === 'active' && ($session['flow_id'] ?? 0) == $flow['id']) {
+                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Continuing session at node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
+                            runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
+                        } else {
+                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for '$textBody'\n", FILE_APPEND);
+                            runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                        }
                     }
                 }
             }

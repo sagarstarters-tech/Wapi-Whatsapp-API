@@ -80,6 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // 2. Handle Text Messages (Check Triggers or Session)
                         elseif ($type === 'text') {
                             $textBody = strtolower(trim($msg['text']['body'] ?? ''));
+                            file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Text body: '$textBody'\n", FILE_APPEND);
+                            
                             $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
                             
                             if ($flow) {
@@ -92,11 +94,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $keywords = strtolower($nData['data']['keywords'] ?? '');
                                         if (empty($keywords)) {
                                             // Default triggers if empty
-                                            if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey'])) {
+                                            if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
                                                 $isTrigger = true; $startNodeId = $nId; break;
                                             }
                                         } else {
                                             $keywordArr = array_map('trim', explode(',', $keywords));
+                                            $keywordArr = array_map('strtolower', $keywordArr); // Normalize to lowercase
                                             if (in_array($textBody, $keywordArr)) {
                                                 $isTrigger = true; $startNodeId = $nId; break;
                                             }
@@ -105,16 +108,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                                 
                                 if ($isTrigger) {
-                                    file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Trigger matched node $startNodeId\n", FILE_APPEND);
+                                    file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Trigger matched node: $startNodeId\n", FILE_APPEND);
                                     runFlow($from, $userId, $flow['id'], $startNodeId, $phoneNumberId, $accessToken);
                                 } else {
                                     $session = getSession($from, $userId);
-                                    if ($session && $session['state'] === 'active' && $session['flow_id'] == $flow['id']) {
-                                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Continuing session at node " . $session['current_node_id'] . "\n", FILE_APPEND);
+                                    if ($session && ($session['state'] ?? '') === 'active' && ($session['flow_id'] ?? 0) == $flow['id']) {
+                                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Resuming session from node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
                                         runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
                                     } else {
-                                        // Auto-start if no keywords were defined (Welcome message)
-                                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] No trigger/session - Auto-starting flow\n", FILE_APPEND);
+                                        // Auto-start for any message if keywords not matched (Welcome flow)
+                                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for '$textBody'\n", FILE_APPEND);
                                         runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
                                     }
                                 }

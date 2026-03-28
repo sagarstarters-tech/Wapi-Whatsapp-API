@@ -260,10 +260,20 @@ function logChatbotMessage($userId, $to, $type, $content, $apiResponse, $mediaUr
             'status' => 'sent',
             'direction' => 'outbound'
         ]);
-        // Also deduct credit if possible
-        $db->query("UPDATE whatsapp_accounts SET credit_balance = credit_balance - 1 WHERE user_id = ?", [$userId]);
+        
+        // Deduct from credits table
+        $db->query("UPDATE credits SET used_credits = used_credits + 1 WHERE user_id = ?", [$userId]);
+        
+        // Activity log
+        $db->insert('activity_logs', [
+            'user_id' => $userId,
+            'action' => 'chatbot_reply',
+            'description' => "Chatbot replied to $to (" . ucfirst($type) . ")",
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'system'
+        ]);
+        
     } catch (Exception $e) {
-        error_log("Failed to log chatbot message: " . $e->getMessage());
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Log Error: " . $e->getMessage() . "\n", FILE_APPEND);
     }
 }
 ?>
