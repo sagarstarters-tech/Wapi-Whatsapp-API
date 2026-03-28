@@ -1,6 +1,6 @@
 <?php
 /**
- * WAPI SaaS - Save Chatbot Flow API
+ * WAPI SaaS - Save Chatbot Flow API (With JIT Migration)
  * Receives JSON from flow builder and stores it in the database.
  */
 
@@ -29,32 +29,40 @@ if (!$data || !isset($data['flow'])) {
 $flowName = $data['name'] ?? 'My Master Flow';
 $flowJson = json_encode($data['flow']);
 
-try {
-    // Check if flow exists for this user (Master Flow example)
+function performSave($db, $userId, $flowName, $flowJson) {
     $existing = $db->fetch("SELECT id FROM chatbot_flows WHERE user_id = ? AND name = ?", [$userId, $flowName]);
-
     if ($existing) {
         $db->update('chatbot_flows', ['flow_json' => $flowJson], 'id = ?', [$existing['id']]);
-        $flowId = $existing['id'];
+        return $existing['id'];
     } else {
-        $flowId = $db->insert('chatbot_flows', [
+        return $db->insert('chatbot_flows', [
             'user_id' => $userId,
             'name' => $flowName,
             'flow_json' => $flowJson
         ]);
     }
-
-    echo json_encode([
-        'success' => true, 
-        'message' => 'Flow saved successfully!',
-        'flow_id' => $flowId
-    ]);
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Database error: ' . $e->getMessage()
-    ]);
 }
-?>
+
+try {
+    $flowId = performSave($db, $userId, $flowName, $flowJson);
+    echo json_encode(['success' => true, 'message' => 'Flow saved successfully!', 'flow_id' => $flowId]);
+} catch (Exception $e) {
+    // If column missing, migrate and retry ONCE
+    if (strpos($e->getMessage(), 'Unknown column \'flow_json\'') !== false || strpos($e->getMessage(), '1054') !== false) {
+        try {
+            $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `flow_json` LONGTEXT AFTER `name` ");
+            $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
+            
+            // Retry Save
+            $flowId = performSave($db, $userId, $flowName, $flowJson);
+            echo json_encode(['success' => true, 'message' => 'Flow saved successfully after schema update!', 'flow_id' => $flowId]);
+            exit;
+        } catch (Exception $migErr) {
+            http_response_code(500);
+            die(json_encode(['success' => false, 'message' => 'Auto-migration failed: ' . $migErr->getMessage()]));
+        }
+    }
+
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+}
