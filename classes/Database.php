@@ -140,6 +140,13 @@ class Database {
         return $this->pdo->rollBack();
     }
 
+    /**
+     * Check if in transaction
+     */
+    public function inTransaction() {
+        return $this->pdo->inTransaction();
+    }
+
     // Prevent cloning and unserialization
     private function __clone() {}
     public function __wakeup() {

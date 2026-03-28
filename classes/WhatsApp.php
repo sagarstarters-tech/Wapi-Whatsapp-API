@@ -256,7 +256,13 @@ class WhatsApp {
             
             // Check if this is a flow button (Format: flow_btn_{nodeId}_{btnIdx})
             if (strpos($replyId, 'flow_btn_') === 0) {
-                // Chatbot functionality disabled
+                $parts = explode('_', $replyId);
+                // format: flow_btn_node_uuid_index
+                $nodeUuid = $parts[2] . '_' . $parts[3];
+                $btnIdx = $parts[4] ?? 0;
+                
+                $this->handleFlowResponse($from, $nodeUuid, $btnIdx, $phoneNumberId);
+                return;
             }
         }
 
@@ -278,12 +284,166 @@ class WhatsApp {
             'direction' => 'inbound'
         ]);
 
-        // Chatbot auto-reply disabled
-        /*
-        if ($msgType === 'text') {
-            $this->processAutoReply($userId, $phoneNumberId, $from, $text);
+        // Check for active flow or session
+        $this->processChatbotFlow($userId, $phoneNumberId, $from, $text, $msgType);
+    }
+
+    /**
+     * Entry point for Chatbot Flow logic
+     */
+    private function processChatbotFlow($userId, $phoneNumberId, $from, $text, $msgType) {
+        $text = strtolower(trim($text));
+        
+        // 1. Check if user is in an active session
+        $session = $this->db->fetch("SELECT * FROM chatbot_sessions WHERE user_id = ? AND phone = ?", [$userId, $from]);
+        
+        if ($session && $session['flow_id']) {
+            // User is in a flow, handle response if applicable (e.g. they typed something while we were waiting)
+            // For now, we'll just check if they triggered a different flow
         }
-        */
+
+        // 2. Check for Keyword Triggers
+        $flows = $this->db->fetchAll("SELECT * FROM chatbot_flows WHERE user_id = ? AND is_active = 1", [$userId]);
+        
+        foreach ($flows as $flow) {
+            $matched = false;
+            $keywords = json_decode($flow['trigger_keywords'], true) ?: [];
+            
+            foreach ($keywords as $kw) {
+                $kw = strtolower(trim($kw));
+                if (empty($kw)) continue;
+
+                if ($flow['match_type'] === 'exact' && $text === $kw) $matched = true;
+                elseif ($flow['match_type'] === 'contains' && strpos($text, $kw) !== false) $matched = true;
+                elseif ($flow['match_type'] === 'starts_with' && strpos($text, $kw) === 0) $matched = true;
+                
+                if ($matched) break;
+            }
+
+            if ($matched) {
+                $this->startFlow($userId, $phoneNumberId, $from, $flow['id']);
+                return;
+            }
+        }
+    }
+
+    /**
+     * Start a specific flow for a user
+     */
+    public function startFlow($userId, $phoneNumberId, $from, $flowId) {
+        // Get start node (usually the one with no incoming connections, or we can look for specific types)
+        // For simplicity, we'll take the first node added to the flow if not specified
+        $startNode = $this->db->fetch("SELECT * FROM chatbot_nodes WHERE flow_id = ? ORDER BY id ASC LIMIT 1", [$flowId]);
+        
+        if ($startNode) {
+            // Create/Update session
+            $this->db->query("INSERT INTO chatbot_sessions (user_id, phone, flow_id, current_node_uuid) 
+                             VALUES (?, ?, ?, ?) 
+                             ON DUPLICATE KEY UPDATE flow_id = ?, current_node_uuid = ?", 
+                             [$userId, $from, $flowId, $startNode['node_uuid'], $flowId, $startNode['node_uuid']]);
+            
+            $this->executeNode($userId, $phoneNumberId, $from, $flowId, $startNode['node_uuid']);
+        }
+    }
+
+    /**
+     * Execute a specific node's action
+     */
+    private function executeNode($userId, $phoneNumberId, $to, $flowId, $nodeUuid) {
+        $node = $this->db->fetch("SELECT * FROM chatbot_nodes WHERE flow_id = ? AND node_uuid = ?", [$flowId, $nodeUuid]);
+        if (!$node) return;
+
+        $data = json_decode($node['data'], true) ?: [];
+        $account = $this->db->fetch("SELECT access_token FROM whatsapp_accounts WHERE user_id = ? AND phone_number_id = ?", [$userId, $phoneNumberId]);
+        if (!$account) return;
+
+        $accessToken = $account['access_token'];
+
+        switch ($node['type']) {
+            case 'text':
+                $this->sendText($userId, $phoneNumberId, $accessToken, $to, $data['message'] ?? '');
+                $this->moveToNextNode($userId, $phoneNumberId, $to, $flowId, $nodeUuid);
+                break;
+                
+            case 'image':
+                $this->sendImage($userId, $phoneNumberId, $accessToken, $to, $data['url'] ?? '', $data['caption'] ?? '');
+                $this->moveToNextNode($userId, $phoneNumberId, $to, $flowId, $nodeUuid);
+                break;
+
+            case 'buttons':
+                $this->sendButtons($userId, $phoneNumberId, $accessToken, $to, $data['message'] ?? '', $data['buttons'] ?? [], $nodeUuid);
+                // Waiting for user interaction (handled in handleIncomingMessage)
+                break;
+                
+            case 'delay':
+                $seconds = isset($data['seconds']) ? (int)$data['seconds'] : 2;
+                // In a real SaaS, this would be a background job. For now, we'll sleep (not ideal for high scale).
+                sleep($seconds);
+                $this->moveToNextNode($userId, $phoneNumberId, $to, $flowId, $nodeUuid);
+                break;
+        }
+    }
+
+    /**
+     * Follow connection to the next node
+     */
+    private function moveToNextNode($userId, $phoneNumberId, $to, $flowId, $currentNodeUuid, $port = 'out') {
+        $connection = $this->db->fetch("SELECT to_node_uuid FROM chatbot_connections 
+                                       WHERE flow_id = ? AND from_node_uuid = ? AND from_port = ?", 
+                                       [$flowId, $currentNodeUuid, $port]);
+        
+        if ($connection) {
+            $nextNodeUuid = $connection['to_node_uuid'];
+            $this->db->update('chatbot_sessions', ['current_node_uuid' => $nextNodeUuid], "user_id = ? AND phone = ?", [$userId, $to]);
+            $this->executeNode($userId, $phoneNumberId, $to, $flowId, $nextNodeUuid);
+        } else {
+            // End of flow
+            $this->db->delete('chatbot_sessions', "user_id = ? AND phone = ?", [$userId, $to]);
+        }
+    }
+
+    /**
+     * Handle button clicks specifically for flows
+     */
+    private function handleFlowResponse($from, $nodeUuid, $btnIdx, $phoneNumberId) {
+        $account = $this->db->fetch("SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ?", [$phoneNumberId]);
+        if (!$account) return;
+        
+        $userId = $account['user_id'];
+        $session = $this->db->fetch("SELECT * FROM chatbot_sessions WHERE user_id = ? AND phone = ? AND current_node_uuid = ?", [$userId, $from, $nodeUuid]);
+        
+        if ($session) {
+            // For buttons, ports might be btn_0, btn_1 etc. or just 'out'
+            $this->moveToNextNode($userId, $phoneNumberId, $from, $session['flow_id'], $nodeUuid, 'out');
+        }
+    }
+
+    /**
+     * Send Quick Reply Buttons
+     */
+    public function sendButtons($userId, $phoneNumberId, $accessToken, $to, $text, $buttonLabels, $nodeUuid) {
+        $buttons = [];
+        foreach ($buttonLabels as $i => $label) {
+            if ($i >= 3) break; // WhatsApp limit
+            $buttons[] = [
+                'type' => 'reply',
+                'reply' => ['id' => "flow_btn_{$nodeUuid}_{$i}", 'title' => mb_substr($label, 0, 20)]
+            ];
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $this->formatPhone($to),
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'button',
+                'body' => ['text' => $text],
+                'action' => ['buttons' => $buttons]
+            ]
+        ];
+
+        return $this->sendMessage($userId, $phoneNumberId, $accessToken, $to, 'interactive', $text, $payload);
     }
 
 
