@@ -16,7 +16,8 @@ function sendRequest($payload, $phoneId = null, $token = null) {
     $targetPhoneId = $phoneId ?? (defined('PHONE_NUMBER_ID') ? PHONE_NUMBER_ID : '');
     $targetToken = $token ?? (defined('WHATSAPP_API_TOKEN') ? WHATSAPP_API_TOKEN : '');
 
-    error_log("Sending Request with ID $targetPhoneId: " . json_encode($payload));
+    // Debug logging
+    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Sending Payload: " . json_encode($payload) . "\n", FILE_APPEND);
 
     $url = "https://graph.facebook.com/" . WHATSAPP_API_VERSION . "/" . $targetPhoneId . "/messages";
     $ch = curl_init();
@@ -39,13 +40,13 @@ function sendRequest($payload, $phoneId = null, $token = null) {
     curl_close($ch);
 
     if ($error) {
-        error_log("Meta API CONNECTION Error: " . $error);
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] cURL Error: " . $error . "\n", FILE_APPEND);
         return false;
     }
 
     $result = json_decode($response, true);
-    if ($httpCode >= 400 && isset($result['error'])) {
-        error_log("Meta API Response Error (HTTP " . $httpCode . "): " . json_encode($result['error']));
+    if ($httpCode >= 400) {
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Meta Error (HTTP $httpCode): " . json_encode($result) . "\n", FILE_APPEND);
         return false;
     }
 
@@ -126,23 +127,37 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
 
     // 1. Fetch the Flow JSON
     $flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = ?", [$flowId]);
-    if (!$flow) return;
+    if (!$flow) {
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Flow not found: $flowId\n", FILE_APPEND);
+        return;
+    }
 
     $data = json_decode($flow['flow_json'], true);
     $nodes = $data['drawflow']['Home']['data'] ?? [];
 
-    // 2. Identify Current Node
+    // 2. Identify Current Node (if null, find a start node)
     if ($nodeId === null) {
         foreach ($nodes as $nId => $nData) {
-            if (empty($nData['inputs']['input_1']['connections'])) {
-                $nodeId = $nId;
-                break;
+            // A node is a start point if it has no inputs OR its inputs are empty
+            $hasInputs = !empty($nData['inputs']);
+            if (!$hasInputs || (isset($nData['inputs']['input_1']) && empty($nData['inputs']['input_1']['connections']))) {
+                if ($nData['name'] === 'start') {
+                    $nodeId = $nId;
+                    break;
+                }
             }
         }
-        if ($nodeId === null) $nodeId = 1;
+        // Fallback to first node if no explicit start found
+        if ($nodeId === null && !empty($nodes)) {
+            $nodeIds = array_keys($nodes);
+            $nodeId = $nodeIds[0];
+        }
     }
 
-    if (!isset($nodes[$nodeId])) return;
+    if ($nodeId === null || !isset($nodes[$nodeId])) {
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Target node $nodeId not found in flow\n", FILE_APPEND);
+        return;
+    }
 
     $currentNode = $nodes[$nodeId];
     $nodeType = $currentNode['name'];
