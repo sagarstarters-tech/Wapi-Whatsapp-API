@@ -21,6 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Event Listeners
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
+        // After node is created, check if it's an interactive node to restore buttons
+        const node = editor.getNodeFromId(nodeId);
+        if (node.name === 'interactive' && node.data) {
+             restoreInteractivePorts(nodeId);
+        }
     });
 
     // Fix for port interaction: ensure ports are clickable even if node has inputs
@@ -34,7 +39,34 @@ document.addEventListener("DOMContentLoaded", () => {
             e.stopPropagation();
         }
     }, true);
+
+    // Auto-load master flow on start
+    setTimeout(() => loadFlow(true), 100);
 });
+
+function restoreInteractivePorts(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    const nodeEl = document.getElementById('node-' + nodeId);
+    if (!nodeEl || !node.data) return;
+    
+    const btnList = nodeEl.querySelector('#btn-list');
+    if (!btnList) return;
+
+    // Clear and reconstruction buttons from data keys (df-btn-0, df-btn-1, etc.)
+    btnList.innerHTML = '';
+    Object.keys(node.data).forEach(key => {
+        if (key.startsWith('btn-')) {
+            const index = key.replace('btn-', '');
+            const btnWrapper = document.createElement('div');
+            btnWrapper.className = 'btn-item mb-1';
+            btnWrapper.innerHTML = `
+                <input type="text" class="form-control form-control-sm border-0 bg-transparent p-0" placeholder="Button text" df-${key} value="${node.data[key]}">
+                <i class="bi bi-x-circle-fill remove-btn" onclick="removeButtonFromNode(this, ${nodeId})"></i>
+            `;
+            btnList.appendChild(btnWrapper);
+        }
+    });
+}
 
 /**
  * 1. Node Templates Management
@@ -265,9 +297,24 @@ function clearCanvas() {
     Swal.fire({ icon: 'warning', title: 'Clear?', text: 'Delete everything?', showCancelButton: true }).then(r => r.isConfirmed && editor.clearModuleSelected());
 }
 
-function loadFlow() {
-    // Basic loading logic for existing flows could go here
-    Swal.fire('Tip', 'Master flow is automatically loaded on start if found.', 'info');
+function loadFlow(quiet = false) {
+    if (!quiet) Swal.fire({ title: 'Loading Flow...', didOpen: () => Swal.showLoading() });
+    
+    fetch('../api/chatbot/get-flow.php?name=Master Flow')
+    .then(res => res.json())
+    .then(res => {
+        if (!quiet) Swal.close();
+        if (res.success && res.flow) {
+            editor.import(res.flow);
+            if (!quiet) Swal.fire({ icon: 'success', title: 'Flow Loaded!', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+        } else if (!quiet) {
+            Swal.fire({ icon: 'info', title: 'No Flow Found', text: 'You haven\'t saved any flow yet. Start by dragging nodes!' });
+        }
+    })
+    .catch(err => {
+        if (!quiet) Swal.fire('Error', 'Failed to load flow: ' + err.message, 'error');
+        console.error("Load Error:", err);
+    });
 }
 
 /**
