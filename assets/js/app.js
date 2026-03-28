@@ -142,7 +142,7 @@ function initDemoChat() {
         "Our platform supports bulk messaging to thousands of contacts! 📨",
         "Need help? Our support team is available 24/7. 💬",
         "Sign up now and get 100 free messages to try! 🚀",
-        "Our chatbot can handle FAQs, orders, and customer support automatically! 🤖"
+        "Our support team is here to help you 24/7! 🤖"
     ];
     
     let replyIndex = 0;
@@ -155,12 +155,7 @@ function initDemoChat() {
         addBubble(text, 'sent');
         input.value = '';
         
-        // Simulate typing delay
-        setTimeout(function() {
-            const reply = autoReplies[replyIndex % autoReplies.length];
-            addBubble(reply, 'received');
-            replyIndex++;
-        }, 800 + Math.random() * 700);
+        // Handle incoming message
     }
     
     function addBubble(text, type) {

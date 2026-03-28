@@ -465,10 +465,10 @@ INSERT INTO `features` (`icon`, `title`, `description`, `sort_order`) VALUES
 ('bi-phone', 'Template Messages', 'Create and manage pre-approved WhatsApp message templates with dynamic variables.', 8);
 
 -- Default Plans
-INSERT INTO `plans` (`name`, `slug`, `description`, `monthly_price`, `yearly_price`, `message_limit`, `contacts_limit`, `api_calls_limit`, `templates_limit`, `chatbot_enabled`, `bulk_messaging`, `webhook_enabled`, `analytics_enabled`, `priority_support`, `badge_color`, `is_popular`, `sort_order`) VALUES
-('Starter', 'starter', 'Perfect for small businesses getting started with WhatsApp API', 999.00, 9990.00, 1000, 500, 5000, 5, 0, 0, 0, 0, '#28a745', 0, 1),
-('Professional', 'professional', 'For growing businesses that need more power and features', 2499.00, 24990.00, 5000, 2500, 25000, 25, 1, 1, 1, 0, '#6c63ff', 1, 2),
-('Business', 'business', 'For enterprises that need unlimited power and priority support', 4999.00, 49990.00, 25000, 10000, 100000, 100, 1, 1, 1, 1, '#ff6b35', 0, 3);
+INSERT INTO `plans` (`name`, `slug`, `description`, `monthly_price`, `yearly_price`, `message_limit`, `contacts_limit`, `api_calls_limit`, `templates_limit`, `bulk_messaging`, `webhook_enabled`, `analytics_enabled`, `priority_support`, `badge_color`, `is_popular`, `sort_order`) VALUES
+('Starter', 'starter', 'Perfect for small businesses getting started with WhatsApp API', 999.00, 9990.00, 1000, 500, 5000, 5, 0, 0, 0, '#28a745', 0, 1),
+('Professional', 'professional', 'For growing businesses that need more power and features', 2499.00, 24990.00, 5000, 2500, 25000, 25, 1, 1, 0, '#6c63ff', 1, 2),
+('Business', 'business', 'For enterprises that need unlimited power and priority support', 4999.00, 49990.00, 25000, 10000, 100000, 100, 1, 1, 1, '#ff6b35', 0, 3);
 
 -- Default Plan Features
 INSERT INTO `plan_features` (`plan_id`, `feature_text`, `is_included`, `sort_order`) VALUES
@@ -503,7 +503,7 @@ INSERT INTO `testimonials` (`name`, `company`, `designation`, `content`, `rating
 
 -- Default FAQs
 INSERT INTO `faqs` (`question`, `answer`, `category`, `sort_order`) VALUES
-('What is WhatsApp Business API?', 'WhatsApp Business API is a solution by Meta that allows businesses to communicate with customers at scale. It supports automated messages, chatbots, bulk messaging, and integrations with CRM and other business tools.', 'general', 1),
+('What is WhatsApp Business API?', 'WhatsApp Business API is a solution by Meta that allows businesses to communicate with customers at scale. It supports automated messages, bulk messaging, and integrations with CRM and other business tools.', 'general', 1),
 ('How do I get started?', 'Simply sign up for an account, choose a pricing plan, and connect your WhatsApp Business number. Our step-by-step setup wizard will guide you through the entire process in under 10 minutes.', 'general', 2),
 ('Do I need a Meta Business account?', 'Yes, you need a Meta Business account and a verified WhatsApp Business phone number to use the WhatsApp Cloud API. We provide detailed documentation to help you set this up.', 'general', 3),
 ('Is there a free trial?', 'Yes! Our Starter plan comes with 1,000 free messages so you can test the platform before committing to a paid plan.', 'pricing', 4),
