@@ -28,7 +28,7 @@ include __DIR__ . '/../includes/header.php';
     <!-- Builder Header / Toolbar -->
     <header class="builder-header">
         <div class="d-flex align-items-center gap-3">
-            <a href="<?= baseUrl('dashboard/chatbot.php'); ?>" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Back to Dashboard">
+            <a href="<?= baseUrl('dashboard/'); ?>" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Back to Dashboard">
                 <i class="bi bi-arrow-left"></i>
             </a>
             <h5 class="mb-0 fw-bold">Chatbot Flow Builder 🤖</h5>
