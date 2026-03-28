@@ -1,9 +1,11 @@
 <?php
 /**
  * WAPI SaaS - WhatsApp Webhook Handler
- * Receives delivery status updates and incoming messages from Meta
  */
 require_once __DIR__ . '/../config/config.php';
+
+// AT THE VERY TOP: DEBUG LOG
+file_put_contents(__DIR__ . '/../webhook_log_root.txt', "[" . date('H:i:s') . "] METHOD: " . $_SERVER['REQUEST_METHOD'] . " | IP: " . $_SERVER['REMOTE_ADDR'] . "\n", FILE_APPEND);
 
 header('Content-Type: application/json');
 
@@ -31,15 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     $payload = json_decode($input, true);
 
-    // Debug: Log incoming payload
-    file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WEBHOOK RECEIVED: " . $input . "\n", FILE_APPEND);
+    file_put_contents(__DIR__ . '/../webhook_log_root.txt', "[" . date('H:i:s') . "] PAYLOAD RECEIVED\n", FILE_APPEND);
 
     if ($payload) {
         try {
             $wa = new WhatsApp();
             $wa->processWebhook($payload);
             
-            // --- CHATBOT ENGINE INTEGRATION ---
             require_once __DIR__ . '/../chatbot-engine/config.php';
             require_once __DIR__ . '/../chatbot-engine/functions.php';
             
@@ -58,8 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($messages as $msg) {
                         $from = $msg['from'] ?? '';
                         $type = $msg['type'] ?? 'text';
-                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Processing msg from $from type $type\n", FILE_APPEND);
                         
+                        // Handler for Drawflow structure
+                        $getNodes = function($json) {
+                            $data = json_decode($json, true);
+                            return $data['drawflow']['Home']['data'] ?? $data['drawflow']['home']['data'] ?? [];
+                        };
+
                         // 1. Handle Button Replies (Interactive)
                         if ($type === 'interactive' && isset($msg['interactive']['button_reply'])) {
                             $replyId = $msg['interactive']['button_reply']['id'] ?? '';
@@ -68,8 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $flowNodeId = $parts[2]; $portIndex = (int)$parts[3];
                                 $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
                                 if ($flow) {
-                                    $flowData = json_decode($flow['flow_json'], true);
-                                    $nodes = $flowData['drawflow']['Home']['data'] ?? [];
+                                    $nodes = $getNodes($flow['flow_json']);
                                     $connections = $nodes[$flowNodeId]['outputs']['output_' . ($portIndex + 1)]['connections'] ?? [];
                                     if (!empty($connections)) {
                                         runFlow($from, $userId, $flow['id'], $connections[0]['node'], $phoneNumberId, $accessToken);
@@ -80,26 +84,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // 2. Handle Text Messages (Check Triggers or Session)
                         elseif ($type === 'text') {
                             $textBody = strtolower(trim($msg['text']['body'] ?? ''));
-                            file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Text body: '$textBody'\n", FILE_APPEND);
-                            
                             $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
                             
                             if ($flow) {
-                                $flowData = json_decode($flow['flow_json'], true);
-                                $nodes = $flowData['drawflow']['Home']['data'] ?? [];
+                                $nodes = $getNodes($flow['flow_json']);
                                 $isTrigger = false; $startNodeId = null;
                                 
                                 foreach ($nodes as $nId => $nData) {
                                     if ($nData['name'] === 'start') {
                                         $keywords = strtolower($nData['data']['keywords'] ?? '');
                                         if (empty($keywords)) {
-                                            // Default triggers if empty
                                             if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
                                                 $isTrigger = true; $startNodeId = $nId; break;
                                             }
                                         } else {
                                             $keywordArr = array_map('trim', explode(',', $keywords));
-                                            $keywordArr = array_map('strtolower', $keywordArr); // Normalize to lowercase
+                                            $keywordArr = array_map('strtolower', $keywordArr); 
                                             if (in_array($textBody, $keywordArr)) {
                                                 $isTrigger = true; $startNodeId = $nId; break;
                                             }
@@ -108,28 +108,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                                 
                                 if ($isTrigger) {
-                                    file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Trigger matched node: $startNodeId\n", FILE_APPEND);
                                     runFlow($from, $userId, $flow['id'], $startNodeId, $phoneNumberId, $accessToken);
                                 } else {
                                     $session = getSession($from, $userId);
                                     if ($session && ($session['state'] ?? '') === 'active' && ($session['flow_id'] ?? 0) == $flow['id']) {
-                                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Resuming session from node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
                                         runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
                                     } else {
-                                        // Auto-start for any message if keywords not matched (Welcome flow)
-                                        file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for '$textBody'\n", FILE_APPEND);
                                         runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
                                     }
                                 }
                             }
                         }
                     }
-                } else {
-                     file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] NO ACTIVE ACCOUNT FOUND for PhoneID: $phoneNumberId\n", FILE_APPEND);
                 }
             }
         } catch (Exception $e) {
-            file_put_contents(__DIR__ . '/../chatbot-engine/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WEBHOOK EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
+            file_put_contents(__DIR__ . '/../webhook_log_root.txt', "[" . date('H:i') . "] ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
         }
     }
 
