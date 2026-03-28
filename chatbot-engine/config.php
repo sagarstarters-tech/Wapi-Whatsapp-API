@@ -1,20 +1,23 @@
 <?php
 /**
- * WhatsApp Chatbot Configuration
- * Replace the placeholders with your actual Meta Cloud API credentials.
+ * WhatsApp Chatbot Configuration (V2)
+ * Integrated with the main application configuration.
  */
 
-// 1. Meta App Settings
-define('WHATSAPP_API_TOKEN', 'YOUR_PERMANENT_ACCESS_TOKEN'); // System User Access Token
-define('PHONE_NUMBER_ID', 'YOUR_PHONE_NUMBER_ID');          // From Meta Developer Portal
-define('WHATSAPP_API_VERSION', 'v18.0');                   // Graph API Version
-
-// 2. Webhook Settings
-define('WEBHOOK_VERIFY_TOKEN', 'my_secret_token_123');     // For verification with Meta
-
-// 3. Database Settings (Using your existing Database class)
-require_once __DIR__ . '/../includes/config.php';
+// Load main app configuration (this also loads .env)
+require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../classes/Database.php';
+
+// Engine Settings
+if (!defined('WHATSAPP_API_VERSION')) define('WHATSAPP_API_VERSION', 'v18.0');
+
+// Note: WHATSAPP_API_TOKEN and PHONE_NUMBER_ID are now handled dynamically in functions.php
+// which fetches them from the database per account.
+
+// Fallback for verification if not in main config (though it should be)
+if (!defined('WEBHOOK_VERIFY_TOKEN')) {
+    define('WEBHOOK_VERIFY_TOKEN', 'wapi_webhook_verify_token_2026');
+}
 
 // Log errors for debugging
 ini_set('log_errors', 1);
