@@ -1,10 +1,5 @@
-/**
- * WAPI SaaS - Visual Chatbot Builder Engine (V2 Full Integration)
- * Core logic for node management, connections, and flow serialization.
- */
-
 let editor;
-const id = document.getElementById("drawflow-canvas");
+let currentNodeId = null;
 
 // Initialize Drawflow
 document.addEventListener("DOMContentLoaded", () => {
@@ -21,20 +16,27 @@ document.addEventListener("DOMContentLoaded", () => {
     // Event Listeners
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
-        // After node is created, check if it's an interactive node to restore buttons
         const node = editor.getNodeFromId(nodeId);
         if (node.name === 'interactive' && node.data) {
              restoreInteractivePorts(nodeId);
         }
     });
 
-    // Fix for port interaction: ensure ports are clickable even if node has inputs
-    canvas.addEventListener('mousedown', (e) => {
-        // Find if target is a Drawflow port (input/output)
-        if (e.target.classList.contains('input') || e.target.classList.contains('output')) {
-             return; // Let Drawflow handle it
-        }
+    editor.on('nodeSelected', function(nodeId) {
+        currentNodeId = nodeId;
+        showNodeConfig(nodeId);
+    });
 
+    editor.on('nodeUnselected', function() {
+        // Optional: close sidebar on unselect? 
+        // User might prefer it stay open for the clicked node until they close it manually.
+    });
+
+    // Fix for port interaction
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('input') || e.target.classList.contains('output')) {
+             return;
+        }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
             e.stopPropagation();
         }
@@ -44,28 +46,209 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => loadFlow(true), 100);
 });
 
-function restoreInteractivePorts(nodeId) {
+/**
+ * Sidebar Config Logic
+ */
+function showNodeConfig(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    const configSidebar = document.getElementById('configSidebar');
+    const configBody = document.getElementById('configBody');
+    const configHeader = configSidebar.querySelector('.config-header h6');
+
+    configHeader.innerText = "Configure " + node.name.charAt(0).toUpperCase() + node.name.slice(1);
+    configBody.innerHTML = ''; // Clear existing
+
+    // Generate Form based on type
+    let html = '';
+    const data = node.data;
+
+    switch (node.name) {
+        case 'start':
+            html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Trigger Keywords</label>
+                    <input type="text" class="form-control" id="conf-keywords" value="${data.keywords || ''}" placeholder="Hi, Hello (comma separated)">
+                    <div class="form-text">Bot starts when user sends these words.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Matching Mode</label>
+                    <select class="form-select" id="conf-match">
+                        <option value="exact" ${data.match === 'exact' ? 'selected' : ''}>Exact match</option>
+                        <option value="contains" ${data.match === 'contains' ? 'selected' : ''}>Contains keyword</option>
+                    </select>
+                </div>
+            `;
+            break;
+        case 'text':
+            html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Message Content</label>
+                    <textarea class="form-control" id="conf-text" rows="5">${data.text || ''}</textarea>
+                </div>
+            `;
+            break;
+        case 'image':
+        case 'audio':
+        case 'video':
+        case 'file':
+            const key = node.name === 'file' ? 'file-url' : node.name + '-url';
+            html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Resource URL</label>
+                    <input type="text" class="form-control" id="conf-url" value="${data[key] || ''}" placeholder="https://...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Caption (Optional)</label>
+                    <input type="text" class="form-control" id="conf-caption" value="${data.caption || ''}">
+                </div>
+            `;
+            break;
+        case 'interactive':
+            html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Message Prompt</label>
+                    <input type="text" class="form-control" id="conf-prompt" value="${data.prompt || ''}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Buttons Configuration</label>
+                    <div id="sidebar-btn-list" class="mb-2"></div>
+                    <button class="btn btn-outline-primary btn-sm w-100" onclick="addButtonToSelectedNode()">+ Add Button</button>
+                </div>
+            `;
+            break;
+        default:
+            html = `<p class="text-muted">No specific configuration for this node.</p>`;
+    }
+
+    configBody.innerHTML = html;
+    
+    // Special handling for interactive buttons in sidebar
+    if (node.name === 'interactive') {
+        renderSidebarButtons(nodeId);
+    }
+
+    openConfig();
+}
+
+function openConfig() {
+    const sidebar = document.getElementById('configSidebar');
+    sidebar.classList.remove('d-none');
+}
+
+function closeConfig() {
+    const sidebar = document.getElementById('configSidebar');
+    sidebar.classList.add('d-none');
+}
+
+function saveConfig() {
+    if (!currentNodeId) return;
+    const node = editor.getNodeFromId(currentNodeId);
+    const newData = { ...node.data };
+
+    // Grabbing data from our dynamic form
+    switch (node.name) {
+        case 'start':
+            newData.keywords = document.getElementById('conf-keywords').value;
+            newData.match = document.getElementById('conf-match').value;
+            break;
+        case 'text':
+            newData.text = document.getElementById('conf-text').value;
+            break;
+        case 'image':
+        case 'audio':
+        case 'video':
+        case 'file':
+            const key = node.name === 'file' ? 'file-url' : node.name + '-url';
+            newData[key] = document.getElementById('conf-url').value;
+            newData.caption = document.getElementById('conf-caption').value;
+            break;
+        case 'interactive':
+            newData.prompt = document.getElementById('conf-prompt').value;
+            // Buttons are saved as we add/edit them usually, but we ensure consistency here
+            break;
+    }
+
+    editor.updateNodeDataFromId(currentNodeId, newData);
+    updateNodePreview(currentNodeId);
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Updated',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1000
+    });
+}
+
+/**
+ * Update Node UI on canvas after config change
+ */
+function updateNodePreview(nodeId) {
     const node = editor.getNodeFromId(nodeId);
     const nodeEl = document.getElementById('node-' + nodeId);
-    if (!nodeEl || !node.data) return;
-    
-    const btnList = nodeEl.querySelector('#btn-list');
-    if (!btnList) return;
+    if (!nodeEl) return;
 
-    // Clear and reconstruction buttons from data keys (df-btn-0, df-btn-1, etc.)
-    btnList.innerHTML = '';
+    if (node.name === 'text') {
+        const box = nodeEl.querySelector('.node-message-box') || nodeEl.querySelector('.form-control');
+        if (box) box.value = node.data.text || '';
+    }
+    // ... similarly for others ...
+}
+
+function renderSidebarButtons(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    const container = document.getElementById('sidebar-btn-list');
+    container.innerHTML = '';
+
     Object.keys(node.data).forEach(key => {
         if (key.startsWith('btn-')) {
-            const index = key.replace('btn-', '');
-            const btnWrapper = document.createElement('div');
-            btnWrapper.className = 'btn-item mb-1';
-            btnWrapper.innerHTML = `
-                <input type="text" class="form-control form-control-sm border-0 bg-transparent p-0" placeholder="Button text" df-${key} value="${node.data[key]}">
-                <i class="bi bi-x-circle-fill remove-btn" onclick="removeButtonFromNode(this, ${nodeId})"></i>
+            const row = document.createElement('div');
+            row.className = 'd-flex gap-2 mb-2';
+            row.innerHTML = `
+                <input type="text" class="form-control form-control-sm" value="${node.data[key]}" onchange="updateSidebarBtnText('${key}', this.value)">
+                <button class="btn btn-danger btn-sm" onclick="removeButtonFromSelectedNode('${key}')"><i class="bi bi-trash"></i></button>
             `;
-            btnList.appendChild(btnWrapper);
+            container.appendChild(row);
         }
     });
+}
+
+function updateSidebarBtnText(key, val) {
+    if (!currentNodeId) return;
+    const node = editor.getNodeFromId(currentNodeId);
+    node.data[key] = val;
+    editor.updateNodeDataFromId(currentNodeId, node.data);
+}
+
+function addButtonToSelectedNode() {
+    if (!currentNodeId) return;
+    const node = editor.getNodeFromId(currentNodeId);
+    const currentBtns = Object.keys(node.data).filter(k => k.startsWith('btn-'));
+    
+    if (currentBtns.length >= 3) {
+        Swal.fire({ icon: 'warning', title: 'WhatsApp limit: 3 buttons' });
+        return;
+    }
+
+    const nextIdx = currentBtns.length;
+    node.data['btn-' + nextIdx] = "New Button";
+    editor.updateNodeDataFromId(currentNodeId, node.data);
+    editor.addNodeOutput(currentNodeId);
+    renderSidebarButtons(currentNodeId);
+}
+
+function removeButtonFromSelectedNode(key) {
+    if (!currentNodeId) return;
+    const node = editor.getNodeFromId(currentNodeId);
+    delete node.data[key];
+    editor.updateNodeDataFromId(currentNodeId, node.data);
+    editor.removeNodeOutput(currentNodeId, 'output_' + (Object.keys(node.data).filter(k => k.startsWith('btn-')).length + 1));
+    renderSidebarButtons(currentNodeId);
+}
+
+function restoreInteractivePorts(nodeId) {
+    // Legacy integration - might not be needed with sidebar but kept for safety
 }
 
 /**
@@ -94,9 +277,9 @@ function getNodeTemplate(type) {
                     <div class="node-body-content" style="padding:10px;">
                         <input type="text" class="form-control form-control-sm mb-2 text-center" style="background:#e2e8f0; font-weight:bold;" value="Demo_bot" disabled>
                         <div class="small fw-bold text-muted mb-1">Bot trigger keywords</div>
-                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Hi, Hello, Start..." df-keywords>
-                        <div class="small fw-bold text-muted mb-1">Keyword matching type</div>
-                        <select class="form-select form-select-sm mb-2"><option>Exact keyword match</option><option>Contains match</option></select>
+                        <div class="node-message-box py-1" style="min-height:30px; border-style:dashed;">hi, hello</div>
+                        <div class="small fw-bold text-muted mt-2 mb-1">Keyword matching type</div>
+                        <div class="small opacity-75">Exact keyword match</div>
                     </div>
                 </div>
             `;
@@ -106,7 +289,7 @@ function getNodeTemplate(type) {
                     <div class="node-header-custom"><i class="bi bi-filter-left" style="color:#4B6EAF;"></i> Text</div>
                     ${getDrawflowStats()}
                     <div class="node-body-content">
-                        <textarea class="form-control" rows="3" placeholder="Type your message..." df-text></textarea>
+                        <div class="node-message-box">Type your message in sidebar...</div>
                     </div>
                     <div class="port-labels-container">
                         <div class="port-label-row">
@@ -123,11 +306,10 @@ function getNodeTemplate(type) {
                     ${getDrawflowStats()}
                     <div class="node-body-content">
                         <div class="ref-preview" id="preview-image">
-                            <!-- Image URL will be appended here via updatePreview -->
                             <i class="bi bi-image" style="font-size:3rem; color:#9ca3af; display:block; text-align:center; padding:20px;"></i>
                         </div>
                         <div class="ref-url-label">Resource URL</div>
-                        <input type="text" class="form-control form-control-sm mt-1" placeholder="https://..." df-image-url onchange="updatePreview(this)">
+                        <div class="small text-muted text-truncate">Click to set URL</div>
                     </div>
                     <div class="port-labels-container">
                         <div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div>
@@ -145,7 +327,6 @@ function getNodeTemplate(type) {
                             <strong>Visit Our Site</strong><br>
                             If you are interested to visit our site
                         </div>
-                        <textarea class="form-control d-none" df-prompt>Visit Our Site - If you are interested</textarea>
                     </div>
                     <div class="port-labels-container">
                         <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end">Next</span></div>
@@ -166,7 +347,6 @@ function getNodeTemplate(type) {
                     </div>
                     <div class="node-body-content py-4 text-center">
                         <i class="bi bi-hand-index-thumb" style="font-size:2rem; opacity:0.5;"></i>
-                        <input type="hidden" df-message value="Button Event">
                     </div>
                     <div class="port-labels-container">
                         <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end text-muted">Next</span></div>
@@ -186,7 +366,7 @@ function getNodeTemplate(type) {
                             <i class="bi bi-volume-up-fill"></i>
                         </div>
                         <div class="ref-url-label">Resource URL</div>
-                        <input type="text" class="form-control form-control-sm mt-1" placeholder="Audio URL..." df-audio-url>
+                        <div class="small text-muted">Audio link...</div>
                     </div>
                     <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
                 </div>
@@ -201,7 +381,7 @@ function getNodeTemplate(type) {
                             <i class="bi bi-play-circle text-white fs-3"></i>
                         </div>
                         <div class="ref-url-label">Resource URL</div>
-                        <input type="text" class="form-control form-control-sm mt-1" placeholder="Video URL..." df-video-url>
+                        <div class="small text-muted text-truncate">Video link...</div>
                     </div>
                     <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
                 </div>
@@ -214,8 +394,6 @@ function getNodeTemplate(type) {
                     <div class="node-body-content text-center py-3">
                         <i class="bi bi-folder-fill" style="font-size:3rem; color:#FF9500;"></i>
                         <div class="mt-2 text-muted" style="font-size:0.65rem;">NewBuilder... .docx</div>
-                        <div class="ref-url-label text-start mt-3">Resource URL</div>
-                        <input type="text" class="form-control form-control-sm mt-1" placeholder="File URL..." df-file-url>
                     </div>
                     <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
                 </div>
@@ -225,8 +403,7 @@ function getNodeTemplate(type) {
                 <div>
                     <div class="node-header-custom"><i class="bi bi-chevron-right" style="color:#AF52DE;"></i> Condition</div>
                     <div class="node-body-content">
-                        <label class="small fw-bold">Logic</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="if keyword == X" df-keyword>
+                        <div class="node-message-box py-1 text-center">Set Logic In Sidebar</div>
                     </div>
                 </div>
             `;
@@ -262,75 +439,27 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
 }
 
 /**
- * 3. Interactions Logic
- */
-function updatePreview(input) {
-    const url = input.value;
-    const previewContainer = input.closest('.drawflow-node').querySelector('#preview-image');
-    if (url) {
-        previewContainer.innerHTML = `<img src="${url}" onerror="this.innerHTML='<i class=\\'bi bi-exclamation-triangle-fill danger\\'></i> Error'">`;
-    } else {
-        previewContainer.innerHTML = '<i class="bi bi-image placeholder"></i>';
-    }
-}
-
-function addButtonToNode(btn) {
-    const btnList = btn.closest('.node-body').querySelector('#btn-list');
-    const nodeId = btn.closest('.drawflow-node').id.replace('node-', '');
-    const count = btnList.children.length;
-    
-    if (count >= 3) {
-        Swal.fire({ icon: 'warning', title: 'Limit reached', text: 'WhatsApp only supports 3 buttons.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
-        return;
-    }
-
-    const btnWrapper = document.createElement('div');
-    btnWrapper.className = 'btn-item mb-1';
-    btnWrapper.innerHTML = `
-        <input type="text" class="form-control form-control-sm border-0 bg-transparent p-0" placeholder="Button text" df-btn-${count}>
-        <i class="bi bi-x-circle-fill remove-btn" onclick="removeButtonFromNode(this, ${nodeId})"></i>
-    `;
-    btnList.appendChild(btnWrapper);
-    editor.addNodeOutput(nodeId);
-}
-
-function removeButtonFromNode(delBtn, nodeId) {
-    const parentContainer = delBtn.closest('.btn-item');
-    parentContainer.remove();
-    editor.removeNodeOutput(nodeId, 'output_1'); // Simplified removal
-}
-
-/**
  * 4. API Integration & Flow Management
  */
 function saveFlow() {
     const data = editor.export();
+    const flowName = document.getElementById('flowNameInput').value || 'Master Flow';
     
-    Swal.fire({ title: 'Saving Master Flow...', didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Saving Flow...', didOpen: () => Swal.showLoading() });
 
     fetch('../api/chatbot/save-flow.php', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Master Flow', flow: data })
+        body: JSON.stringify({ name: flowName, flow: data })
     })
     .then(res => res.json())
     .then(res => {
         if (res.success) {
-            Swal.fire({ icon: 'success', title: 'Saved!', text: res.message });
+            Swal.fire({ icon: 'success', title: 'Saved!', text: res.message, timer: 1500 });
         } else {
             Swal.fire({ icon: 'error', title: 'Oops!', text: res.message });
         }
     })
     .catch(err => Swal.fire('Error', 'Connection failed: ' + err.message, 'error'));
-}
-
-function exportJSON() {
-    const data = editor.export();
-    document.getElementById('jsonOutput').innerText = JSON.stringify(data, null, 4);
-    new bootstrap.Modal(document.getElementById('jsonModal')).show();
-}
-
-function clearCanvas() {
-    Swal.fire({ icon: 'warning', title: 'Clear?', text: 'Delete everything?', showCancelButton: true }).then(r => r.isConfirmed && editor.clearModuleSelected());
 }
 
 function loadFlow(quiet = false) {
@@ -342,54 +471,21 @@ function loadFlow(quiet = false) {
         if (!quiet) Swal.close();
         if (res.success && res.flow) {
             editor.import(res.flow);
-            if (!quiet) Swal.fire({ icon: 'success', title: 'Flow Loaded!', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
         } else if (!quiet) {
-            Swal.fire({ icon: 'info', title: 'No Flow Found', text: 'You haven\'t saved any flow yet. Start by dragging nodes!' });
+            Swal.fire({ icon: 'info', title: 'No Flow Found', text: 'Start by dragging nodes from the top bar!' });
         }
     })
     .catch(err => {
-        if (!quiet) Swal.fire('Error', 'Failed to load flow: ' + err.message, 'error');
-        console.error("Load Error:", err);
+        if (!quiet) Swal.fire('Error', 'Failed to load flow', 'error');
     });
 }
 
-/**
- * 5. Test Flow (UI Simulation)
- */
-function testFlow() {
-    const data = editor.export();
-    const nodes = data.drawflow.Home.data;
-    
-    // Find Start Node
-    let currentId = Object.keys(nodes).find(id => nodes[id].inputs.input_1.connections.length === 0) || 1;
-    
-    Swal.fire({
-        title: 'Testing Flow 🚀',
-        html: '<div id="test-output" class="text-start p-3 bg-light rounded" style="font-size: 0.85rem; height: 150px; overflow-y: auto;"></div>',
-        showConfirmButton: true,
-        confirmButtonText: 'Next Step',
-        showCancelButton: true,
-        cancelButtonText: 'Stop'
-    }).then(result => {
-        if (result.isConfirmed) {
-             // Logic for browser-based simulation would be implemented here as a recursive loop
-        }
-    });
-
-    const output = document.getElementById('test-output');
-    simulateNode(currentId, nodes, output);
+function clearCanvas() {
+    Swal.fire({ 
+        icon: 'warning', 
+        title: 'Clear Canvas?', 
+        text: 'This will delete all blocks. Are you sure?', 
+        showCancelButton: true 
+    }).then(r => r.isConfirmed && editor.clearModuleSelected());
 }
 
-function simulateNode(id, nodes, output) {
-    const node = nodes[id];
-    if (!node) return;
-    
-    output.innerHTML += `<div class="mb-2"><strong>[${node.name.toUpperCase()}]:</strong> Executing node...</div>`;
-    
-    if (node.name === 'interactive') {
-        output.innerHTML += `<div class="text-primary italic">Waiting for user interaction...</div>`;
-    } else {
-        const next = node.outputs.output_1.connections[0];
-        if (next) setTimeout(() => simulateNode(next.node, nodes, output), 1000);
-    }
-}
