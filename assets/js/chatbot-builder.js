@@ -32,10 +32,10 @@ function getNodeTemplate(type) {
             return `
                 <div class="node-root">
                     <div class="node-header bg-success text-white"><i class="bi bi-play-circle-fill"></i> Start / Trigger</div>
-                    <div class="node-body text-center py-4">
-                        <div class="text-success mb-2" style="font-size: 2.5rem;"><i class="bi bi-lightning-charge-fill"></i></div>
-                        <p class="mb-0 small fw-bold">Incoming Message</p>
-                        <p class="text-muted" style="font-size: 0.65rem;">When a user sends any message</p>
+                    <div class="node-body">
+                        <label class="mb-1 small fw-bold">Trigger Keywords</label>
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Hi, Hello, Start..." df-keywords>
+                        <p class="text-muted mb-0" style="font-size: 0.65rem;">Flow starts when user sends any of these keywords (comma separated). Leave empty for any message.</p>
                     </div>
                 </div>
             `;
