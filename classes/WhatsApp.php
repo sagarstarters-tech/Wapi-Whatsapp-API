@@ -11,7 +11,7 @@ class WhatsApp {
     public function __construct() {
         $this->db = Database::getInstance();
         $settings = new Settings();
-        $this->apiVersion = $settings->get('whatsapp_api_version', 'v17.0');
+        $this->apiVersion = $settings->get('whatsapp_api_version', 'v18.0');
         $this->apiUrl = $settings->get('whatsapp_api_url', 'https://graph.facebook.com') . '/' . $this->apiVersion;
     }
 
@@ -98,19 +98,21 @@ class WhatsApp {
     /**
      * Core message sending method
      */
-    private function sendMessage($userId, $phoneNumberId, $accessToken, $to, $type, $content, $payload, $mediaUrl = null) {
+    private function sendMessage($userId, $phoneNumberId, $accessToken, $to, $type, $content, $payload, $mediaUrl = null, $skipChecks = false) {
         $url = "{$this->apiUrl}/{$phoneNumberId}/messages";
 
-        // Check subscription
-        $sub = $this->db->fetch("SELECT id FROM subscriptions WHERE user_id = ? AND status = 'active' AND expires_at > NOW() LIMIT 1", [$userId]);
-        if (!$sub) {
-            return ['success' => false, 'message' => 'Subscription expired or inactive. Please renew your plan.'];
-        }
+        if (!$skipChecks) {
+            // Check subscription
+            $sub = $this->db->fetch("SELECT id FROM subscriptions WHERE user_id = ? AND status = 'active' AND expires_at > NOW() LIMIT 1", [$userId]);
+            if (!$sub) {
+                return ['success' => false, 'message' => 'Subscription expired or inactive. Please renew your plan.'];
+            }
 
-        // Check credits
-        $credits = $this->db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$userId]);
-        if ($credits && ($credits['total_credits'] - $credits['used_credits']) <= 0) {
-            return ['success' => false, 'message' => 'Insufficient credits. Please upgrade your plan.'];
+            // Check credits
+            $credits = $this->db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$userId]);
+            if ($credits && ($credits['total_credits'] - $credits['used_credits']) <= 0) {
+                return ['success' => false, 'message' => 'Insufficient credits. Please upgrade your plan.'];
+            }
         }
 
         // Log message

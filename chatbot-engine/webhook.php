@@ -123,7 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($isTrigger) {
                         file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Trigger matched node: $startNodeId\n", FILE_APPEND);
-                        runFlow($from, $userId, $flow['id'], $startNodeId, $phoneNumberId, $accessToken);
+                        // CRITICAL: start node itself sends no message
+                        // Jump directly to the node connected to start's output_1
+                        $startNodeData = $nodes[$startNodeId] ?? null;
+                        $startConns    = $startNodeData['outputs']['output_1']['connections'] ?? [];
+                        if (!empty($startConns)) {
+                            $firstNodeId = $startConns[0]['node'];
+                            runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken);
+                        } else {
+                            // Fallback: pass null to let runFlow auto-find
+                            runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                        }
                     } else {
                         $session = getSession($from, $userId);
                         if ($session && ($session['state'] ?? '') === 'active' && ($session['flow_id'] ?? 0) == $flow['id']) {

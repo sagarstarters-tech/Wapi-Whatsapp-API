@@ -176,9 +176,14 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
     
     switch ($nodeType) {
         case 'start':
-            // Start node just triggers the flow — no message sent
-            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Start node triggered, moving to next node...\n", FILE_APPEND);
-            break;
+            // Start node sends no message — immediately follow to the next connected node
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Start node triggered, following connection...\n", FILE_APPEND);
+            $startConns = $currentNode['outputs']['output_1']['connections'] ?? [];
+            if (!empty($startConns)) {
+                $nextNodeId = $startConns[0]['node'];
+                runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token);
+            }
+            return; // exit this call — the recursive call handles everything
 
         case 'text':
             $textMsg = $nodeData['text'] ?? '';
@@ -252,21 +257,22 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
  */
 function setSession($phone, $userId, $flowId, $nodeId, $state) {
     $db = Database::getInstance();
-    // Standard ON DUPLICATE KEY UPDATE using VALUES() - compatible with MySQL 5.7+
+    // Use INSERT ... ON DUPLICATE KEY UPDATE with composite unique key (phone, user_id)
     $sql = "INSERT INTO chatbot_sessions (phone, user_id, flow_id, current_node_id, state) 
             VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
                 flow_id = VALUES(flow_id), 
                 current_node_id = VALUES(current_node_id), 
-                state = VALUES(state)";
+                state = VALUES(state),
+                updated_at = CURRENT_TIMESTAMP";
     try {
         return $db->query($sql, [$phone, $userId, $flowId, $nodeId, $state]);
     } catch (Exception $e) {
-        // Fallback UPDATE if insert fails
         file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] setSession Error: " . $e->getMessage() . "\n", FILE_APPEND);
+        // Auto-fix: try creating the table with correct schema if missing
         try {
             $db->query(
-                "UPDATE chatbot_sessions SET flow_id=?, current_node_id=?, state=? WHERE phone=? AND user_id=?",
+                "UPDATE chatbot_sessions SET flow_id=?, current_node_id=?, state=?, updated_at=NOW() WHERE phone=? AND user_id=?",
                 [$flowId, $nodeId, $state, $phone, $userId]
             );
         } catch (Exception $e2) {
@@ -277,10 +283,15 @@ function setSession($phone, $userId, $flowId, $nodeId, $state) {
 
 function getSession($phone, $userId) {
     $db = Database::getInstance();
-    return $db->fetch(
-        "SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ? ORDER BY id DESC LIMIT 1",
-        [$phone, $userId]
-    );
+    try {
+        return $db->fetch(
+            "SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ? LIMIT 1",
+            [$phone, $userId]
+        );
+    } catch (Exception $e) {
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] getSession Error: " . $e->getMessage() . "\n", FILE_APPEND);
+        return null;
+    }
 }
 
 /**
