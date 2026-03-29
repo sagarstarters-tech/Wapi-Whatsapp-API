@@ -58,7 +58,7 @@ define('WEBHOOK_VERIFY_TOKEN', $_ENV['WEBHOOK_VERIFY_TOKEN'] ?? 'default-verify-
 
 // File Upload
 define('UPLOAD_DIR', APP_ROOT . '/uploads/');
-define('MAX_UPLOAD_SIZE', $_ENV['MAX_UPLOAD_SIZE'] ?? (10 * 1024 * 1024));
+define('MAX_UPLOAD_SIZE', $_ENV['MAX_UPLOAD_SIZE'] ?? (100 * 1024 * 1024));
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'mp4', 'mp3']);
 
 // Pagination

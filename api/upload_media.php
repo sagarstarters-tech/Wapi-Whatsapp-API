@@ -32,7 +32,8 @@ $fileTmpPath = $file['tmp_name'];
 
 // Validate size
 if ($fileSize > MAX_UPLOAD_SIZE) {
-    echo json_encode(['status' => 'error', 'message' => 'File size exceeds maximum allowed size (10MB).']);
+    $maxMb = floor(MAX_UPLOAD_SIZE / (1024 * 1024));
+    echo json_encode(['status' => 'error', 'message' => "File size exceeds maximum allowed size ({$maxMb}MB)."]);
     exit;
 }
 
