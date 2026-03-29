@@ -249,3 +249,14 @@ body {
     word-break: break-all;
     margin-top: 5px;
 }
+
+/* Configure Reference Sidebar specific styles */
+.cfg-label { font-size: 13px; font-weight: 500; color: #555; margin-bottom: 5px; }
+.cfg-input { font-size: 13px; border-radius: 4px; border: 1px solid #dee2e6; background: #fff; }
+.cfg-segment-control { display: flex; border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden; background: #f8f9fa; }
+.cfg-segment-btn { flex: 1; padding: 6px 0; text-align: center; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: #555; transition: 0.2s; white-space: nowrap; }
+.cfg-segment-btn.active { background: #007bff; color: white; }
+.cfg-segment-btn:first-child { border-right: 1px solid #dee2e6; }
+.config-header { background: #E1E6EC !important; border-bottom: 1px solid #c8d3e0; }
+.config-header h6 { color: #1e293b !important; font-weight: 700; font-size: 15px; }
+.config-sidebar { background: #F1F4F8 !important; }
