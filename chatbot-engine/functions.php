@@ -295,12 +295,20 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
 
     // 4. Move to Next Node (if not interactive)
     if (!$isInteractive) {
-        $connections = $currentNode['outputs']['output_1']['connections'] ?? [];
-        if (!empty($connections)) {
-            $nextNodeId = $connections[0]['node'];
-            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Moving to next node: $nextNodeId\n", FILE_APPEND);
-            runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
-        } else {
+        $outputs = $currentNode['outputs'] ?? [];
+        $foundNext = false;
+        
+        foreach ($outputs as $outputKey => $outputData) {
+            $connections = $outputData['connections'] ?? [];
+            foreach ($connections as $conn) {
+                $nextNodeId = $conn['node'];
+                $foundNext = true;
+                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Moving to next node via $outputKey: $nextNodeId\n", FILE_APPEND);
+                runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
+            }
+        }
+        
+        if (!$foundNext) {
             setSession($phone, $userId, $flowId, $nodeId, 'finished');
             file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Flow finished at node $nodeId\n", FILE_APPEND);
         }

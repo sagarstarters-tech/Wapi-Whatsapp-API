@@ -176,20 +176,21 @@ function showNodeConfig(nodeId) {
         case 'image':
             html = `
                 <div class="mb-3">
-                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply image</label>
-                    <input type="text" class="form-control cfg-input" id="conf-caption" value="${data.caption || ''}" placeholder="Check out that Image" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply image URL</label>
+                    <input type="text" class="form-control cfg-input" id="conf-url" value="${data['image-url'] || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
                 
                 <div class="mb-3 mt-4">
                     <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;">
-                        <input type="file" id="conf-upload" accept="image/png, image/jpeg" style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;" onchange="document.getElementById('conf-url').value = this.files[0] ? this.files[0].name : ''">
+                        <!-- Currently visually mimics an upload box for design purposes -->
                         <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
+                        <div class="mt-2 text-muted" style="font-size:11px;">(Upload disabled, please paste direct HTTP link above)</div>
                     </div>
-                    <div class="text-center mt-2" style="font-size: 12px; color: #999; font-weight: 500;">
-                        Supported types: png, jpg
-                    </div>
-                    <!-- Hidden URL field to maintain backend compatibility -->
-                    <input type="hidden" id="conf-url" value="${data['image-url'] || ''}">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Caption (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-caption" value="${data.caption || ''}" placeholder="Check out that Image" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
                 
                 <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
@@ -209,11 +210,9 @@ function showNodeConfig(nodeId) {
                 
                 <div class="mb-3 mt-4">
                     <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;">
-                        <input type="file" id="conf-upload" accept="video/mp4, video/x-flv, video/x-ms-wmv" style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;" onchange="document.getElementById('conf-video-url').value = this.files[0] ? this.files[0].name : ''">
+                        <!-- Currently visually mimics an upload box for design purposes -->
                         <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
-                    </div>
-                    <div class="text-center mt-2" style="font-size: 12px; color: #999; font-weight: 500;">
-                        Supported types: mp4, flv, wmv
+                        <div class="mt-2 text-muted" style="font-size:11px;">(Upload disabled, please paste direct HTTP link above)</div>
                     </div>
                 </div>
                 
