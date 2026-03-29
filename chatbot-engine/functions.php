@@ -68,14 +68,20 @@ function sendText($phone, $message, $phoneId = null, $token = null) {
 }
 
 function sendImage($phone, $imageUrl, $caption = '', $phoneId = null, $token = null) {
+    if (empty($imageUrl)) return false;
+    $media = ['link' => $imageUrl];
+    if (trim($caption) !== '') {
+        $media['caption'] = $caption;
+    }
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'image',
-        'image' => ['link' => $imageUrl, 'caption' => $caption]
+        'image' => $media
     ];
     return sendRequest($payload, $phoneId, $token);
 }
 
 function sendAudio($phone, $audioUrl, $phoneId = null, $token = null) {
+    if (empty($audioUrl)) return false;
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'audio',
         'audio' => ['link' => $audioUrl]
@@ -84,31 +90,45 @@ function sendAudio($phone, $audioUrl, $phoneId = null, $token = null) {
 }
 
 function sendVideo($phone, $videoUrl, $caption = '', $phoneId = null, $token = null) {
+    if (empty($videoUrl)) return false;
+    $media = ['link' => $videoUrl];
+    if (trim($caption) !== '') {
+        $media['caption'] = $caption;
+    }
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'video',
-        'video' => ['link' => $videoUrl, 'caption' => $caption]
+        'video' => $media
     ];
     return sendRequest($payload, $phoneId, $token);
 }
 
 function sendDocument($phone, $docUrl, $filename = '', $phoneId = null, $token = null) {
+    if (empty($docUrl)) return false;
+    $media = ['link' => $docUrl];
+    if (trim($filename) !== '') {
+        $media['filename'] = $filename;
+    }
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'document',
-        'document' => ['link' => $docUrl, 'filename' => $filename]
+        'document' => $media
     ];
     return sendRequest($payload, $phoneId, $token);
 }
 
 function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $token = null) {
+    if (empty(trim($text)) || empty($buttonsData)) return false;
     $buttons = [];
     foreach ($buttonsData as $key => $label) {
+        if (trim($label) === '') continue;
         if (count($buttons) >= 3) break;
         $portIndex = str_replace('btn-', '', $key); 
         $buttons[] = [
             'type' => 'reply',
-            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr($label, 0, 20)]
+            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
         ];
     }
+
+    if (empty($buttons)) return false;
 
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'interactive',
