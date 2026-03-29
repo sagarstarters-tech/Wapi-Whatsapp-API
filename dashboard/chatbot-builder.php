@@ -55,6 +55,9 @@ include __DIR__ . '/../includes/header.php';
             <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="cta" title="Link/URL Button">
                 <i class="bi bi-box-arrow-up-right" style="color: #007AFF;"></i>
             </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="card" title="Rich Media Card">
+                <i class="bi bi-card-image" style="color: #20C997;"></i>
+            </div>
             <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="condition" title="Condition">
                 <i class="bi bi-chevron-right" style="color: #AF52DE;"></i>
             </div>

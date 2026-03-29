@@ -367,7 +367,7 @@ function showNodeConfig(nodeId) {
     configBody.innerHTML = html;
     
     // Special handling for interactive buttons in sidebar
-    if (node.name === 'interactive') {
+    if (node.name === 'interactive' || node.name === 'card') {
         renderSidebarButtons(nodeId);
     }
 
@@ -425,6 +425,12 @@ function saveConfig(silent = false) {
             newData.text = document.getElementById('conf-cta-text') ? document.getElementById('conf-cta-text').value : newData.text;
             newData.btnText = document.getElementById('conf-cta-btn-text') ? document.getElementById('conf-cta-btn-text').value : newData.btnText;
             newData.url = document.getElementById('conf-cta-url') ? document.getElementById('conf-cta-url').value : newData.url;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
+            break;
+        case 'card':
+            newData['image-url'] = document.getElementById('conf-card-img') ? document.getElementById('conf-card-img').value : newData['image-url'];
+            newData.body = document.getElementById('conf-card-body') ? document.getElementById('conf-card-body').value : newData.body;
+            newData.footer = document.getElementById('conf-card-footer') ? document.getElementById('conf-card-footer').value : newData.footer;
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
     }
@@ -487,6 +493,22 @@ function updateNodePreview(nodeId) {
             if (promptBox && node.data.text) promptBox.innerHTML = node.data.text;
             const urlLabel = nodeEl.querySelector('.url-label');
             if (urlLabel && node.data.btnText) urlLabel.textContent = node.data.btnText;
+            break;
+        }
+        case 'card': {
+            const imgContainer = nodeEl.querySelector('.node-image-container');
+            if (imgContainer) {
+                if (node.data['image-url']) {
+                    imgContainer.innerHTML = `<img src="${node.data['image-url']}" style="width:100%; height:100px; object-fit:cover; border-radius:8px;">`;
+                } else {
+                    imgContainer.innerHTML = `<div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
+                }
+            }
+            const bodyBox = nodeEl.querySelector('.node-message-box');
+            if (bodyBox) bodyBox.innerHTML = node.data.body ? node.data.body.replace(/\n/g, '<br>') : '<strong>Message Body...</strong>';
+            
+            const footerBox = nodeEl.querySelector('.node-footer-box');
+            if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
             break;
         }
     }
@@ -754,6 +776,31 @@ function getNodeTemplate(type) {
                     </div>
                 </div>
             `;
+        case 'card':
+            return `
+                <div class="node-root" style="min-width: 260px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 12px; border: 1px solid #e2e8f0; font-family: 'Segoe UI', sans-serif;">
+                    <div class="node-header-custom" style="background:#f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 15px; border-radius: 12px 12px 0 0; color: #20C997; font-weight: 600;"><i class="bi bi-card-heading me-1"></i> Rich Card</div>
+                    
+                    <div class="node-body-content p-3">
+                        <div class="node-image-container mb-2">
+                            <div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>
+                        </div>
+                        <div class="node-message-box" style="font-size: 13px; color: #334155; line-height: 1.4; margin-bottom: 8px;">
+                            <strong>Message Body...</strong>
+                        </div>
+                        <div class="node-footer-box" style="font-size: 11px; color: #94a3b8;">Footer text...</div>
+                    </div>
+                    
+                    <div class="port-labels-container" style="background: #f8fafc; border-top: 1px dashed #cbd5e1; padding: 10px 0; border-radius: 0 0 12px 12px;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">Next</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Buttons</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         default:
             return `<div>Node type not found</div>`;
     }
@@ -779,7 +826,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     let inputs = 1; let outputs = 1;
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
-    if (type === 'interactive') outputs = 4;
+    if (type === 'interactive' || type === 'card') outputs = 4;
     if (type === 'cta') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
@@ -846,6 +893,15 @@ function validateFlow(data) {
             }
             if (node.name === 'cta' && (!ndata.url || ndata.url.trim() === '' || !ndata.btnText || ndata.btnText.trim() === '')) {
                 return { valid: false, message: 'A Link Button node is incomplete. Both Button Text and URL are required.', nodeId: id };
+            }
+            if (node.name === 'card' && (!ndata.body || ndata.body.trim() === '')) {
+                return { valid: false, message: 'A Rich Card node must have a Body Message.', nodeId: id };
+            }
+            if (node.name === 'card') {
+                const btns = Object.keys(ndata).filter(k => k.startsWith('btn-'));
+                if (btns.length === 0) {
+                    return { valid: false, message: 'A Rich Card must have at least one button.', nodeId: id };
+                }
             }
             if (node.name === 'interactive') {
                 if (!ndata.prompt || ndata.prompt.trim() === '') {
