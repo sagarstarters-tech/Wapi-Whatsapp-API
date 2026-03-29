@@ -154,8 +154,22 @@ function showNodeConfig(nodeId) {
         case 'text':
             html = `
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Message Content</label>
-                    <textarea class="form-control" id="conf-text" rows="5">${data.text || ''}</textarea>
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply message</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1">
+                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-text" rows="5" placeholder="#LEAD_USER_FIRST_NAME# How are you?" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                    </div>
+                </div>
+                
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
                 </div>
             `;
             break;
@@ -249,6 +263,7 @@ function saveConfig() {
             break;
         case 'text':
             newData.text = document.getElementById('conf-text').value;
+            newData.delay = document.getElementById('conf-delay').value;
             break;
         case 'image':
         case 'audio':
@@ -292,17 +307,18 @@ function updateNodePreview(nodeId) {
 
     switch (node.name) {
         case 'start': {
-            const kw = node.data.keywords || 'hi, hello';
-            const match = node.data.match || 'exact';
-            const kwBox = nodeEl.querySelector('.node-message-box');
-            if (kwBox) kwBox.textContent = kw;
-            const matchEl = nodeEl.querySelector('.small.opacity-75');
-            if (matchEl) matchEl.textContent = (match === 'contains' ? 'Contains keyword' : 'Exact keyword match');
+            const titleBox = nodeEl.querySelector('.cfg-title-display');
+            if (titleBox) titleBox.value = node.data.title || 'Demo_bot';
+            
+            const kwBox = nodeEl.querySelector('.cfg-kw-display');
+            if (kwBox) kwBox.textContent = node.data.keywords || 'hi, hello';
+            
+            const matchEl = nodeEl.querySelector('.cfg-match-display');
+            if (matchEl) matchEl.textContent = (node.data.match === 'contains' ? 'String match' : 'Exact keyword match');
             break;
         }
         case 'text': {
-            const box = nodeEl.querySelector('.node-message-box');
-            if (box) box.textContent = node.data.text || 'Type your message in sidebar...';
+            // Stats are static for now, no message preview string displayed inside the canvas text node in screenshot!
             break;
         }
         case 'image':
@@ -411,29 +427,38 @@ function getNodeTemplate(type) {
     switch (type) {
         case 'start':
             return `
-                <div class="node-root">
-                    <div class="node-header-custom"><i class="bi bi-play-circle-fill" style="color:#32ADE6;"></i> Start Bot Flow</div>
-                    <div class="node-body-content" style="padding:10px;">
-                        <input type="text" class="form-control form-control-sm mb-2 text-center" style="background:#e2e8f0; font-weight:bold;" value="Demo_bot" disabled>
-                        <div class="small fw-bold text-muted mb-1">Bot trigger keywords</div>
-                        <div class="node-message-box py-1" style="min-height:30px; border-style:dashed;">hi, hello</div>
-                        <div class="small fw-bold text-muted mt-2 mb-1">Keyword matching type</div>
-                        <div class="small opacity-75">Exact keyword match</div>
+                <div class="node-root" style="min-width: 250px;">
+                    <div class="node-header-custom" style="justify-content:flex-start; background: #EEF2F6; border-radius: 12px 12px 0 0; border-bottom: none;"><i class="bi bi-person-walking" style="color:#333;"></i> Start Bot Flow</div>
+                    <div class="node-body-content px-3 pt-1 pb-3" style="background: #EEF2F6;">
+                        <input type="text" class="cfg-title-display w-100 text-center mb-3" style="background:#e1e9f4; border:none; border-radius:4px; font-weight:500; font-size:12px; padding:4px; color:#5c719e;" value="Demo_bot" disabled>
+                        
+                        <div style="font-size:10px; color:#9ca3af; line-height: 1;">Bot trigger keywords</div>
+                        <div class="cfg-kw-display" style="font-size:12px; color:#4e5d78; margin-bottom: 8px;">hi, hello</div>
+                        
+                        <div style="font-size:10px; color:#9ca3af; line-height: 1;">Keyword matching type</div>
+                        <div class="cfg-match-display" style="font-size:12px; color:#4e5d78;">Exact keyword match</div>
+                    </div>
+                    <div class="port-labels-container" style="background: #EEF2F6; border-top:1px dashed #cbd5e1;">
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding-right: 15px;">
+                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Compose Next Message</span>
+                        </div>
                     </div>
                 </div>
             `;
         case 'text':
             return `
-                <div>
-                    <div class="node-header-custom"><i class="bi bi-filter-left" style="color:#4B6EAF;"></i> Text</div>
-                    ${getDrawflowStats()}
-                    <div class="node-body-content">
-                        <div class="node-message-box">Type your message in sidebar...</div>
+                <div class="node-root" style="min-width: 250px; background: #EEF2F6;">
+                    <div class="node-header-custom" style="border-bottom:none; background: #EEF2F6;"><i class="bi bi-list" style="color:#4e5d78;"></i> Text</div>
+                    <div class="node-stats-row border-0 mt-1 px-2 pb-4" style="background: #EEF2F6; justify-content: space-around;">
+                        <div class="stat-col"><i class="bi bi-cursor-fill text-primary" style="opacity: 0.8;"></i><span style="font-size:9px;">Sent</span><span style="font-size:11px;">0</span></div>
+                        <div class="stat-col"><i class="bi bi-check-circle text-success" style="opacity: 0.8;"></i><span style="font-size:9px;">Delivered</span><span style="font-size:11px;">0</span></div>
+                        <div class="stat-col"><i class="bi bi-person-x text-primary" style="opacity: 0.8; font-size: 14px;"></i><span style="font-size:9px;">Subscribers</span><span style="font-size:11px;">0</span></div>
+                        <div class="stat-col"><i class="bi bi-heart-fill text-danger" style="opacity: 0.8;"></i><span style="font-size:9px;">Errors</span><span style="font-size:11px;">0</span></div>
                     </div>
-                    <div class="port-labels-container">
-                        <div class="port-label-row">
-                            <span class="text-start">Message</span>
-                            <span class="text-end">Compose Next Message</span>
+                    <div class="port-labels-container" style="background:#EEF2F6; border-top:1px dashed #cbd5e1; margin-top:15px; padding: 10px 0;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#555; position: relative; right: -8px;">Message</span>
+                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Compose Next Message</span>
                         </div>
                     </div>
                 </div>

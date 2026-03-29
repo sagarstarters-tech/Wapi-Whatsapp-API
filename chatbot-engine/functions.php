@@ -233,6 +233,10 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if (empty($textMsg)) {
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WARNING: text node $nodeId has empty message!\n", FILE_APPEND);
             }
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
             $res = sendText($phone, $textMsg, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'text', $textMsg, $res);
             break;
