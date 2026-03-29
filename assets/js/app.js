@@ -155,7 +155,24 @@ function initDemoChat() {
         addBubble(text, 'sent');
         input.value = '';
         
-        // Handle incoming message
+        // Show typing indicator
+        const typingBubble = document.createElement('div');
+        typingBubble.className = 'wa-bubble received typing-indicator';
+        typingBubble.innerHTML = '<div class="typing-dots"><span>.</span><span>.</span><span>.</span></div>';
+        messagesDiv.appendChild(typingBubble);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        
+        // Auto-reply after a short delay
+        setTimeout(function() {
+            // Remove typing indicator
+            if (typingBubble.parentNode) {
+                typingBubble.remove();
+            }
+            // Show auto-reply
+            const reply = autoReplies[replyIndex % autoReplies.length];
+            addBubble(reply, 'received');
+            replyIndex++;
+        }, 1200);
     }
     
     function addBubble(text, type) {
