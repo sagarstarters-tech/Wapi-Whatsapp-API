@@ -7,9 +7,9 @@
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/session.php';
 
 // Check if user is logged in (session validation)
-session_start();
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit;
