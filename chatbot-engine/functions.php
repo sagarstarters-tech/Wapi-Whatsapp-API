@@ -139,6 +139,29 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
     return sendRequest($payload, $phoneId, $token);
 }
 
+function sendCtaUrl($phone, $text, $btnText, $url, $phoneId = null, $token = null) {
+    if (empty(trim($text)) || empty(trim($btnText)) || empty(trim($url))) return false;
+    
+    $payload = [
+        'messaging_product' => 'whatsapp', 
+        'recipient_type'    => 'individual', 
+        'to'                => $phone, 
+        'type'              => 'interactive',
+        'interactive'       => [
+            'type'   => 'cta_url',
+            'body'   => ['text' => $text],
+            'action' => [
+                'name' => 'cta_url',
+                'parameters' => [
+                    'display_text' => mb_substr(trim($btnText), 0, 20),
+                    'url'          => trim($url)
+                ]
+            ]
+        ]
+    ];
+    return sendRequest($payload, $phoneId, $token);
+}
+
 /**
  * 3. Dynamic Flow Engine (JSON Parser)
  */
@@ -245,8 +268,8 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             break;
             
         case 'cta':
-            $res = sendText($phone, $nodeData['message'] ?? 'Click the link:', $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'text', $nodeData['message'] ?? 'CTA', $res);
+            $res = sendCtaUrl($phone, $nodeData['text'] ?? '', $nodeData['btnText'] ?? '', $nodeData['url'] ?? '', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $nodeData['text'] ?? 'CTA Link', $res);
             break;
 
         case 'delay':

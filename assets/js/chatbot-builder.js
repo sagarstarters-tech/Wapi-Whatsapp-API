@@ -116,6 +116,22 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
+        case 'cta':
+            html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Message Text</label>
+                    <textarea class="form-control" id="conf-cta-text" rows="3">${data.text || ''}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Button Text</label>
+                    <input type="text" class="form-control" id="conf-cta-btn-text" value="${data.btnText || ''}" placeholder="Visit Website">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Button URL</label>
+                    <input type="text" class="form-control" id="conf-cta-url" value="${data.url || ''}" placeholder="https://...">
+                </div>
+            `;
+            break;
         default:
             html = `<p class="text-muted">No specific configuration for this node.</p>`;
     }
@@ -165,6 +181,11 @@ function saveConfig() {
         case 'interactive':
             newData.prompt = document.getElementById('conf-prompt').value;
             // Buttons are saved as we add/edit them usually, but we ensure consistency here
+            break;
+        case 'cta':
+            newData.text = document.getElementById('conf-cta-text').value;
+            newData.btnText = document.getElementById('conf-cta-btn-text').value;
+            newData.url = document.getElementById('conf-cta-url').value;
             break;
     }
 
@@ -216,6 +237,13 @@ function updateNodePreview(nodeId) {
         case 'interactive': {
             const promptBox = nodeEl.querySelector('.node-message-box');
             if (promptBox && node.data.prompt) promptBox.innerHTML = '<strong>' + node.data.prompt + '</strong>';
+            break;
+        }
+        case 'cta': {
+            const promptBox = nodeEl.querySelector('.node-message-box');
+            if (promptBox && node.data.text) promptBox.innerHTML = node.data.text;
+            const urlLabel = nodeEl.querySelector('.url-label');
+            if (urlLabel && node.data.btnText) urlLabel.textContent = node.data.btnText;
             break;
         }
     }
@@ -370,18 +398,13 @@ function getNodeTemplate(type) {
         case 'cta':
             return `
                 <div class="node-root">
-                    <div class="node-header-custom button-hd"><i class="bi bi-cursor-fill"></i> Button</div>
-                    <div class="node-stats-row border-bottom">
-                        <div class="stat-col"><i class="bi bi-hand-index"></i><span>0</span></div>
-                        <div class="stat-col"><i class="bi bi-person"></i><span>0</span></div>
-                        <div class="stat-col"><i class="bi bi-exclamation-triangle border-danger text-danger"></i><span>0</span></div>
-                    </div>
-                    <div class="node-body-content py-4 text-center">
-                        <i class="bi bi-hand-index-thumb" style="font-size:2rem; opacity:0.5;"></i>
+                    <div class="node-header-custom button-hd"><i class="bi bi-cursor-fill"></i> Link Button</div>
+                    <div class="node-body-content py-3 p-2 text-center border-bottom">
+                         <div class="node-message-box text-start small text-muted">Configure in sidebar</div>
+                         <div class="mt-2 text-primary fw-bold border rounded p-1" style="border-color: #007AFF !important;"><i class="bi bi-box-arrow-up-right me-1"></i><span class="url-label">Click Here</span></div>
                     </div>
                     <div class="port-labels-container">
                         <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end text-muted">Next</span></div>
-                        <div class="port-label-row justify-content-end"><span class="text-end">Subscribe to Sequence</span></div>
                     </div>
                 </div>
             `;
