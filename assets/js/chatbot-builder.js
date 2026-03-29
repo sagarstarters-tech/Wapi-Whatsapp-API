@@ -165,8 +165,15 @@ function showNodeConfig(nodeId) {
                 </div>
                 
                 <div class="mb-3">
-                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Caption (Optional)</label>
-                    <input type="text" class="form-control cfg-input" id="conf-caption" value="${data.caption || ''}" placeholder="Check out that Image" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message (Optional)</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1">
+                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-caption" rows="4" placeholder="Type your image message here..." style="background: #fafafa; border: 1px solid #ddd;">${data.caption || ''}</textarea>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                    </div>
                 </div>
                 
                 <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
