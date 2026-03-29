@@ -57,18 +57,20 @@ $newFileName = uniqid('media_') . '_' . time() . '.' . $fileExtension;
 $destPath = $uploadPath . $newFileName;
 
 if (move_uploaded_file($fileTmpPath, $destPath)) {
-    // Generate public URL
-    // e.g. https://domain.com/wapi/uploads/chatbot/media_123.png
-    // Strip everything before 'wapi' folder if APP_URL doesn't perfectly resolve subfolder (just basic concatenation)
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    // Generate public URL using APP_URL from config
+    // APP_URL is defined in .env (e.g. https://wapi.sagarstarters.com)
+    $baseUrl = rtrim(defined('APP_URL') ? APP_URL : '', '/');
     
-    // We assume the application is accessible from the web root or a subpath
-    // $_SERVER['SCRIPT_NAME'] is usually /wapi/api/upload_media.php
-    $appPath = dirname(dirname($_SERVER['SCRIPT_NAME'])); // Should be /wapi
-    if ($appPath === '/' || $appPath === '\\') $appPath = '';
+    // Strip any trailing /wapi from APP_URL if it exists (subdomain setup)
+    // Then append the path to uploads
+    $publicUrl = $baseUrl . '/uploads/chatbot/' . $newFileName;
 
-    $publicUrl = $protocol . '://' . $host . $appPath . '/uploads/chatbot/' . $newFileName;
+    // Log the URL for debugging
+    file_put_contents(
+        dirname(__DIR__) . '/chatbot-engine/webhook_debug.log',
+        "[" . date('Y-m-d H:i:s') . "] Image uploaded: $publicUrl\n",
+        FILE_APPEND | LOCK_EX
+    );
 
     echo json_encode([
         'status' => 'success',
@@ -76,5 +78,5 @@ if (move_uploaded_file($fileTmpPath, $destPath)) {
         'message' => 'File uploaded successfully'
     ]);
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to move uploaded file.']);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to move uploaded file. Check folder permissions.']);
 }
