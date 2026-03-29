@@ -163,6 +163,36 @@ function sendCtaUrl($phone, $text, $btnText, $url, $phoneId = null, $token = nul
 }
 
 /**
+ * Replace string variables like #LEAD_USER_FIRST_NAME# with actual data
+ */
+function replaceDynamicVariables($text, $phone, $userId) {
+    if (empty(trim($text))) return $text;
+
+    $name = 'User';
+    $firstName = 'User';
+    
+    $db = Database::getInstance();
+    try {
+        $contact = $db->fetch("SELECT * FROM contacts WHERE phone = ? AND user_id = ? LIMIT 1", [$phone, $userId]);
+        if ($contact && !empty($contact['name'])) {
+            $name = $contact['name'];
+            $nameParts = explode(' ', trim($name));
+            $firstName = $nameParts[0];
+        }
+    } catch (Exception $e) {
+    }
+
+    $replacements = [
+        '#LEAD_USER_NAME#' => $name,
+        '#LEAD_USER_FIRST_NAME#' => $firstName,
+        '#LEAD_USER_MOBILE#' => $phone,
+        '#USER_WHATSAPP_NUMBER#' => $phone
+    ];
+
+    return str_replace(array_keys($replacements), array_values($replacements), $text);
+}
+
+/**
  * 3. Dynamic Flow Engine (JSON Parser)
  */
 function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $token = null) {
@@ -236,7 +266,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             return; // exit this call — the recursive call handles everything
 
         case 'text':
-            $textMsg = $nodeData['text'] ?? '';
+            $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId);
             if (empty($textMsg)) {
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WARNING: text node $nodeId has empty message!\n", FILE_APPEND);
             }
@@ -253,17 +283,19 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $res = sendImage($phone, $nodeData['image-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
+            $caption = replaceDynamicVariables($nodeData['caption'] ?? '', $phone, $userId);
+            $res = sendImage($phone, $nodeData['image-url'] ?? '', $caption, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'image', 'Image', $res, $nodeData['image-url'] ?? '');
             break;
             
         case 'interactive':
             $buttonsData = [];
             foreach ($nodeData as $key => $val) {
-                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = $val;
+                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
             }
-            $res = sendButtons($phone, $nodeData['prompt'] ?? 'Select an option:', $buttonsData, $nodeId, $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'interactive', $nodeData['prompt'] ?? 'Interactive Buttons', $res);
+            $prompt = replaceDynamicVariables($nodeData['prompt'] ?? 'Select an option:', $phone, $userId);
+            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
             $isInteractive = true;
             break;
             
@@ -292,7 +324,8 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $res = sendVideo($phone, $nodeData['video-url'] ?? '', $nodeData['caption'] ?? '', $phoneId, $token);
+            $caption = replaceDynamicVariables($nodeData['caption'] ?? '', $phone, $userId);
+            $res = sendVideo($phone, $nodeData['video-url'] ?? '', $caption, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'video', 'Video', $res, $nodeData['video-url'] ?? '');
             break;
             
@@ -306,8 +339,10 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $res = sendCtaUrl($phone, $nodeData['text'] ?? '', $nodeData['btnText'] ?? '', $nodeData['url'] ?? '', $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'interactive', $nodeData['text'] ?? 'CTA Link', $res);
+            $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId);
+            $btnText = replaceDynamicVariables($nodeData['btnText'] ?? '', $phone, $userId);
+            $res = sendCtaUrl($phone, $textMsg, $btnText, $nodeData['url'] ?? '', $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $textMsg, $res);
             break;
 
         case 'delay':
