@@ -107,64 +107,12 @@ function showNodeConfig(nodeId) {
                     <input type="hidden" id="conf-match" value="${data.match || 'exact'}">
                 </div>
                 
-                <div class="mb-3">
-                    <label class="cfg-label">Title</label>
-                    <input type="text" class="form-control cfg-input" id="conf-title" value="${data.title || ''}">
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
                 </div>
-                
-                <div class="row mb-3">
-                    <div class="col-6 pe-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="cfg-label mb-0">Add Label(s)</label>
-                            <a href="#" class="text-decoration-none" style="font-size: 11px;"><i class="bi bi-plus-circle-fill"></i> New</a>
-                        </div>
-                        <input type="text" class="form-control cfg-input" id="conf-add-labels" value="${data.addLabels || ''}">
-                    </div>
-                    <div class="col-6 ps-2">
-                        <label class="cfg-label mb-1">Remove Label(s)</label>
-                        <input type="text" class="form-control cfg-input mt-3" style="margin-top: 15px !important;" id="conf-remove-labels" value="${data.removeLabels || ''}">
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-6 pe-2">
-                        <label class="cfg-label">Subscribe to Sequence</label>
-                        <select class="form-select cfg-input" id="conf-sub-seq">
-                            <option value="">Select a Sequence</option>
-                            <option value="1" ${data.subSeq === '1' ? 'selected' : ''}>Sequence 1</option>
-                        </select>
-                    </div>
-                    <div class="col-6 ps-2">
-                        <label class="cfg-label">Unsubscribe from Sequence</label>
-                        <select class="form-select cfg-input" id="conf-unsub-seq">
-                            <option value="">Select a Sequence</option>
-                            <option value="1" ${data.unsubSeq === '1' ? 'selected' : ''}>Sequence 1</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-6 pe-2">
-                        <label class="cfg-label">Assign Conversation to a group</label>
-                        <select class="form-select cfg-input" id="conf-assign-group">
-                            <option value="">Select Team Role</option>
-                            <option value="support" ${data.assignGroup === 'support' ? 'selected' : ''}>Support</option>
-                        </select>
-                    </div>
-                    <div class="col-6 ps-2">
-                        <label class="cfg-label">Assign conversation to a user</label>
-                        <select class="form-select cfg-input" id="conf-assign-user">
-                            <option value="">Select Team Member</option>
-                            <option value="john" ${data.assignUser === 'john' ? 'selected' : ''}>John Doe</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="cfg-label">Send data to Webhook URL</label>
-                    <input type="text" class="form-control cfg-input" id="conf-webhook" value="${data.webhook || ''}">
-                </div>
-                
             `;
             break;
         case 'text':
@@ -319,14 +267,7 @@ function saveConfig() {
         case 'start':
             newData.keywords = document.getElementById('conf-keywords').value;
             newData.match = document.getElementById('conf-match').value;
-            newData.title = document.getElementById('conf-title').value;
-            newData.addLabels = document.getElementById('conf-add-labels').value;
-            newData.removeLabels = document.getElementById('conf-remove-labels').value;
-            newData.subSeq = document.getElementById('conf-sub-seq').value;
-            newData.unsubSeq = document.getElementById('conf-unsub-seq').value;
-            newData.assignGroup = document.getElementById('conf-assign-group').value;
-            newData.assignUser = document.getElementById('conf-assign-user').value;
-            newData.webhook = document.getElementById('conf-webhook').value;
+            newData.delay = document.getElementById('conf-delay').value;
             break;
         case 'text':
             newData.text = document.getElementById('conf-text').value;
