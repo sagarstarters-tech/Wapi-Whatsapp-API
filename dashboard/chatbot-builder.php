@@ -75,6 +75,11 @@ include __DIR__ . '/../includes/header.php';
             <!-- Flow Name Input -->
             <input type="text" id="flowNameInput" class="form-control form-control-sm text-center mx-2" value="Demo_bot" style="width: 150px; font-weight: 500;">
             
+            <!-- My Flows Button -->
+            <button class="btn btn-sm btn-outline-primary d-flex align-items-center px-3" onclick="openFlowsPanel()" style="font-weight: 500;">
+                <i class="bi bi-collection me-2"></i> My Flows
+            </button>
+            
             <!-- Save Button -->
             <button class="btn btn-sm btn-success d-flex align-items-center px-3" onclick="saveFlow()" style="font-weight: 500;">
                 <i class="bi bi-save2 me-2"></i> Save
@@ -110,5 +115,54 @@ include __DIR__ . '/../includes/header.php';
         </main>
     </div>
 </div>
+
+<!-- ====== My Flows Side Panel ====== -->
+<div id="flowsPanel" style="
+    position: fixed;
+    top: 0; right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.13);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+">
+    <!-- Panel Header -->
+    <div style="background: linear-gradient(135deg, #1a73e8, #0d47a1); color: #fff; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-collection-fill fs-5"></i>
+            <span style="font-size: 16px; font-weight: 600; letter-spacing: 0.3px;">My Chat Flows</span>
+        </div>
+        <button onclick="closeFlowsPanel()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <!-- New Flow Button -->
+    <div style="padding: 14px 18px; border-bottom: 1px solid #f0f0f0; background: #f8f9ff; flex-shrink: 0;">
+        <button onclick="newFlow()" class="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-2" style="font-weight: 500; padding: 9px;">
+            <i class="bi bi-plus-circle-fill"></i> Create New Flow
+        </button>
+    </div>
+
+    <!-- Flows List -->
+    <div id="flowsList" style="flex: 1; overflow-y: auto; padding: 12px 14px;">
+        <div class="text-center text-muted py-5" style="font-size: 13px;">
+            <i class="bi bi-hourglass-split fs-3 d-block mb-2"></i>
+            Loading flows...
+        </div>
+    </div>
+</div>
+<!-- Overlay -->
+<div id="flowsPanelOverlay" onclick="closeFlowsPanel()" style="
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    z-index: 9998;
+    backdrop-filter: blur(2px);
+"></div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

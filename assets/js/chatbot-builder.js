@@ -875,3 +875,161 @@ async function uploadMediaToBot(inputElement, targetInputId, msgElementId) {
         inputElement.value = ''; // allow re-upload
     }
 }
+
+/* ============================================================
+ *  MY FLOWS PANEL  –  List / Load / Delete / New
+ * ============================================================ */
+
+function openFlowsPanel() {
+    const panel   = document.getElementById('flowsPanel');
+    const overlay = document.getElementById('flowsPanelOverlay');
+    panel.style.right  = '0';
+    overlay.style.display = 'block';
+    loadFlowsList();
+}
+
+function closeFlowsPanel() {
+    const panel   = document.getElementById('flowsPanel');
+    const overlay = document.getElementById('flowsPanelOverlay');
+    panel.style.right  = '-420px';
+    overlay.style.display = 'none';
+}
+
+function loadFlowsList() {
+    const container = document.getElementById('flowsList');
+    container.innerHTML = `
+        <div class="text-center text-muted py-5" style="font-size:13px;">
+            <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div><br>Loading your flows...
+        </div>`;
+
+    fetch('../api/chatbot/list-flows.php')
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success) {
+                container.innerHTML = `<p class="text-danger text-center mt-4">Failed to load flows.</p>`;
+                return;
+            }
+            if (!res.flows || res.flows.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-wind fs-2 d-block mb-2"></i>
+                        No saved flows yet.<br>
+                        <small>Click <strong>Create New Flow</strong> to start.</small>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = res.flows.map(flow => {
+                const updatedDate = flow.updated_at
+                    ? new Date(flow.updated_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+                    : '';
+                return `
+                <div class="flow-item-card d-flex align-items-center justify-content-between mb-2 p-3"
+                     style="background:#f8f9ff; border:1px solid #e3e8f0; border-radius:10px; transition: box-shadow 0.15s;">
+                    <div style="min-width:0; flex:1;">
+                        <div class="fw-semibold text-truncate" style="color:#1a1a2e; font-size:14px;" title="${escapeHtml(flow.name)}">
+                            <i class="bi bi-diagram-3-fill text-primary me-1" style="font-size:12px;"></i>
+                            ${escapeHtml(flow.name)}
+                        </div>
+                        <div class="text-muted" style="font-size:11px; margin-top:2px;">
+                            <i class="bi bi-clock me-1"></i>${updatedDate}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 ms-2 flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-primary px-2 py-1"
+                                onclick="openFlow(${flow.id}, '${escapeHtml(flow.name).replace(/'/g,"\\'")}');"
+                                title="Edit Flow" style="font-size:12px;">
+                            <i class="bi bi-pencil-fill"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger px-2 py-1"
+                                onclick="deleteFlow(${flow.id}, '${escapeHtml(flow.name).replace(/'/g,"\\'")}');"
+                                title="Delete Flow" style="font-size:12px;">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => {
+            container.innerHTML = `<p class="text-danger text-center mt-4">Connection error.</p>`;
+        });
+}
+
+function openFlow(flowId, flowName) {
+    Swal.fire({ title: 'Loading "' + flowName + '"...', didOpen: () => Swal.showLoading() });
+
+    fetch('../api/chatbot/get-flow.php?id=' + encodeURIComponent(flowId))
+        .then(r => r.json())
+        .then(res => {
+            Swal.close();
+            if (res.success && res.flow) {
+                editor.clearModuleSelected();
+                editor.import(res.flow);
+                const nameInput = document.getElementById('flowNameInput');
+                if (nameInput) nameInput.value = res.flow_name || flowName;
+                setTimeout(() => updateAllNodePreviews(), 100);
+                closeFlowsPanel();
+                Swal.fire({ icon: 'success', title: 'Loaded!', text: '"' + flowName + '" is ready to edit.', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Could not load flow.' });
+            }
+        })
+        .catch(() => Swal.fire('Error', 'Connection failed.', 'error'));
+}
+
+function deleteFlow(flowId, flowName) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Delete Flow?',
+        html: `Are you sure you want to permanently delete <strong>${escapeHtml(flowName)}</strong>?<br><small class="text-muted">This cannot be undone.</small>`,
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Delete!',
+        cancelButtonText: 'Cancel'
+    }).then(result => {
+        if (!result.isConfirmed) return;
+
+        Swal.fire({ title: 'Deleting...', didOpen: () => Swal.showLoading() });
+
+        fetch('../api/chatbot/delete-flow.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flow_id: flowId })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
+                loadFlowsList(); // Refresh panel list
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+            }
+        })
+        .catch(() => Swal.fire('Error', 'Connection failed.', 'error'));
+    });
+}
+
+function newFlow() {
+    Swal.fire({
+        title: 'New Flow Name',
+        input: 'text',
+        inputPlaceholder: 'e.g. Welcome_Bot',
+        inputAttributes: { maxlength: 80 },
+        showCancelButton: true,
+        confirmButtonText: 'Create',
+        inputValidator: (value) => {
+            if (!value || value.trim() === '') return 'Please enter a flow name!';
+        }
+    }).then(result => {
+        if (!result.isConfirmed) return;
+        editor.clearModuleSelected();
+        const nameInput = document.getElementById('flowNameInput');
+        if (nameInput) nameInput.value = result.value.trim();
+        closeFlowsPanel();
+        Swal.fire({ icon: 'success', title: 'Canvas cleared!', text: 'Start building "' + result.value.trim() + '"', timer: 1500, showConfirmButton: false });
+    });
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
