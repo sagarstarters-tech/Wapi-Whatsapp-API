@@ -221,6 +221,13 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
         case 'start':
             // Start node sends no message — immediately follow to the next connected node
             file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Start node triggered, following connection...\n", FILE_APPEND);
+            
+            // Apply configured start node delay
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
+
             $startConns = $currentNode['outputs']['output_1']['connections'] ?? [];
             if (!empty($startConns)) {
                 $nextNodeId = $startConns[0]['node'];
@@ -303,6 +310,10 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             foreach ($connections as $conn) {
                 $nextNodeId = $conn['node'];
                 $foundNext = true;
+                
+                // Add a forced 1-second delay between sequential nodes to guarantee WhatsApp API delivery order (Media takes longer than Text)
+                sleep(1);
+                
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Moving to next node via $outputKey: $nextNodeId\n", FILE_APPEND);
                 runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
             }
