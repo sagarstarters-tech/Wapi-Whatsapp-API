@@ -82,10 +82,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } 
-            // 2. Handle Incoming Text (Keywords / Restart / Continue)
-            elseif ($type === 'text') {
-                $textBody = strtolower(trim($msg['text']['body'] ?? ''));
-                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Text body: '$textBody'\n", FILE_APPEND);
+            // 2. Handle All Other Incoming Messages (Text + Non-Text)
+            else {
+                $textBody = '';
+                if ($type === 'text') {
+                    $textBody = strtolower(trim($msg['text']['body'] ?? ''));
+                } elseif ($type === 'image') {
+                    $textBody = strtolower(trim($msg['image']['caption'] ?? ''));
+                } elseif ($type === 'video') {
+                    $textBody = strtolower(trim($msg['video']['caption'] ?? ''));
+                } elseif ($type === 'document') {
+                    $textBody = strtolower(trim($msg['document']['caption'] ?? ''));
+                }
+                
+                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Message type: '$type', text: '$textBody'\n", FILE_APPEND);
 
                 // Find User's active flow
                 $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
@@ -94,54 +104,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $nodes = $flowData['drawflow']['Home']['data'] ?? [];
                     $isTrigger = false; $startNodeId = null;
                     
-                    foreach ($nodes as $nId => $nData) {
-                        if ($nData['name'] === 'start') {
-                            $keywords = strtolower($nData['data']['keywords'] ?? '');
-                                if (empty($keywords)) {
-                                    if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
-                                        $isTrigger = true; $startNodeId = $nId; break;
-                                    }
-                                } else {
-                                    $matchType = $nData['data']['match'] ?? 'exact';
-                                    $keywordArr = array_map('trim', explode(',', $keywords));
-                                    $keywordArr = array_map('strtolower', $keywordArr);
-                                    
-                                    if ($matchType === 'contains') {
-                                        foreach ($keywordArr as $kw) {
-                                            if (strpos($textBody, $kw) !== false) {
-                                                $isTrigger = true; $startNodeId = $nId; break 2;
-                                            }
+                    // Keyword matching only if we have text content
+                    if (!empty($textBody)) {
+                        foreach ($nodes as $nId => $nData) {
+                            if ($nData['name'] === 'start') {
+                                $keywords = strtolower($nData['data']['keywords'] ?? '');
+                                    if (empty($keywords)) {
+                                        if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
+                                            $isTrigger = true; $startNodeId = $nId; break;
                                         }
                                     } else {
-                                        if (in_array($textBody, $keywordArr)) {
-                                            $isTrigger = true; $startNodeId = $nId; break;
+                                        $matchType = $nData['data']['match'] ?? 'exact';
+                                        $keywordArr = array_map('trim', explode(',', $keywords));
+                                        $keywordArr = array_map('strtolower', $keywordArr);
+                                        
+                                        if ($matchType === 'contains') {
+                                            foreach ($keywordArr as $kw) {
+                                                if (strpos($textBody, $kw) !== false) {
+                                                    $isTrigger = true; $startNodeId = $nId; break 2;
+                                                }
+                                            }
+                                        } else {
+                                            if (in_array($textBody, $keywordArr)) {
+                                                $isTrigger = true; $startNodeId = $nId; break;
+                                            }
                                         }
                                     }
                                 }
-                            }
+                        }
                     }
 
                     if ($isTrigger) {
                         file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Trigger matched node: $startNodeId\n", FILE_APPEND);
-                        // CRITICAL: start node itself sends no message
-                        // Jump directly to the node connected to start's output_1
                         $startNodeData = $nodes[$startNodeId] ?? null;
                         $startConns    = $startNodeData['outputs']['output_1']['connections'] ?? [];
                         if (!empty($startConns)) {
                             $firstNodeId = $startConns[0]['node'];
                             runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken);
                         } else {
-                            // Fallback: pass null to let runFlow auto-find
                             runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
                         }
                     } else {
                         $session = getSession($from, $userId);
                         if ($session && ($session['state'] ?? '') === 'active' && ($session['flow_id'] ?? 0) == $flow['id']) {
-                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Continuing session at node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
+                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Continuing session (type=$type) at node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
                             runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
                         } else {
-                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for '$textBody'\n", FILE_APPEND);
-                            runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                            // For non-text messages without active session, auto-start the flow
+                            if ($type !== 'text') {
+                                foreach ($nodes as $nId => $nData) {
+                                    if ($nData['name'] === 'start') {
+                                        $startConns = $nData['outputs']['output_1']['connections'] ?? [];
+                                        if (!empty($startConns)) {
+                                            $firstNodeId = $startConns[0]['node'];
+                                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for non-text (type=$type) at node: $firstNodeId\n", FILE_APPEND);
+                                            runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken);
+                                        } else {
+                                            runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                                        }
+                                        break;
+                                    }
+                                }
+                            } else {
+                                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for '$textBody'\n", FILE_APPEND);
+                                runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                            }
                         }
                     }
                 }
