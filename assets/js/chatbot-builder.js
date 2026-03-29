@@ -32,6 +32,22 @@ document.addEventListener("DOMContentLoaded", () => {
         // User might prefer it stay open for the clicked node until they close it manually.
     });
 
+    editor.on('connectionSelected', function(conn) {
+        Swal.fire({
+            title: 'Disconnect Line?',
+            text: 'Are you sure you want to remove this connection?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, remove it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                editor.removeSingleConnection(conn.output_id, conn.input_id, conn.output_class, conn.input_class);
+            }
+        });
+    });
+
     // Fix for port interaction
     canvas.addEventListener('mousedown', (e) => {
         if (e.target.classList.contains('input') || e.target.classList.contains('output')) {
