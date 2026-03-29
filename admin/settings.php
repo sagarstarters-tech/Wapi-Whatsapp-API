@@ -149,9 +149,17 @@ include __DIR__ . '/../includes/header.php';
                         <div class="col-12"><label class="form-label">Hero Subtitle</label><textarea name="settings[hero_subtitle]" class="form-control" rows="2"><?= e($allSettings['hero_subtitle'] ?? ''); ?></textarea></div>
                         <div class="col-md-6"><label class="form-label">Hero Button Text</label><input type="text" name="settings[hero_button_text]" class="form-control" value="<?= e($allSettings['hero_button_text'] ?? ''); ?>"></div>
                         <div class="col-md-6"><label class="form-label">Hero Button Link</label><input type="text" name="settings[hero_button_link]" class="form-control" value="<?= e($allSettings['hero_button_link'] ?? ''); ?>"></div>
+                        <div class="col-12 border-top pt-3"><label class="form-label text-primary fw-bold">Features Section</label></div>
                         <div class="col-12"><label class="form-label">Features Section Title</label><input type="text" name="settings[features_title]" class="form-control" value="<?= e($allSettings['features_title'] ?? ''); ?>"></div>
                         <div class="col-12"><label class="form-label">Features Subtitle</label><textarea name="settings[features_subtitle]" class="form-control" rows="2"><?= e($allSettings['features_subtitle'] ?? ''); ?></textarea></div>
+                        <div class="col-12 border-top pt-3"><label class="form-label text-primary fw-bold">Pricing Section</label></div>
                         <div class="col-12"><label class="form-label">Pricing Title</label><input type="text" name="settings[pricing_title]" class="form-control" value="<?= e($allSettings['pricing_title'] ?? ''); ?>"></div>
+                        <div class="col-12 border-top pt-3"><label class="form-label text-primary fw-bold">CTA Section (Bottom)</label></div>
+                        <div class="col-12"><label class="form-label">CTA Title</label><input type="text" name="settings[cta_title]" class="form-control" value="<?= e($allSettings['cta_title'] ?? 'Ready to Get Started?'); ?>"></div>
+                        <div class="col-12"><label class="form-label">CTA Subtitle</label><textarea name="settings[cta_subtitle]" class="form-control" rows="2"><?= e($allSettings['cta_subtitle'] ?? 'Join thousands of businesses using WAPI to power their WhatsApp communication.'); ?></textarea></div>
+                        <div class="col-md-6"><label class="form-label">CTA Button Text</label><input type="text" name="settings[cta_button_text]" class="form-control" value="<?= e($allSettings['cta_button_text'] ?? 'Start 14 Days Free Trial'); ?>"></div>
+                        <div class="col-md-6"><label class="form-label">CTA Button Link</label><input type="text" name="settings[cta_button_link]" class="form-control" value="<?= e($allSettings['cta_button_link'] ?? 'auth/register.php?plan=trial'); ?>"></div>
+                        <div class="col-12 border-top pt-3 text-secondary">Titles for Other Sections</div>
                         <div class="col-12"><label class="form-label">Testimonials Title</label><input type="text" name="settings[testimonials_title]" class="form-control" value="<?= e($allSettings['testimonials_title'] ?? ''); ?>"></div>
                         <div class="col-12"><label class="form-label">FAQ Title</label><input type="text" name="settings[faq_title]" class="form-control" value="<?= e($allSettings['faq_title'] ?? ''); ?>"></div>
                     </div>

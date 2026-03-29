@@ -58,4 +58,4 @@ $db->insert('payments', [
 ]);
 
 setFlash('success', 'Payment successful! Your subscription is now active.');
-redirect('/wapi/dashboard/subscription.php');
+redirect('dashboard/subscription.php');

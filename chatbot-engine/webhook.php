@@ -97,18 +97,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($nodes as $nId => $nData) {
                         if ($nData['name'] === 'start') {
                             $keywords = strtolower($nData['data']['keywords'] ?? '');
-                            if (empty($keywords)) {
-                                if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
-                                    $isTrigger = true; $startNodeId = $nId; break;
-                                }
-                            } else {
-                                $keywordArr = array_map('trim', explode(',', $keywords));
-                                $keywordArr = array_map('strtolower', $keywordArr);
-                                if (in_array($textBody, $keywordArr)) {
-                                    $isTrigger = true; $startNodeId = $nId; break;
+                                if (empty($keywords)) {
+                                    if (in_array($textBody, ['hi', 'hello', 'start', 'menu', 'hey', 'demo'])) {
+                                        $isTrigger = true; $startNodeId = $nId; break;
+                                    }
+                                } else {
+                                    $matchType = $nData['data']['match'] ?? 'exact';
+                                    $keywordArr = array_map('trim', explode(',', $keywords));
+                                    $keywordArr = array_map('strtolower', $keywordArr);
+                                    
+                                    if ($matchType === 'contains') {
+                                        foreach ($keywordArr as $kw) {
+                                            if (strpos($textBody, $kw) !== false) {
+                                                $isTrigger = true; $startNodeId = $nId; break 2;
+                                            }
+                                        }
+                                    } else {
+                                        if (in_array($textBody, $keywordArr)) {
+                                            $isTrigger = true; $startNodeId = $nId; break;
+                                        }
+                                    }
                                 }
                             }
-                        }
                     }
 
                     if ($isTrigger) {

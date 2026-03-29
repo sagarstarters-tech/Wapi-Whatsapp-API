@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
 
 if (Auth::isLoggedIn()) {
-    redirect('/wapi/dashboard/');
+    redirect('dashboard/');
 }
 
 $error = '';
@@ -22,7 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $auth = new Auth();
             $result = $auth->forgotPassword($email);
-            $success = $result['message'];
+            if (!empty($result['success']) && $result['success'] === true) {
+                $success = $result['message'];
+            } else {
+                $error = $result['message'];
+            }
         }
     }
 }
@@ -63,7 +67,7 @@ include __DIR__ . '/../includes/header.php';
         </form>
 
         <p class="text-center mt-4" style="font-size: 0.9375rem; color: var(--text-secondary);">
-            Remember your password? <a href="/wapi/auth/login.php" class="fw-bold">Sign In</a>
+            Remember your password? <a href="<?= baseUrl('auth/login.php'); ?>" class="fw-bold">Sign In</a>
         </p>
     </div>
 </section>

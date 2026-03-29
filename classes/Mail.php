@@ -26,10 +26,11 @@ class Mail {
         if ($driver === 'mail') {
             // "Pahale wala" (Previous) PHP mail() method
             $headers = "From: " . $fromName . " <" . $fromEmail . ">\r\n";
+            $headers .= "Reply-To: " . $fromEmail . "\r\n";
             $headers .= "MIME-Version: 1.0\r\n";
             $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
             
-            if (@mail($to, $subject, $body, $headers)) {
+            if (@mail($to, $subject, $body, $headers, "-f " . $fromEmail)) {
                 return ['success' => true, 'message' => 'Message sent via PHP Mail'];
             } else {
                 return ['success' => false, 'message' => 'PHP Mail failed. Check server configuration.'];

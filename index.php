@@ -324,15 +324,17 @@ include __DIR__ . '/includes/header.php';
     </section>
 
     <!-- CTA Section -->
-    <section style="padding: 6rem 0; background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%); color: white; text-align: center;">
-        <div class="container">
-            <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Ready to Get Started?</h2>
-            <p style="font-size: 1.125rem; opacity: 0.9; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
-                Join thousands of businesses using WAPI to power their WhatsApp communication.
+    <section class="cta-section" style="padding: 6rem 0; background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%); color: white; text-align: center;">
+        <div class="container px-4">
+            <h2 class="cta-title mb-3" style="font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800;">
+                <?= e($settings->get('cta_title', 'Ready to Get Started?')); ?>
+            </h2>
+            <p class="cta-subtitle mb-4 mx-auto" style="font-size: clamp(1rem, 3vw, 1.125rem); opacity: 0.9; max-width: 600px;">
+                <?= e($settings->get('cta_subtitle', 'Join thousands of businesses using WAPI to power their WhatsApp communication.')); ?>
             </p>
-            <a href="<?= baseUrl('auth/register.php?plan=trial'); ?>" class="btn btn-lg" 
-               style="background: white; color: var(--primary); font-weight: 700; padding: 0.875rem 2.5rem; border-radius: 12px;">
-                Start 14 Days Free Trial <i class="bi bi-arrow-right"></i>
+            <a href="<?= baseUrl($settings->get('cta_button_link', 'auth/register.php?plan=trial')); ?>" class="btn btn-lg btn-white-glass" 
+               style="background: white; color: var(--primary); font-weight: 700; padding: 0.875rem 2.5rem; border-radius: 12px; transition: var(--transition);">
+                <?= e($settings->get('cta_button_text', 'Start 14 Days Free Trial')); ?> <i class="bi bi-arrow-right"></i>
             </a>
         </div>
     </section>

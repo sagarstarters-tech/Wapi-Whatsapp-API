@@ -268,11 +268,18 @@ class Auth {
 
         $mailResult = Mail::send($email, $subject, $body);
 
+        if (!$mailResult['success']) {
+            return [
+                'success' => false,
+                'message' => 'Failed to send reset email: ' . $mailResult['message']
+            ];
+        }
+
         return [
             'success' => true,
             'message' => 'If this email exists, a reset link has been sent.',
             'token' => $token, // Still returning for debug/compatibility
-            'mail_sent' => $mailResult['success']
+            'mail_sent' => true
         ];
     }
 

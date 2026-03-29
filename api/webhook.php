@@ -98,10 +98,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 $isTrigger = true; $startNodeId = $nId; break;
                                             }
                                         } else {
+                                            $matchType = $nData['data']['match'] ?? 'exact';
                                             $keywordArr = array_map('trim', explode(',', $keywords));
                                             $keywordArr = array_map('strtolower', $keywordArr); 
-                                            if (in_array($textBody, $keywordArr)) {
-                                                $isTrigger = true; $startNodeId = $nId; break;
+                                            
+                                            if ($matchType === 'contains') {
+                                                foreach ($keywordArr as $kw) {
+                                                    if (strpos($textBody, $kw) !== false) {
+                                                        $isTrigger = true; $startNodeId = $nId; break 2;
+                                                    }
+                                                }
+                                            } else {
+                                                if (in_array($textBody, $keywordArr)) {
+                                                    $isTrigger = true; $startNodeId = $nId; break;
+                                                }
                                             }
                                         }
                                     }

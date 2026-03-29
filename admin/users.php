@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             }
         }
     }
-    redirect('/wapi/admin/users.php');
+    redirect('admin/users.php');
 }
 
 // Search & Filter

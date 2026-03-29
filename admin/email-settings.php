@@ -50,7 +50,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">Email / SMTP Settings</h1>
-                <div class="dash-breadcrumb"><a href="/wapi/admin/">Admin</a><i class="bi bi-chevron-right"></i><span>Email</span></div>
+                <div class="dash-breadcrumb"><a href="<?= baseUrl('admin/'); ?>">Admin</a><i class="bi bi-chevron-right"></i><span>Email</span></div>
             </div>
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>

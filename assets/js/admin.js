@@ -20,6 +20,7 @@ function initSidebar() {
         toggle.addEventListener('click', function() {
             if (window.innerWidth >= 992) {
                 sidebar.classList.toggle('collapsed');
+                document.body.classList.toggle('sidebar-collapsed', sidebar.classList.contains('collapsed'));
                 localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
             } else {
                 sidebar.classList.toggle('mobile-open');
@@ -45,6 +46,7 @@ function initSidebar() {
     // Restore sidebar state
     if (window.innerWidth >= 992 && localStorage.getItem('sidebar_collapsed') === 'true') {
         sidebar.classList.add('collapsed');
+        document.body.classList.add('sidebar-collapsed');
     }
 }
 
