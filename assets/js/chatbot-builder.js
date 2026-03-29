@@ -71,6 +71,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Auto-load master flow on start
     setTimeout(() => loadFlow(true), 100);
+
+    // Live update start node badge when flow name changes
+    const flowNameInput = document.getElementById('flowNameInput');
+    if (flowNameInput) {
+        flowNameInput.addEventListener('input', () => {
+            const exportData = editor.export();
+            const nodes = exportData.drawflow.Home.data || {};
+            Object.keys(nodes).forEach(id => {
+                if (nodes[id].name === 'start') {
+                    editor.updateNodeDataFromId(id, { ...nodes[id].data, title: flowNameInput.value });
+                    updateNodePreview(id);
+                }
+            });
+        });
+    }
 });
 
 /**
@@ -371,7 +386,7 @@ function updateNodePreview(nodeId) {
     switch (node.name) {
         case 'start': {
             const titleBox = nodeEl.querySelector('.cfg-title-display');
-            if (titleBox) titleBox.value = node.data.title || 'Demo_bot';
+            if (titleBox) titleBox.textContent = node.data.title || document.getElementById('flowNameInput')?.value || 'Demo_bot';
             
             const kwBox = nodeEl.querySelector('.cfg-kw-display');
             if (kwBox) kwBox.textContent = node.data.keywords || 'hi, hello';
@@ -490,21 +505,26 @@ function getNodeTemplate(type) {
     switch (type) {
         case 'start':
             return `
-                <div class="node-root" style="min-width: 250px;">
-                    <div class="node-header-custom" style="justify-content:flex-start; background: #EEF2F6; border-radius: 12px 12px 0 0; border-bottom: none;"><i class="bi bi-person-walking" style="color:#333;"></i> Start Bot Flow</div>
-                    <div class="node-body-content px-3 pt-1 pb-3" style="background: #EEF2F6;">
-                        <input type="text" class="cfg-title-display w-100 text-center mb-3" style="background:#e1e9f4; border:none; border-radius:4px; font-weight:500; font-size:12px; padding:4px; color:#5c719e;" value="Demo_bot" disabled>
-                        
-                        <div style="font-size:10px; color:#9ca3af; line-height: 1;">Bot trigger keywords</div>
-                        <div class="cfg-kw-display" style="font-size:12px; color:#4e5d78; margin-bottom: 8px;">hi, hello</div>
-                        
-                        <div style="font-size:10px; color:#9ca3af; line-height: 1;">Keyword matching type</div>
-                        <div class="cfg-match-display" style="font-size:12px; color:#4e5d78;">Exact keyword match</div>
+                <div class="node-root start-node-root" style="min-width: 250px;">
+                    <div class="start-node-header">
+                        <i class="bi bi-person-walking"></i>
+                        <span>Start Bot Flow</span>
                     </div>
-                    <div class="port-labels-container" style="background: #EEF2F6; border-top:1px dashed #cbd5e1;">
-                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding-right: 15px;">
-                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Compose Next Message</span>
+                    <div class="start-node-body">
+                        <div class="start-node-badge-wrap">
+                            <span class="start-node-flow-badge cfg-title-display">Demo_bot</span>
                         </div>
+                        <div class="start-node-info-row">
+                            <span class="start-node-label">Bot trigger keywords</span>
+                            <span class="cfg-kw-display start-node-value">hi, hello</span>
+                        </div>
+                        <div class="start-node-info-row">
+                            <span class="start-node-label">Keyword matching type</span>
+                            <span class="cfg-match-display start-node-value">Exact keyword match</span>
+                        </div>
+                    </div>
+                    <div class="start-node-footer">
+                        <span class="start-node-port-label">Compose Next Message</span>
                     </div>
                 </div>
             `;
@@ -694,7 +714,20 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     if (type === 'cta') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
-    editor.addNode(type, inputs, outputs, pos_x, pos_y, type, {}, template);
+    const defaultData = {};
+    if (type === 'start') {
+        defaultData.keywords = 'hi, hello';
+        defaultData.match = 'exact';
+        defaultData.delay = 0;
+        defaultData.title = document.getElementById('flowNameInput')?.value || 'Demo_bot';
+    }
+
+    const nodeId = editor.addNode(type, inputs, outputs, pos_x, pos_y, type, defaultData, template);
+    
+    // After creation, sync badge/preview with actual data
+    if (type === 'start') {
+        setTimeout(() => updateNodePreview(nodeId), 50);
+    }
 }
 
 /**

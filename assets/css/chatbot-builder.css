@@ -260,3 +260,114 @@ body {
 .config-header { background: #E1E6EC !important; border-bottom: 1px solid #c8d3e0; }
 .config-header h6 { color: #1e293b !important; font-weight: 700; font-size: 15px; }
 .config-sidebar { background: #F1F4F8 !important; }
+
+/* ===== Start Node Redesign - matching screenshot ===== */
+
+/* Override the default drawflow node background for start node */
+.drawflow .drawflow-node.start {
+    background: #EEF2F6;
+    border: 1.5px solid #c8d3e0;
+    border-radius: 12px;
+    min-width: 260px;
+    padding: 0;
+}
+
+.start-node-root {
+    background: #EEF2F6;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Header row: icon + "Start Bot Flow" text */
+.start-node-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 14px 10px 14px;
+    background: #EEF2F6;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    border-bottom: none;
+}
+
+.start-node-header i {
+    font-size: 14px;
+    color: #374151;
+}
+
+/* Body: badge + info rows */
+.start-node-body {
+    background: #EEF2F6;
+    padding: 8px 14px 12px 14px;
+}
+
+/* Blue flow-name badge - matches the screenshot "Demo_bot" blue pill */
+.start-node-badge-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.start-node-flow-badge {
+    display: inline-block;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 18px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    text-align: center;
+    min-width: 90px;
+}
+
+/* Info rows: label on top, value below */
+.start-node-info-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 7px;
+}
+
+.start-node-info-row:last-child {
+    margin-bottom: 0;
+}
+
+.start-node-label {
+    font-size: 10px;
+    color: #9ca3af;
+    line-height: 1.3;
+    font-weight: 400;
+}
+
+.start-node-value {
+    font-size: 12px;
+    color: #374151;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Footer: "Compose Next Message" right-aligned with output port dot */
+.start-node-footer {
+    background: #EEF2F6;
+    border-top: 1px dashed #c8d3e0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 7px 22px 7px 14px;
+}
+
+.start-node-port-label {
+    font-size: 10px;
+    color: #555;
+    font-weight: 500;
+    position: relative;
+    right: -4px;
+}
+
+/* Port dot alignment for start node */
+.drawflow .drawflow-node.start .output {
+    top: auto;
+    bottom: 11px;
+}
+
