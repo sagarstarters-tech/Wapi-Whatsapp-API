@@ -268,6 +268,10 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             break;
             
         case 'audio':
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
             $res = sendAudio($phone, $nodeData['audio-url'] ?? '', $phoneId, $token);
             logChatbotMessage($userId, $phone, 'audio', 'Audio', $res, $nodeData['audio-url'] ?? '');
             break;
