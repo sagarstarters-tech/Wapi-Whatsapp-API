@@ -289,61 +289,63 @@ function closeConfig() {
     sidebar.classList.add('d-none');
 }
 
-function saveConfig() {
+function saveConfig(silent = false) {
     if (!currentNodeId) return;
     const node = editor.getNodeFromId(currentNodeId);
+    if (!node) return;
     const newData = { ...node.data };
 
     // Grabbing data from our dynamic form
     switch (node.name) {
         case 'start':
-            newData.keywords = document.getElementById('conf-keywords').value;
-            newData.match = document.getElementById('conf-match').value;
-            newData.delay = document.getElementById('conf-delay').value;
+            newData.keywords = document.getElementById('conf-keywords') ? document.getElementById('conf-keywords').value : newData.keywords;
+            newData.match = document.getElementById('conf-match') ? document.getElementById('conf-match').value : newData.match;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'text':
-            newData.text = document.getElementById('conf-text').value;
-            newData.delay = document.getElementById('conf-delay').value;
+            newData.text = document.getElementById('conf-text') ? document.getElementById('conf-text').value : newData.text;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'image':
-            newData['image-url'] = document.getElementById('conf-url').value;
-            newData.caption = document.getElementById('conf-caption').value;
-            newData.delay = document.getElementById('conf-delay').value;
+            newData['image-url'] = document.getElementById('conf-url') ? document.getElementById('conf-url').value : newData['image-url'];
+            newData.caption = document.getElementById('conf-caption') ? document.getElementById('conf-caption').value : newData.caption;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'video':
-            newData['video-url'] = document.getElementById('conf-video-url').value;
-            newData.delay = document.getElementById('conf-delay').value;
+            newData['video-url'] = document.getElementById('conf-video-url') ? document.getElementById('conf-video-url').value : newData['video-url'];
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'audio':
-            newData['audio-url'] = document.getElementById('conf-audio-url').value;
-            newData.delay = document.getElementById('conf-delay').value;
+            newData['audio-url'] = document.getElementById('conf-audio-url') ? document.getElementById('conf-audio-url').value : newData['audio-url'];
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'file':
-            newData['file-url'] = document.getElementById('conf-url').value;
-            newData.caption = document.getElementById('conf-caption').value;
+            newData['file-url'] = document.getElementById('conf-url') ? document.getElementById('conf-url').value : newData['file-url'];
+            newData.caption = document.getElementById('conf-caption') ? document.getElementById('conf-caption').value : newData.caption;
             break;
         case 'interactive':
-            newData.prompt = document.getElementById('conf-prompt').value;
-            // Buttons are saved as we add/edit them usually, but we ensure consistency here
+            newData.prompt = document.getElementById('conf-prompt') ? document.getElementById('conf-prompt').value : newData.prompt;
             break;
         case 'cta':
-            newData.text = document.getElementById('conf-cta-text').value;
-            newData.btnText = document.getElementById('conf-cta-btn-text').value;
-            newData.url = document.getElementById('conf-cta-url').value;
+            newData.text = document.getElementById('conf-cta-text') ? document.getElementById('conf-cta-text').value : newData.text;
+            newData.btnText = document.getElementById('conf-cta-btn-text') ? document.getElementById('conf-cta-btn-text').value : newData.btnText;
+            newData.url = document.getElementById('conf-cta-url') ? document.getElementById('conf-cta-url').value : newData.url;
             break;
     }
 
     editor.updateNodeDataFromId(currentNodeId, newData);
     updateNodePreview(currentNodeId);
     
-    Swal.fire({
-        icon: 'success',
-        title: 'Updated',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 1000
-    });
+    if (!silent) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Updated',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1000
+        });
+    }
 }
 
 /**
@@ -751,6 +753,11 @@ function validateFlow(data) {
 }
 
 function saveFlow() {
+    // Auto sync any currently open node config before validating!
+    if (currentNodeId && !document.getElementById('configSidebar').classList.contains('d-none')) {
+        saveConfig(true); 
+    }
+
     const data = editor.export();
     
     // Validate Flow before saving
