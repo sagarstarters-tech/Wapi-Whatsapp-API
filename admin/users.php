@@ -39,24 +39,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             setFlash('danger', 'Email already exists.');
         } else {
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-            $newUserId = $db->insert('users', [
-                'name' => $name,
-                'email' => $email,
-                'password' => $hashedPassword,
-                'role' => 'user',
-                'status' => 'active',
-                'email_verified' => 1
-            ]);
+            $planId = sanitizeInt($_POST['plan_id'] ?? 0);
             
-            if ($newUserId) {
-                $db->insert('credits', [
-                    'user_id' => $newUserId,
-                    'total_credits' => 100,
-                    'used_credits' => 0
+            $db->beginTransaction();
+            try {
+                $newUserId = $db->insert('users', [
+                    'uuid' => generateUUID(),
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => $hashedPassword,
+                    'role' => 'user',
+                    'status' => 'active',
+                    'email_verified' => 1
                 ]);
-                setFlash('success', 'User added successfully with 100 initial credits.');
-            } else {
-                setFlash('danger', 'Error adding user.');
+                
+                if ($newUserId) {
+                    $initialCredits = 0;
+                    if ($planId > 0) {
+                        $plan = $db->fetch("SELECT * FROM plans WHERE id = ?", [$planId]);
+                        if ($plan) {
+                            $initialCredits = $plan['message_limit'];
+                            $startsAt = date('Y-m-d H:i:s');
+                            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+                            
+                            $db->insert('subscriptions', [
+                                'user_id' => $newUserId,
+                                'plan_id' => $planId,
+                                'billing_cycle' => 'monthly',
+                                'amount' => 0, // Manual addition
+                                'status' => 'active',
+                                'starts_at' => $startsAt,
+                                'expires_at' => $expiresAt
+                            ]);
+                        }
+                    }
+
+                    $db->insert('credits', [
+                        'user_id' => $newUserId,
+                        'total_credits' => $initialCredits ?: 100,
+                        'used_credits' => 0
+                    ]);
+                    
+                    $db->commit();
+                    setFlash('success', 'User added successfully' . ($planId ? ' with ' . $plan['name'] . ' plan.' : '.'));
+                } else {
+                    throw new Exception('Error inserting user.');
+                }
+            } catch (Exception $e) {
+                $db->rollback();
+                setFlash('danger', 'Error adding user: ' . $e->getMessage());
             }
         }
     } elseif ($action === 'edit_user' && $userId) {
@@ -108,12 +139,12 @@ $pagination = paginate($totalUsers, $page);
 $users = $db->fetchAll("SELECT u.*, (SELECT plan_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan FROM users u WHERE {$where} ORDER BY u.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
 
 // Get plan names and add to users array
-$plans = $db->fetchAll("SELECT id, name FROM plans");
-$planMap = [0 => 'Free'];
+$plans = $db->fetchAll("SELECT id, name, message_limit FROM plans WHERE is_active = 1 ORDER BY sort_order");
+$planMap = [];
 foreach ($plans as $p) $planMap[$p['id']] = $p['name'];
 
 foreach ($users as &$u) {
-    $u['plan_name'] = $planMap[$u['active_plan'] ?? 0] ?? 'Free';
+    $u['plan_name'] = isset($u['active_plan']) ? ($planMap[$u['active_plan']] ?? 'Unknown') : 'No Plan';
 }
 unset($u);
 
@@ -258,6 +289,16 @@ include __DIR__ . '/../includes/header.php';
                     <div class="mb-3">
                         <label class="form-label">Password <span class="text-danger">*</span></label>
                         <input type="password" name="password" class="form-control" required minlength="8" placeholder="Minimum 8 characters">
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Assign Plan</label>
+                        <select name="plan_id" class="form-control">
+                            <option value="0">No Plan (Manual)</option>
+                            <?php foreach ($plans as $p): ?>
+                                <option value="<?= $p['id']; ?>"><?= e($p['name']); ?> (<?= $p['message_limit']; ?> msgs)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text">If selected, a 1-month active subscription will be created.</div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
