@@ -272,8 +272,19 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $res = sendAudio($phone, $nodeData['audio-url'] ?? '', $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'audio', 'Audio', $res, $nodeData['audio-url'] ?? '');
+            $audioUrl = $nodeData['audio-url'] ?? '';
+            $res = sendAudio($phone, $audioUrl, $phoneId, $token);
+            
+            // Critical Meta API Fallback: If Meta rejects the audio (e.g., Unsupported Media Type for some .mp3s),
+            // we will forcefully send it as an attached document to ensure delivery!
+            if (!$res && !empty($audioUrl)) {
+                $ext = pathinfo(parse_url($audioUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
+                $fallbackName = !empty($ext) ? "voice_message.$ext" : "voice_message.mp3";
+                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('H:i') . "] sendAudio failed, attempting sendDocument fallback for: $audioUrl\n", FILE_APPEND);
+                $res = sendDocument($phone, $audioUrl, $fallbackName, $phoneId, $token);
+            }
+            
+            logChatbotMessage($userId, $phone, 'audio', 'Audio', $res, $audioUrl);
             break;
             
         case 'video':
