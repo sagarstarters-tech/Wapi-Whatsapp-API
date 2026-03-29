@@ -810,7 +810,12 @@ function getNodeTemplate(type) {
  * 2. Drag & Drop Engine
  */
 function allowDrop(ev) { ev.preventDefault(); }
-function drag(ev) { ev.dataTransfer.setData("node", ev.target.getAttribute('data-node')); }
+function drag(ev) { 
+    const nodeElement = ev.target.closest('[data-node]');
+    if (nodeElement) {
+        ev.dataTransfer.setData("node", nodeElement.getAttribute('data-node')); 
+    }
+}
 function drop(ev) {
     ev.preventDefault();
     const type = ev.dataTransfer.getData("node");
