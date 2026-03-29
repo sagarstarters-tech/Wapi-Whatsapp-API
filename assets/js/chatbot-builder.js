@@ -58,6 +58,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, true);
 
+    // Canvas Mouse Wheel Zoom Logic
+    canvas.addEventListener('wheel', (e) => {
+        if (!editor || editor.editor_mode === 'fixed') return;
+        e.preventDefault(); // Prevent standard page scroll
+        if (e.deltaY > 0) {
+            editor.zoom_out();
+        } else {
+            editor.zoom_in();
+        }
+    }, { passive: false });
+
     // Auto-load master flow on start
     setTimeout(() => loadFlow(true), 100);
 });
