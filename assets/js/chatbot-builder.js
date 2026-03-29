@@ -258,7 +258,7 @@ function showNodeConfig(nodeId) {
             break;
         case 'cta':
             html = `
-                <input type="hidden" id="conf-cta-text" value="${data.text || 'Click the link below:'}">
+                <input type="hidden" id="conf-cta-text" value="&#8203;">
                 <div class="mb-3">
                     <label class="form-label fw-bold" style="font-size: 13px; color: #555;">Button Text</label>
                     <input type="text" class="form-control cfg-input" id="conf-cta-btn-text" value="${data.btnText || ''}" placeholder="Visit Website" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
@@ -579,7 +579,6 @@ function getNodeTemplate(type) {
                 <div class="node-root">
                     <div class="node-header-custom button-hd"><i class="bi bi-cursor-fill"></i> Link Button</div>
                     <div class="node-body-content py-3 p-2 text-center border-bottom">
-                         <div class="node-message-box text-start small text-muted">Configure in sidebar</div>
                          <div class="mt-2 text-primary fw-bold border rounded p-1" style="border-color: #007AFF !important;"><i class="bi bi-box-arrow-up-right me-1"></i><span class="url-label">Click Here</span></div>
                     </div>
                     <div class="port-labels-container">
