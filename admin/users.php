@@ -103,13 +103,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             if ($exists) {
                 setFlash('danger', 'Email already exists for another user.');
             } else {
-                $db->update('users', [
-                    'name' => $name,
-                    'email' => $email,
-                    'phone' => $phone,
-                    'status' => $status
-                ], 'id = ?', [$userId]);
-                setFlash('success', 'User updated successfully.');
+                $planId = sanitizeInt($_POST['plan_id'] ?? 0);
+                
+                $db->beginTransaction();
+                try {
+                    // Update basic details
+                    $db->update('users', [
+                        'name' => $name,
+                        'email' => $email,
+                        'phone' => $phone,
+                        'status' => $status
+                    ], 'id = ?', [$userId]);
+
+                    // Handle Plan update
+                    $currentActiveSubscription = $db->fetch("SELECT plan_id, id FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1", [$userId]);
+                    $currentPlanId = $currentActiveSubscription ? (int)$currentActiveSubscription['plan_id'] : 0;
+
+                    if ($planId !== $currentPlanId) {
+                        // Cancel existing
+                        if ($currentActiveSubscription) {
+                            $db->update('subscriptions', ['status' => 'cancelled'], 'id = ?', [$currentActiveSubscription['id']]);
+                        }
+
+                        // Add new if not "No Plan"
+                        if ($planId > 0) {
+                            $plan = $db->fetch("SELECT * FROM plans WHERE id = ?", [$planId]);
+                            if ($plan) {
+                                $startsAt = date('Y-m-d H:i:s');
+                                $expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+                                
+                                $db->insert('subscriptions', [
+                                    'user_id' => $userId,
+                                    'plan_id' => $planId,
+                                    'billing_cycle' => 'monthly',
+                                    'amount' => 0,
+                                    'status' => 'active',
+                                    'starts_at' => $startsAt,
+                                    'expires_at' => $expiresAt
+                                ]);
+
+                                // Reset/Update credits to new plan limit
+                                $db->update('credits', [
+                                    'total_credits' => $plan['message_limit'],
+                                    'used_credits' => 0
+                                ], 'user_id = ?', [$userId]);
+                            }
+                        } else {
+                            // If set to "No Plan", optionally reset credits or keep them. 
+                            // Usually, "No Plan" means no access.
+                            $db->update('credits', ['total_credits' => 0, 'used_credits' => 0], 'user_id = ?', [$userId]);
+                        }
+                    }
+
+                    $db->commit();
+                    setFlash('success', 'User updated successfully.');
+                } catch (Exception $e) {
+                    $db->rollback();
+                    setFlash('danger', 'Error updating user: ' . $e->getMessage());
+                }
             }
         }
     }
@@ -343,6 +394,16 @@ include __DIR__ . '/../includes/header.php';
                             <option value="inactive">Inactive</option>
                         </select>
                     </div>
+                    <div class="mb-0">
+                        <label class="form-label">Active Plan</label>
+                        <select name="plan_id" id="edit_plan_id" class="form-control">
+                            <option value="0">No Plan (Manual)</option>
+                            <?php foreach ($plans as $p): ?>
+                                <option value="<?= $p['id']; ?>"><?= e($p['name']); ?> (<?= $p['message_limit']; ?> msgs)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text">Changing plan will reset user credits to the new plan's limit.</div>
+                    </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
@@ -426,6 +487,7 @@ function editUser(user) {
     document.getElementById('edit_email').value = user.email;
     document.getElementById('edit_phone').value = user.phone || '';
     document.getElementById('edit_status').value = user.status;
+    document.getElementById('edit_plan_id').value = user.active_plan || 0;
     
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
