@@ -189,11 +189,42 @@ function updateNodePreview(nodeId) {
     const nodeEl = document.getElementById('node-' + nodeId);
     if (!nodeEl) return;
 
-    if (node.name === 'text') {
-        const box = nodeEl.querySelector('.node-message-box') || nodeEl.querySelector('.form-control');
-        if (box) box.value = node.data.text || '';
+    switch (node.name) {
+        case 'start': {
+            const kw = node.data.keywords || 'hi, hello';
+            const match = node.data.match || 'exact';
+            const kwBox = nodeEl.querySelector('.node-message-box');
+            if (kwBox) kwBox.textContent = kw;
+            const matchEl = nodeEl.querySelector('.small.opacity-75');
+            if (matchEl) matchEl.textContent = (match === 'contains' ? 'Contains keyword' : 'Exact keyword match');
+            break;
+        }
+        case 'text': {
+            const box = nodeEl.querySelector('.node-message-box');
+            if (box) box.textContent = node.data.text || 'Type your message in sidebar...';
+            break;
+        }
+        case 'image':
+        case 'video':
+        case 'audio':
+        case 'file': {
+            const urlKey = node.name === 'file' ? 'file-url' : node.name + '-url';
+            const urlEl = nodeEl.querySelector('.small.text-muted.text-truncate') || nodeEl.querySelector('.small.text-muted');
+            if (urlEl) urlEl.textContent = node.data[urlKey] || 'Click to set URL';
+            break;
+        }
+        case 'interactive': {
+            const promptBox = nodeEl.querySelector('.node-message-box');
+            if (promptBox && node.data.prompt) promptBox.innerHTML = '<strong>' + node.data.prompt + '</strong>';
+            break;
+        }
     }
-    // ... similarly for others ...
+}
+
+function updateAllNodePreviews() {
+    const exportData = editor.export();
+    const nodes = exportData.drawflow.Home.data || {};
+    Object.keys(nodes).forEach(id => updateNodePreview(id));
 }
 
 function renderSidebarButtons(nodeId) {
@@ -465,12 +496,20 @@ function saveFlow() {
 function loadFlow(quiet = false) {
     if (!quiet) Swal.fire({ title: 'Loading Flow...', didOpen: () => Swal.showLoading() });
     
-    fetch('../api/chatbot/get-flow.php?name=Master Flow')
+    // Load latest flow for this user (not hardcoded name)
+    fetch('../api/chatbot/get-flow.php?load_latest=1')
     .then(res => res.json())
     .then(res => {
         if (!quiet) Swal.close();
         if (res.success && res.flow) {
             editor.import(res.flow);
+            // Update flow name in header input
+            if (res.flow_name) {
+                const nameInput = document.getElementById('flowNameInput');
+                if (nameInput) nameInput.value = res.flow_name;
+            }
+            // Update all node previews to show actual saved data
+            setTimeout(() => updateAllNodePreviews(), 100);
         } else if (!quiet) {
             Swal.fire({ icon: 'info', title: 'No Flow Found', text: 'Start by dragging nodes from the top bar!' });
         }

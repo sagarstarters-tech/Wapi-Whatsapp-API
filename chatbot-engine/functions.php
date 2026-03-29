@@ -125,6 +125,8 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
 function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $token = null) {
     $db = Database::getInstance();
 
+    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] runFlow: phone=$phone, userId=$userId, flowId=$flowId, nodeId=$nodeId\n", FILE_APPEND);
+
     // 1. Fetch the Flow JSON
     $flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = ?", [$flowId]);
     if (!$flow) {
@@ -133,18 +135,19 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
     }
 
     $data = json_decode($flow['flow_json'], true);
-    $nodes = $data['drawflow']['Home']['data'] ?? [];
+    $nodes = $data['drawflow']['Home']['data'] ?? $data['drawflow']['home']['data'] ?? [];
+
+    if (empty($nodes)) {
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Flow $flowId has no nodes!\n", FILE_APPEND);
+        return;
+    }
 
     // 2. Identify Current Node (if null, find a start node)
     if ($nodeId === null) {
         foreach ($nodes as $nId => $nData) {
-            // A node is a start point if it has no inputs OR its inputs are empty
-            $hasInputs = !empty($nData['inputs']);
-            if (!$hasInputs || (isset($nData['inputs']['input_1']) && empty($nData['inputs']['input_1']['connections']))) {
-                if ($nData['name'] === 'start') {
-                    $nodeId = $nId;
-                    break;
-                }
+            if ($nData['name'] === 'start') {
+                $nodeId = $nId;
+                break;
             }
         }
         // Fallback to first node if no explicit start found
@@ -155,13 +158,15 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
     }
 
     if ($nodeId === null || !isset($nodes[$nodeId])) {
-        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Target node $nodeId not found in flow\n", FILE_APPEND);
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Target node $nodeId not found in flow $flowId\n", FILE_APPEND);
         return;
     }
 
     $currentNode = $nodes[$nodeId];
     $nodeType = $currentNode['name'];
     $nodeData = $currentNode['data'];
+
+    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Executing node $nodeId (type: $nodeType), data: " . json_encode($nodeData) . "\n", FILE_APPEND);
 
     // Update Session State
     setSession($phone, $userId, $flowId, $nodeId, 'active');
@@ -170,9 +175,18 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
     $isInteractive = false;
     
     switch ($nodeType) {
+        case 'start':
+            // Start node just triggers the flow — no message sent
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Start node triggered, moving to next node...\n", FILE_APPEND);
+            break;
+
         case 'text':
-            $res = sendText($phone, $nodeData['text'] ?? '', $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'text', $nodeData['text'] ?? '', $res);
+            $textMsg = $nodeData['text'] ?? '';
+            if (empty($textMsg)) {
+                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WARNING: text node $nodeId has empty message!\n", FILE_APPEND);
+            }
+            $res = sendText($phone, $textMsg, $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'text', $textMsg, $res);
             break;
             
         case 'image':
@@ -211,8 +225,12 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             break;
 
         case 'delay':
-            sleep(max(1, (int)($nodeData['delay-seconds'] ?? 2)));
+            $secs = max(1, min(10, (int)($nodeData['delay-seconds'] ?? 2)));
+            sleep($secs);
             break;
+
+        default:
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Unknown node type: $nodeType\n", FILE_APPEND);
     }
 
     // 4. Move to Next Node (if not interactive)
@@ -220,9 +238,11 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
         $connections = $currentNode['outputs']['output_1']['connections'] ?? [];
         if (!empty($connections)) {
             $nextNodeId = $connections[0]['node'];
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Moving to next node: $nextNodeId\n", FILE_APPEND);
             runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
         } else {
             setSession($phone, $userId, $flowId, $nodeId, 'finished');
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Flow finished at node $nodeId\n", FILE_APPEND);
         }
     }
 }
@@ -232,14 +252,35 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
  */
 function setSession($phone, $userId, $flowId, $nodeId, $state) {
     $db = Database::getInstance();
-    $sql = "INSERT INTO chatbot_sessions (phone, user_id, flow_id, current_node_id, state) VALUES (?, ?, ?, ?, ?) 
-            ON DUPLICATE KEY UPDATE flow_id = ?, current_node_id = ?, state = ?";
-    return $db->query($sql, [$phone, $userId, $flowId, $nodeId, $state, $flowId, $nodeId, $state]);
+    // Standard ON DUPLICATE KEY UPDATE using VALUES() - compatible with MySQL 5.7+
+    $sql = "INSERT INTO chatbot_sessions (phone, user_id, flow_id, current_node_id, state) 
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                flow_id = VALUES(flow_id), 
+                current_node_id = VALUES(current_node_id), 
+                state = VALUES(state)";
+    try {
+        return $db->query($sql, [$phone, $userId, $flowId, $nodeId, $state]);
+    } catch (Exception $e) {
+        // Fallback UPDATE if insert fails
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] setSession Error: " . $e->getMessage() . "\n", FILE_APPEND);
+        try {
+            $db->query(
+                "UPDATE chatbot_sessions SET flow_id=?, current_node_id=?, state=? WHERE phone=? AND user_id=?",
+                [$flowId, $nodeId, $state, $phone, $userId]
+            );
+        } catch (Exception $e2) {
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] setSession Fallback Error: " . $e2->getMessage() . "\n", FILE_APPEND);
+        }
+    }
 }
 
 function getSession($phone, $userId) {
     $db = Database::getInstance();
-    return $db->fetch("SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ?", [$phone, $userId]);
+    return $db->fetch(
+        "SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ? ORDER BY id DESC LIMIT 1",
+        [$phone, $userId]
+    );
 }
 
 /**

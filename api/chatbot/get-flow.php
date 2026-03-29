@@ -16,16 +16,28 @@ if (!Auth::isLoggedIn()) {
 
 $db = Database::getInstance();
 $userId = $_SESSION['user_id'];
-$flowName = $_GET['name'] ?? 'Master Flow';
 
 try {
-    $flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE user_id = ? AND name = ?", [$userId, $flowName]);
+    // Support load_latest=1 to get the most recently saved flow
+    if (!empty($_GET['load_latest'])) {
+        $flow = $db->fetch(
+            "SELECT name, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1",
+            [$userId]
+        );
+    } else {
+        $flowName = $_GET['name'] ?? 'Master Flow';
+        $flow = $db->fetch(
+            "SELECT name, flow_json FROM chatbot_flows WHERE user_id = ? AND name = ?",
+            [$userId, $flowName]
+        );
+    }
 
-    if ($flow) {
+    if ($flow && $flow['flow_json']) {
         $flowData = json_decode($flow['flow_json'], true);
         echo json_encode([
-            'success' => true,
-            'flow' => $flowData
+            'success'    => true,
+            'flow'       => $flowData,
+            'flow_name'  => $flow['name']
         ]);
     } else {
         echo json_encode([
