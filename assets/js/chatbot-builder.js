@@ -181,10 +181,11 @@ function showNodeConfig(nodeId) {
                 </div>
                 
                 <div class="mb-3 mt-4">
-                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-media').click()">
                         <!-- Currently visually mimics an upload box for design purposes -->
                         <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
-                        <div class="mt-2 text-muted" style="font-size:11px;">(Upload disabled, please paste direct HTTP link above)</div>
+                        <input type="file" id="conf-upload-media" accept="image/png, image/jpeg, image/webp" style="display:none;" onchange="uploadMediaToBot(this, 'conf-url', 'upload-status-media')">
+                        <div id="upload-status-media" class="mt-2 text-muted" style="font-size:12px; font-weight: 500;">Click to upload (png, jpg, webp)</div>
                     </div>
                 </div>
                 
@@ -209,10 +210,11 @@ function showNodeConfig(nodeId) {
                 </div>
                 
                 <div class="mb-3 mt-4">
-                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-media-vid').click()">
                         <!-- Currently visually mimics an upload box for design purposes -->
                         <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
-                        <div class="mt-2 text-muted" style="font-size:11px;">(Upload disabled, please paste direct HTTP link above)</div>
+                        <input type="file" id="conf-upload-media-vid" accept="video/mp4, video/x-flv, video/x-ms-wmv" style="display:none;" onchange="uploadMediaToBot(this, 'conf-video-url', 'upload-status-media-vid')">
+                        <div id="upload-status-media-vid" class="mt-2 text-muted" style="font-size:12px; font-weight: 500;">Click to upload (mp4, flv, wmv)</div>
                     </div>
                 </div>
                 
@@ -738,3 +740,38 @@ function clearCanvas() {
     }).then(r => r.isConfirmed && editor.clearModuleSelected());
 }
 
+/**
+ * 5. Media Upload Handler
+ */
+async function uploadMediaToBot(inputElement, targetInputId, msgElementId) {
+    if (!inputElement.files || inputElement.files.length === 0) return;
+    const file = inputElement.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const msgEl = document.getElementById(msgElementId);
+    if (msgEl) msgEl.innerHTML = '<span class="text-primary spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+
+    // The PHP endpoint we created is at /wapi/api/upload_media.php. 
+    // Assuming this page is /wapi/admin/chatbot-builder.php
+    try {
+        const response = await fetch('../api/upload_media.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            document.getElementById(targetInputId).value = data.url;
+            if (msgEl) msgEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Uploaded!</span>';
+        } else {
+            if (msgEl) msgEl.innerHTML = '<span class="text-danger">' + data.message + '</span>';
+            alert('Upload failed: ' + data.message);
+        }
+    } catch(err) {
+        console.error('API Error:', err);
+        if (msgEl) msgEl.innerHTML = '<span class="text-danger">HTTP Error during upload</span>';
+    } finally {
+        inputElement.value = ''; // allow re-upload
+    }
+}
