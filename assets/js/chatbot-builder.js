@@ -258,17 +258,21 @@ function showNodeConfig(nodeId) {
             break;
         case 'cta':
             html = `
+                <input type="hidden" id="conf-cta-text" value="${data.text || 'Click the link below:'}">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Message Text</label>
-                    <textarea class="form-control" id="conf-cta-text" rows="3">${data.text || ''}</textarea>
+                    <label class="form-label fw-bold" style="font-size: 13px; color: #555;">Button Text</label>
+                    <input type="text" class="form-control cfg-input" id="conf-cta-btn-text" value="${data.btnText || ''}" placeholder="Visit Website" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Button Text</label>
-                    <input type="text" class="form-control" id="conf-cta-btn-text" value="${data.btnText || ''}" placeholder="Visit Website">
+                    <label class="form-label fw-bold" style="font-size: 13px; color: #555;">Button URL</label>
+                    <input type="text" class="form-control cfg-input" id="conf-cta-url" value="${data.url || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Button URL</label>
-                    <input type="text" class="form-control" id="conf-cta-url" value="${data.url || ''}" placeholder="https://...">
+                
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
                 </div>
             `;
             break;
@@ -337,6 +341,7 @@ function saveConfig(silent = false) {
             newData.text = document.getElementById('conf-cta-text') ? document.getElementById('conf-cta-text').value : newData.text;
             newData.btnText = document.getElementById('conf-cta-btn-text') ? document.getElementById('conf-cta-btn-text').value : newData.btnText;
             newData.url = document.getElementById('conf-cta-url') ? document.getElementById('conf-cta-url').value : newData.url;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
     }
 
@@ -738,8 +743,8 @@ function validateFlow(data) {
             if (node.name === 'file' && (!ndata['file-url'] || ndata['file-url'].trim() === '')) {
                 return { valid: false, message: 'A File/Document node is missing its URL.', nodeId: id };
             }
-            if (node.name === 'cta' && (!ndata.text || ndata.text.trim() === '' || !ndata.url || ndata.url.trim() === '')) {
-                return { valid: false, message: 'A Link Button node is incomplete. Both Text and URL are required.', nodeId: id };
+            if (node.name === 'cta' && (!ndata.url || ndata.url.trim() === '' || !ndata.btnText || ndata.btnText.trim() === '')) {
+                return { valid: false, message: 'A Link Button node is incomplete. Both Button Text and URL are required.', nodeId: id };
             }
             if (node.name === 'interactive') {
                 if (!ndata.prompt || ndata.prompt.trim() === '') {
