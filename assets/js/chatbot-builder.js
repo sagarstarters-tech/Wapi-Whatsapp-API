@@ -98,6 +98,75 @@ function setMatchType(val, btn) {
     btn.classList.add('active');
 }
 
+/**
+ * Insert variable at cursor position in a textarea or input
+ */
+function insertAtCursor(fieldId, text) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    const startPos = field.selectionStart;
+    const endPos = field.selectionEnd;
+    const value = field.value;
+
+    field.value = value.substring(0, startPos) + text + value.substring(endPos, value.length);
+    field.selectionStart = field.selectionEnd = startPos + text.length;
+    field.focus();
+}
+
+/**
+ * Toggle custom variables dropdown
+ */
+function toggleCustomVars(btn, fieldId) {
+    const existing = btn.parentElement.querySelector('.custom-vars-dropdown');
+    if (existing) {
+        existing.remove();
+        return;
+    }
+
+    // Close others
+    document.querySelectorAll('.custom-vars-dropdown').forEach(d => d.remove());
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'custom-vars-dropdown border shadow-sm position-absolute bg-white rounded p-1';
+    dropdown.style.zIndex = '1000';
+    dropdown.style.width = '150px';
+    dropdown.style.top = '100%';
+    dropdown.style.left = '0';
+    
+    const vars = [
+        { label: 'Full Name', value: '#LEAD_USER_NAME#' },
+        { label: 'Mobile Number', value: '#LEAD_USER_MOBILE#' },
+        { label: 'WhatsApp Number', value: '#USER_WHATSAPP_NUMBER#' }
+    ];
+
+    vars.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item small py-1 px-2 cursor-pointer';
+        item.style.fontSize = '12px';
+        item.style.cursor = 'pointer';
+        item.innerText = v.label;
+        item.onclick = () => {
+            insertAtCursor(fieldId, v.value);
+            dropdown.remove();
+        };
+        dropdown.appendChild(item);
+    });
+
+    btn.parentElement.classList.add('position-relative');
+    btn.parentElement.appendChild(dropdown);
+
+    // Close on click outside
+    const closeListener = (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.remove();
+            document.removeEventListener('mousedown', closeListener);
+        }
+    };
+    document.addEventListener('mousedown', closeListener);
+}
+
+
 function showNodeConfig(nodeId) {
     const node = editor.getNodeFromId(nodeId);
     const configSidebar = document.getElementById('configSidebar');
@@ -145,9 +214,9 @@ function showNodeConfig(nodeId) {
             html = `
                 <div class="mb-3">
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply message</label>
-                    <div class="d-flex align-items-center gap-2 mb-2 mt-1">
-                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-text')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-text', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-text" rows="5" placeholder="#LEAD_USER_FIRST_NAME# How are you?" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
@@ -181,9 +250,9 @@ function showNodeConfig(nodeId) {
                 
                 <div class="mb-3">
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message (Optional)</label>
-                    <div class="d-flex align-items-center gap-2 mb-2 mt-1">
-                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button class="btn btn-sm btn-light text-primary border" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-caption')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-caption', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-caption" rows="4" placeholder="Type your image message here..." style="background: #fafafa; border: 1px solid #ddd;">${data.caption || ''}</textarea>
