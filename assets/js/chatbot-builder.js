@@ -200,8 +200,32 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
-        case 'audio':
         case 'video':
+            html = `
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply video url</label>
+                    <input type="text" class="form-control cfg-input" id="conf-video-url" value="${data['video-url'] || ''}" placeholder="Put your video url here or click the upload box." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                
+                <div class="mb-3 mt-4">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;">
+                        <input type="file" id="conf-upload" accept="video/mp4, video/x-flv, video/x-ms-wmv" style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;" onchange="document.getElementById('conf-video-url').value = this.files[0] ? this.files[0].name : ''">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
+                    </div>
+                    <div class="text-center mt-2" style="font-size: 12px; color: #999; font-weight: 500;">
+                        Supported types: mp4, flv, wmv
+                    </div>
+                </div>
+                
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
+                </div>
+            `;
+            break;
+        case 'audio':
         case 'file':
             const key = node.name === 'file' ? 'file-url' : node.name + '-url';
             html = `
@@ -296,8 +320,11 @@ function saveConfig() {
             newData.caption = document.getElementById('conf-caption').value;
             newData.delay = document.getElementById('conf-delay').value;
             break;
-        case 'audio':
         case 'video':
+            newData['video-url'] = document.getElementById('conf-video-url').value;
+            newData.delay = document.getElementById('conf-delay').value;
+            break;
+        case 'audio':
         case 'file':
             const key = node.name === 'file' ? 'file-url' : node.name + '-url';
             newData[key] = document.getElementById('conf-url').value;
@@ -573,17 +600,31 @@ function getNodeTemplate(type) {
             `;
         case 'video':
             return `
-                <div>
-                    <div class="node-header-custom"><i class="bi bi-youtube" style="color:#FF3B30;"></i> Video</div>
-                    ${getDrawflowStats()}
-                    <div class="node-body-content">
-                        <div class="ref-preview bg-dark d-flex align-items-center justify-content-center" style="height:80px;">
-                            <i class="bi bi-play-circle text-white fs-3"></i>
-                        </div>
-                        <div class="ref-url-label">Resource URL</div>
-                        <div class="small text-muted text-truncate">Video link...</div>
+                <div class="node-root" style="min-width: 250px; background: #EEF2F6;">
+                    <div class="node-header-custom" style="border-bottom:none; background: #EEF2F6;"><i class="bi bi-camera-video-fill" style="color:#4e5d78;"></i> Video</div>
+                    <div class="node-stats-row border-0 mt-1 px-2 pb-4" style="background: #EEF2F6; justify-content: space-around;">
+                        <div class="stat-col"><i class="bi bi-cursor-fill text-primary" style="opacity: 0.8;"></i><span style="font-size:9px;">Sent</span><span style="font-size:11px;">0</span></div>
+                        <div class="stat-col"><i class="bi bi-check-circle text-success" style="opacity: 0.8;"></i><span style="font-size:9px;">Delivered</span><span style="font-size:11px;">0</span></div>
+                        <div class="stat-col"><i class="bi bi-person-x text-primary" style="opacity: 0.8; font-size: 14px;"></i><span style="font-size:9px;">Subscribers</span><span style="font-size:11px;">0</span></div>
+                        <div class="stat-col"><i class="bi bi-heart-fill text-danger" style="opacity: 0.8;"></i><span style="font-size:9px;">Errors</span><span style="font-size:11px;">0</span></div>
                     </div>
-                    <div class="port-labels-container"><div class="port-label-row"><span class="text-start">Message</span><span class="text-end">Compose Next Message</span></div></div>
+                    <div class="node-body-content text-center pb-2 pt-0" style="background:#EEF2F6;">
+                        <div class="node-image-preview" style="background: transparent;">
+                            <i class="bi bi-hand-index" style="font-size:2rem; color:#4e5d78;"></i>
+                        </div>
+                    </div>
+                    <div class="port-labels-container" style="background:#EEF2F6; border-top:1px dashed #cbd5e1; padding: 10px 0;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#555; position: relative; right: -8px;">Message</span>
+                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Compose Next Message</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Keyboard Button</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Add Buttons</span>
+                        </div>
+                    </div>
                 </div>
             `;
         case 'file':
@@ -634,7 +675,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     if (type === 'condition') outputs = 2;
     if (type === 'interactive') outputs = 4;
     if (type === 'cta') outputs = 2;
-    if (type === 'image') outputs = 3;
+    if (type === 'image' || type === 'video') outputs = 3;
 
     editor.addNode(type, inputs, outputs, pos_x, pos_y, type, {}, template);
 }
