@@ -676,8 +676,87 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
 /**
  * 4. API Integration & Flow Management
  */
+function validateFlow(data) {
+    try {
+        const nodes = data.drawflow.Home.data;
+        const nodeIds = Object.keys(nodes);
+        
+        if (nodeIds.length === 0) {
+            return { valid: false, message: 'Canvas is empty. Please add some nodes to build a flow.' };
+        }
+
+        const startNodes = nodeIds.filter(id => nodes[id].name === 'start');
+        if (startNodes.length === 0) {
+            return { valid: false, message: 'Missing Start node! You must have exactly one "Start/Trigger" node.' };
+        }
+        if (startNodes.length > 1) {
+            return { valid: false, message: 'Multiple Start nodes found! You can only have one Start node per flow.' };
+        }
+        
+        const startNode = nodes[startNodes[0]];
+        const startConns = startNode.outputs.output_1 ? startNode.outputs.output_1.connections : [];
+        if (!startConns || startConns.length === 0) {
+            return { valid: false, message: 'Start node is disconnected! Please connect it to your first message.' };
+        }
+
+        for (let id of nodeIds) {
+            const node = nodes[id];
+            const ndata = node.data;
+            
+            if (node.name === 'text' && (!ndata.text || ndata.text.trim() === '')) {
+                return { valid: false, message: 'A Text node is empty. Please configure it.', nodeId: id };
+            }
+            if (node.name === 'image' && (!ndata['image-url'] || ndata['image-url'].trim() === '')) {
+                return { valid: false, message: 'An Image node is missing its file URL. Please configure it.', nodeId: id };
+            }
+            if (node.name === 'video' && (!ndata['video-url'] || ndata['video-url'].trim() === '')) {
+                return { valid: false, message: 'A Video node is missing its file URL.', nodeId: id };
+            }
+            if (node.name === 'audio' && (!ndata['audio-url'] || ndata['audio-url'].trim() === '')) {
+                return { valid: false, message: 'An Audio node is missing its file URL.', nodeId: id };
+            }
+            if (node.name === 'file' && (!ndata['file-url'] || ndata['file-url'].trim() === '')) {
+                return { valid: false, message: 'A File/Document node is missing its URL.', nodeId: id };
+            }
+            if (node.name === 'cta' && (!ndata.text || ndata.text.trim() === '' || !ndata.url || ndata.url.trim() === '')) {
+                return { valid: false, message: 'A Link Button node is incomplete. Both Text and URL are required.', nodeId: id };
+            }
+            if (node.name === 'interactive') {
+                if (!ndata.prompt || ndata.prompt.trim() === '') {
+                    return { valid: false, message: 'An Interactive Button node is missing its main message.', nodeId: id };
+                }
+                const btns = Object.keys(ndata).filter(k => k.startsWith('btn-'));
+                if (btns.length === 0) {
+                    return { valid: false, message: 'An Interactive Button node must have at least one button configured.', nodeId: id };
+                }
+            }
+        }
+
+        return { valid: true };
+    } catch (err) {
+        console.error('Validation error:', err);
+        return { valid: true }; // Fallback to allow saving if validation logic errors
+    }
+}
+
 function saveFlow() {
     const data = editor.export();
+    
+    // Validate Flow before saving
+    const validation = validateFlow(data);
+    if (!validation.valid) {
+        if (validation.nodeId) {
+            // Highlight the problematic node visually if a nodeId is returned
+            const nodeEl = document.getElementById('node-' + validation.nodeId);
+            if (nodeEl) {
+                nodeEl.style.boxShadow = '0 0 15px rgba(220, 53, 69, 0.8)';
+                setTimeout(() => { nodeEl.style.boxShadow = ''; }, 3000);
+            }
+        }
+        Swal.fire({ icon: 'warning', title: 'Attention Required', text: validation.message });
+        return; // Abort saving
+    }
+
     const flowName = document.getElementById('flowNameInput').value || 'Master Flow';
     
     Swal.fire({ title: 'Saving Flow...', didOpen: () => Swal.showLoading() });
