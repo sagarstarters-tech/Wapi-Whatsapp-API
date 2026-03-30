@@ -360,6 +360,52 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
+        case 'card':
+            html = `
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Card Header Image URL (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-card-img" value="${data['image-url'] || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                
+                <div class="mb-3 mt-4">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 20px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-card-media').click()">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
+                        <input type="file" id="conf-upload-card-media" accept="image/png, image/jpeg, image/webp" style="display:none;" onchange="uploadMediaToBot(this, 'conf-card-img', 'upload-status-card-media')">
+                        <div id="upload-status-card-media" class="mt-2 text-muted" style="font-size:12px; font-weight: 500;">Click to upload (png, jpg, webp)</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message Body <span class="text-danger">*</span></label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-card-body')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-card-body', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-card-body" rows="4" placeholder="Rich card main message..." style="background: #fafafa; border: 1px solid #ddd;">${data.body || ''}</textarea>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Footer Text (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-card-footer" value="${data.footer || ''}" placeholder="Small footer text" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary" style="font-size: 13px;">Buttons Configuration</label>
+                    <div id="sidebar-btn-list" class="mb-2"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="addButtonToSelectedNode()">+ Add Button</button>
+                </div>
+
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
+                </div>
+            `;
+            break;
         default:
             html = `<p class="text-muted">No specific configuration for this node.</p>`;
     }
