@@ -564,6 +564,19 @@ function updateNodePreview(nodeId) {
         case 'interactive': {
             const promptBox = nodeEl.querySelector('.node-message-box');
             if (promptBox && node.data.prompt) promptBox.innerHTML = '<strong>' + node.data.prompt + '</strong>';
+            
+            // Sync dynamic button labels on canvas
+            const labelsContainer = nodeEl.querySelector('.port-labels-container');
+            if (labelsContainer) {
+                const btn1 = node.data['btn-0'] || 'Btn 1';
+                const btn2 = node.data['btn-1'] || 'Btn 2';
+                const btn3 = node.data['btn-2'] || 'Btn 3';
+                
+                const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
+                if (btnLabels[1]) btnLabels[1].querySelector('span').textContent = btn1;
+                if (btnLabels[2]) btnLabels[2].querySelector('span').textContent = btn2;
+                if (btnLabels[3]) btnLabels[3].querySelector('span').textContent = btn3;
+            }
             break;
         }
         case 'cta': {
@@ -993,6 +1006,18 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
         defaultData['btn-0'] = 'Option 1';
         defaultData['btn-1'] = 'Option 2';
         defaultData.delay = 0;
+    }
+    if (type === 'card') {
+        defaultData.body = 'Check out this offer!';
+        defaultData.footer = 'WAPI Chatbot';
+        defaultData['btn-0'] = 'Buy Now';
+        defaultData['btn-1'] = 'Know More';
+        defaultData.delay = 0;
+    }
+    if (type === 'interactive') {
+        defaultData.prompt = 'Please select an option below:';
+        defaultData['btn-0'] = 'Yes';
+        defaultData['btn-1'] = 'No';
     }
 
     const nodeId = editor.addNode(type, inputs, outputs, pos_x, pos_y, type, defaultData, template);
@@ -1449,7 +1474,10 @@ function renderSidebarButtons(nodeId) {
 function updateButtonData(nodeId, index, value) {
     const node = editor.getNodeFromId(nodeId);
     if (node) {
-        node.data['btn-' + index] = value;
+        const newData = { ...node.data };
+        newData['btn-' + index] = value;
+        // Correctly update node data so Drawflow tracks changes for export
+        editor.updateNodeDataFromId(nodeId, newData);
         updateNodePreview(nodeId);
     }
 }
