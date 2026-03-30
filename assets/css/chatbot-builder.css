@@ -89,6 +89,8 @@ body {
 }
 
 .drawflow .drawflow-node {
+    position: absolute !important;
+    flex-direction: row !important;
     background: #eef2f6; 
     border: 1px solid #c8d3e0;
     border-radius: 12px;
