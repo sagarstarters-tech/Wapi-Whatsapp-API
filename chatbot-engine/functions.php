@@ -139,25 +139,34 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
     return sendRequest($payload, $phoneId, $token);
 }
 
-function sendCtaUrl($phone, $text, $btnText, $url, $phoneId = null, $token = null) {
-    if (empty(trim($text)) || empty(trim($btnText)) || empty(trim($url))) return false;
+function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText = '', $phoneId = null, $token = null) {
+    if (empty(trim($btnText)) || empty(trim($url))) return false;
     
+    $interactive = [
+        'type'   => 'cta_url',
+        'body'   => ['text' => (empty(trim($text)) ? 'Click below' : $text)],
+        'action' => [
+            'name' => 'cta_url',
+            'parameters' => [
+                'display_text' => mb_substr(trim($btnText), 0, 20),
+                'url'          => trim($url)
+            ]
+        ]
+    ];
+
+    if (!empty($imageUrl)) {
+        $interactive['header'] = ['type' => 'image', 'image' => ['link' => $imageUrl]];
+    }
+    if (!empty($footerText)) {
+        $interactive['footer'] = ['text' => $footerText];
+    }
+
     $payload = [
         'messaging_product' => 'whatsapp', 
         'recipient_type'    => 'individual', 
         'to'                => $phone, 
         'type'              => 'interactive',
-        'interactive'       => [
-            'type'   => 'cta_url',
-            'body'   => ['text' => $text],
-            'action' => [
-                'name' => 'cta_url',
-                'parameters' => [
-                    'display_text' => mb_substr(trim($btnText), 0, 20),
-                    'url'          => trim($url)
-                ]
-            ]
-        ]
+        'interactive'       => $interactive
     ];
     return sendRequest($payload, $phoneId, $token);
 }
@@ -385,8 +394,11 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
                 sleep($delaySecs);
             }
             $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId);
+            $footerMsg = replaceDynamicVariables($nodeData['footer'] ?? '', $phone, $userId);
             $btnText = replaceDynamicVariables($nodeData['btnText'] ?? '', $phone, $userId);
-            $res = sendCtaUrl($phone, $textMsg, $btnText, $nodeData['url'] ?? '', $phoneId, $token);
+            $imageUrl = $nodeData['image'] ?? '';
+            
+            $res = sendCtaUrl($phone, $textMsg, $btnText, $nodeData['url'] ?? '', $imageUrl, $footerMsg, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $textMsg, $res);
             break;
 

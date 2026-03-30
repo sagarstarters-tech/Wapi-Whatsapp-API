@@ -343,11 +343,41 @@ function showNodeConfig(nodeId) {
             break;
         case 'cta':
             html = `
-                <input type="hidden" id="conf-cta-text" value="&#8203;">
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Image Header URL (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-cta-image" value="${data.image || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                
+                <div class="mb-3 mt-4">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 20px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-cta-media').click()">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
+                        <input type="file" id="conf-upload-cta-media" accept="image/png, image/jpeg, image/webp" style="display:none;" onchange="uploadMediaToBot(this, 'conf-cta-image', 'upload-status-cta-media')">
+                        <div id="upload-status-cta-media" class="mt-2 text-muted" style="font-size:12px; font-weight: 500;">Click to upload (png, jpg, webp)</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message Body (Optional)</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-cta-text')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-cta-text', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-cta-text" rows="3" placeholder="Visit our website now!" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Footer Text (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-cta-footer" value="${data.footer || ''}" placeholder="Thank you!" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label fw-bold" style="font-size: 13px; color: #555;">Button Text</label>
                     <input type="text" class="form-control cfg-input" id="conf-cta-btn-text" value="${data.btnText || ''}" placeholder="Visit Website" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
+
                 <div class="mb-3">
                     <label class="form-label fw-bold" style="font-size: 13px; color: #555;">Button URL</label>
                     <input type="text" class="form-control cfg-input" id="conf-cta-url" value="${data.url || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
@@ -497,6 +527,8 @@ function saveConfig(silent = false) {
             break;
         case 'cta':
             newData.text = document.getElementById('conf-cta-text') ? document.getElementById('conf-cta-text').value : newData.text;
+            newData.image = document.getElementById('conf-cta-image') ? document.getElementById('conf-cta-image').value : (newData.image || '');
+            newData.footer = document.getElementById('conf-cta-footer') ? document.getElementById('conf-cta-footer').value : (newData.footer || '');
             newData.btnText = document.getElementById('conf-cta-btn-text') ? document.getElementById('conf-cta-btn-text').value : newData.btnText;
             newData.url = document.getElementById('conf-cta-url') ? document.getElementById('conf-cta-url').value : newData.url;
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
@@ -559,6 +591,25 @@ function updateNodePreview(nodeId) {
             const urlKey = node.name === 'file' ? 'file-url' : node.name + '-url';
             const urlEl = nodeEl.querySelector('.small.text-muted.text-truncate') || nodeEl.querySelector('.small.text-muted');
             if (urlEl) urlEl.textContent = node.data[urlKey] || 'Click to set URL';
+            break;
+        }
+        case 'cta': {
+            const imgContainer = nodeEl.querySelector('.node-image-container');
+            if (imgContainer) {
+                if (node.data.image) {
+                    imgContainer.innerHTML = `<img src="${node.data.image}" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
+                } else {
+                    imgContainer.innerHTML = `<div style="background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
+                }
+            }
+            const bodyBox = nodeEl.querySelector('.node-message-box');
+            if (bodyBox) bodyBox.innerHTML = node.data.text ? node.data.text.replace(/\n/g, '<br>') : '<strong>Message Body...</strong>';
+            
+            const footerBox = nodeEl.querySelector('.node-footer-box');
+            if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
+
+            const btnLabel = nodeEl.querySelector('.url-label');
+            if (btnLabel) btnLabel.textContent = node.data.btnText || 'Visit Website';
             break;
         }
         case 'interactive': {
@@ -814,13 +865,28 @@ function getNodeTemplate(type) {
             `;
         case 'cta':
             return `
-                <div class="node-root">
-                    <div class="node-header-custom button-hd"><i class="bi bi-cursor-fill"></i> Link Button</div>
-                    <div class="node-body-content py-3 p-2 text-center border-bottom">
-                         <div class="mt-2 text-primary fw-bold border rounded p-1" style="border-color: #007AFF !important;"><i class="bi bi-box-arrow-up-right me-1"></i><span class="url-label">Click Here</span></div>
+                <div class="node-root cta-node-root">
+                    <div class="node-header-custom" style="background:#f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 15px; border-radius: 12px 12px 0 0; color: #007bff; font-weight: 600;"><i class="bi bi-cursor-fill me-1"></i> Link Button</div>
+                    
+                    <div class="node-body-content p-3" style="background:#fff;">
+                        <div class="node-image-container mb-2">
+                            <div style="background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>
+                        </div>
+                        <div class="node-message-box" style="font-size: 13px; color: #334155; line-height: 1.4; margin-bottom: 8px;">
+                            <strong>Message Body...</strong>
+                        </div>
+                        <div class="node-footer-box mb-3" style="font-size: 11px; color: #94a3b8;">Footer text...</div>
+                        
+                        <div class="cta-preview-btn-wrapper" style="text-align: center; border: 1px solid #007bff; color: #007bff; padding: 6px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                            <i class="bi bi-link-45deg"></i> <span class="url-label">Visit Website</span>
+                        </div>
                     </div>
-                    <div class="port-labels-container">
-                        <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end text-muted">Next</span></div>
+
+                    <div class="port-labels-container" style="border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#555; position: relative; right: -8px;">In</span>
+                            <span style="font-size:10px; color:#555; position: relative; left: -8px;">Next</span>
+                        </div>
                     </div>
                 </div>
             `;
