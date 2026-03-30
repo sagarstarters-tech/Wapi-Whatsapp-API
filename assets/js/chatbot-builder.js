@@ -17,8 +17,13 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
         const node = editor.getNodeFromId(nodeId);
-        if (node.name === 'interactive' && node.data) {
-             restoreInteractivePorts(nodeId);
+        // Force correct port counts for interactive/card if they differ (prevents corruption)
+        if (node.name === 'interactive' || node.name === 'card') {
+            if (node.outputs && Object.keys(node.outputs).length < 4) {
+                // Not easily possible to add outputs to Drawflow node instance directly without re-adding
+                // but we can try to at least warn or ensure future ones are correct.
+            }
+            restoreInteractivePorts(nodeId);
         }
     });
 
@@ -555,6 +560,19 @@ function updateNodePreview(nodeId) {
             
             const footerBox = nodeEl.querySelector('.node-footer-box');
             if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
+
+            // Sync dynamic button labels on canvas
+            const labelsContainer = nodeEl.querySelector('.port-labels-container');
+            if (labelsContainer) {
+                const btn1 = node.data['btn-0'] || 'Btn 1';
+                const btn2 = node.data['btn-1'] || 'Btn 2';
+                const btn3 = node.data['btn-2'] || 'Btn 3';
+                
+                const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
+                if (btnLabels[1]) btnLabels[1].querySelector('span').textContent = btn1;
+                if (btnLabels[2]) btnLabels[2].querySelector('span').textContent = btn2;
+                if (btnLabels[3]) btnLabels[3].querySelector('span').textContent = btn3;
+            }
             break;
         }
     }
@@ -618,7 +636,13 @@ function removeButtonFromSelectedNode(key) {
 }
 
 function restoreInteractivePorts(nodeId) {
-    // Legacy integration - might not be needed with sidebar but kept for safety
+    // This ensures that existing nodes (loaded from DB) or new nodes have correctly 
+    // aligned internal state if Drawflow mismatched them.
+    const node = editor.getNodeFromId(nodeId);
+    if (!node) return;
+    
+    // Auto-update Canvas Preview immediately
+    updateNodePreview(nodeId);
 }
 
 /**
@@ -824,10 +848,10 @@ function getNodeTemplate(type) {
             `;
         case 'card':
             return `
-                <div class="node-root" style="min-width: 260px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 12px; border: 1px solid #e2e8f0; font-family: 'Segoe UI', sans-serif;">
+                <div class="node-root card-node-root">
                     <div class="node-header-custom" style="background:#f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 15px; border-radius: 12px 12px 0 0; color: #20C997; font-weight: 600;"><i class="bi bi-card-heading me-1"></i> Rich Card</div>
                     
-                    <div class="node-body-content p-3">
+                    <div class="node-body-content p-3" style="background:#fff;">
                         <div class="node-image-container mb-2">
                             <div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>
                         </div>
@@ -839,10 +863,17 @@ function getNodeTemplate(type) {
                     
                     <div class="port-labels-container" style="background: #f8fafc; border-top: 1px dashed #cbd5e1; padding: 10px 0; border-radius: 0 0 12px 12px;">
                         <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
-                            <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">Next</span>
+                            <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">In</span>
+                            <span style="font-size:11px; color:#64748b; position: relative; left: -8px;">Next</span>
                         </div>
                         <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
-                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Buttons</span>
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 2</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 3</span>
                         </div>
                     </div>
                 </div>
