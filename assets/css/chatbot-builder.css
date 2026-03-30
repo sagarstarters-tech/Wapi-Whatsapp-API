@@ -219,22 +219,36 @@ body {
 
 /* Card & Interactive specific buttons - align with footer rows */
 .drawflow-node.card .inputs .input_1,
-.drawflow-node.card .outputs .output_1,
-.drawflow-node.interactive .inputs .input_1,
-.drawflow-node.interactive .outputs .output_1 { 
+.drawflow-node.interactive .inputs .input_1 { 
     top: auto !important; 
-    bottom: 83px !important; 
-    transform: none;
+    bottom: 84px !important; 
+    transform: none !important;
 }
 
+/* Force outputs into footer labels positions */
+.drawflow-node.card .outputs .output_1,
+.drawflow-node.interactive .outputs .output_1 { top: auto !important; bottom: 84px !important; transform: none !important; }
+
 .drawflow-node.card .outputs .output_2, 
-.drawflow-node.interactive .outputs .output_2 { top: auto !important; bottom: 62px !important; transform: none; }
+.drawflow-node.interactive .outputs .output_2 { top: auto !important; bottom: 63px !important; transform: none !important; }
 
 .drawflow-node.card .outputs .output_3, 
-.drawflow-node.interactive .outputs .output_3 { top: auto !important; bottom: 41px !important; transform: none; }
+.drawflow-node.interactive .outputs .output_3 { top: auto !important; bottom: 42px !important; transform: none !important; }
 
 .drawflow-node.card .outputs .output_4, 
-.drawflow-node.interactive .outputs .output_4 { top: auto !important; bottom: 20px !important; transform: none; }
+.drawflow-node.interactive .outputs .output_4 { top: auto !important; bottom: 21px !important; transform: none !important; }
+
+/* Hide ANY extra ports that might appear in card/interactive nodes (like at top corners) */
+.drawflow-node.card .outputs .output:nth-child(n+5),
+.drawflow-node.interactive .outputs .output:nth-child(n+5) {
+    display: none !important;
+}
+
+/* Ensure no default Drawflow ports appear in top corner */
+.drawflow-node.card .outputs .output:not(.output_1):not(.output_2):not(.output_3):not(.output_4),
+.drawflow-node.interactive .outputs .output:not(.output_1):not(.output_2):not(.output_3):not(.output_4) {
+    display: none !important;
+}
 
 /* Image, Video, Audio specific - 3 outputs total */
 .drawflow-node.image .inputs .input_1,
