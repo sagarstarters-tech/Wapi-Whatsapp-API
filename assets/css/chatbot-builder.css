@@ -92,6 +92,13 @@ body {
 /* Drawflow Node Override */
 .drawflow {
     background: transparent !important;
+    will-change: transform;
+    transition: none !important; /* Prevents ghosting during fast drag */
+}
+
+/* Optimization for nodes during move */
+.drawflow-node {
+    will-change: left, top;
 }
 
 .drawflow .drawflow-node {
@@ -103,8 +110,13 @@ body {
     min-width: 260px;
     padding: 0;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    transition: box-shadow 0.2s, border-color 0.2s;
+    transition: box-shadow 0.2s, border-color 0.2s; /* Only transition non-layout props */
     z-index: 2;
+    cursor: grab;
+}
+
+.drawflow .drawflow-node:active {
+    cursor: grabbing;
 }
 
 .drawflow .drawflow-node.selected {
