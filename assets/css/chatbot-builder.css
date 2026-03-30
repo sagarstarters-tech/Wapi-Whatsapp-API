@@ -25,6 +25,12 @@ body {
     flex-direction: column;
 }
 
+.builder-layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
 /* Top Palette Toolbar */
 .top-palette {
     height: var(--builder-top-height);
@@ -271,7 +277,10 @@ body {
 .cfg-segment-btn:first-child { border-right: 1px solid #dee2e6; }
 .config-header { background: #E1E6EC !important; border-bottom: 1px solid #c8d3e0; }
 .config-header h6 { color: #1e293b !important; font-weight: 700; font-size: 15px; }
-.config-sidebar { background: #F1F4F8 !important; }
+.config-sidebar { 
+    background: #F1F4F8 !important; 
+    height: 100%;
+}
 
 /* ===== Start Node Redesign ===== */
 .drawflow .drawflow-node.start {

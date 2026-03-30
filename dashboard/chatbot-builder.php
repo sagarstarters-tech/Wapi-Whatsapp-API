@@ -90,7 +90,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </header>
 
-    <div class="builder-layout d-flex h-100">
+    <div class="builder-layout d-flex">
         <!-- Configuration Panel (Hidden by default, slides in from left) -->
         <aside class="config-sidebar bg-light border-end d-none" id="configSidebar" style="width: 350px; flex-shrink: 0; display: flex; flex-direction: column;">
             <div class="config-header bg-secondary text-white text-center py-2 px-3 d-flex justify-content-between align-items-center">
@@ -106,7 +106,7 @@ include __DIR__ . '/../includes/header.php';
         </aside>
 
         <!-- Main Canvas Area -->
-        <main class="builder-canvas-area flex-grow-1 position-relative" id="drawflow-canvas" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <main class="builder-canvas-area flex-grow-1 position-relative" id="drawflow-canvas" ondrop="drop(event)" ondragover="allowDrop(event)" style="height: calc(100vh - var(--builder-top-height));">
             <!-- Drawflow will be initialized here -->
             
             <!-- Canvas Controls -->
