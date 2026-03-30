@@ -330,6 +330,10 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             break;
             
         case 'interactive':
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
             $buttonsData = [];
             foreach ($nodeData as $key => $val) {
                 if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
