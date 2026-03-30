@@ -236,6 +236,26 @@ body {
 .drawflow-node.card .outputs .output_4, 
 .drawflow-node.interactive .outputs .output_4 { top: auto !important; bottom: 20px !important; transform: none; }
 
+/* Image, Video, Audio specific - 3 outputs total */
+.drawflow-node.image .inputs .input_1,
+.drawflow-node.image .outputs .output_1,
+.drawflow-node.video .inputs .input_1,
+.drawflow-node.video .outputs .output_1,
+.drawflow-node.audio .inputs .input_1,
+.drawflow-node.audio .outputs .output_1 { 
+    top: auto !important; 
+    bottom: 84px !important; 
+    transform: none;
+}
+
+.drawflow-node.image .outputs .output_2, 
+.drawflow-node.video .outputs .output_2,
+.drawflow-node.audio .outputs .output_2 { top: auto !important; bottom: 63px !important; transform: none; }
+
+.drawflow-node.image .outputs .output_3, 
+.drawflow-node.video .outputs .output_3,
+.drawflow-node.audio .outputs .output_3 { top: auto !important; bottom: 42px !important; transform: none; }
+
 /* Port Labels inside nodes matching reference */
 .port-labels-container {
     padding: 8px 0;
