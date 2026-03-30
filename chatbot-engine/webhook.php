@@ -65,15 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $flowNodeId = $parts[2];
                     $portIndex = (int)$parts[3];
 
-                    // Find the user's master flow (currently selecting first one)
-                    $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id ASC LIMIT 1", [$userId]);
+                    // Find the user's master flow (currently selecting latest one for consistency)
+                    $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
                     if (!$flow) continue;
 
                     $flowData = json_decode($flow['flow_json'], true);
-                    $nodes = $flowData['drawflow']['Home']['data'] ?? [];
+                    $nodes = $flowData['drawflow']['Home']['data'] ?? $flowData['drawflow']['home']['data'] ?? [];
                     
                     // Look for connections on the specific output port
-                    $outputName = 'output_' . ($portIndex + 1);
+                    // output_1 is 'Next', so buttons (0,1,2) map to output_2, output_3, output_4
+                    $outputName = 'output_' . ($portIndex + 2);
                     $connections = $nodes[$flowNodeId]['outputs'][$outputName]['connections'] ?? [];
 
                     if (!empty($connections)) {
