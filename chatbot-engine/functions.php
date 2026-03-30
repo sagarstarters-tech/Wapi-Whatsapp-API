@@ -405,6 +405,21 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             $isInteractive = true;
             break;
 
+        case 'text-cta':
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
+            $buttonsData = [];
+            foreach ($nodeData as $key => $val) {
+                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
+            }
+            $prompt = replaceDynamicVariables($nodeData['text'] ?? 'Select an option:', $phone, $userId);
+            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
+            $isInteractive = true;
+            break;
+
         case 'delay':
             $secs = max(1, min(10, (int)($nodeData['delay-seconds'] ?? 2)));
             sleep($secs);

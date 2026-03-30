@@ -17,12 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
         const node = editor.getNodeFromId(nodeId);
-        // Force correct port counts for interactive/card if they differ (prevents corruption)
-        if (node.name === 'interactive' || node.name === 'card') {
-            if (node.outputs && Object.keys(node.outputs).length < 4) {
-                // Not easily possible to add outputs to Drawflow node instance directly without re-adding
-                // but we can try to at least warn or ensure future ones are correct.
-            }
+        // Force correct port counts for interactive/card/text-cta if they differ (prevents corruption)
+        if (node.name === 'interactive' || node.name === 'card' || node.name === 'text-cta') {
             restoreInteractivePorts(nodeId);
         }
     });
@@ -411,6 +407,33 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
+        case 'text-cta':
+            html = `
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply message</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-text-cta')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-text-cta', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-text-cta" rows="5" placeholder="Hi! Select an option below..." style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary" style="font-size: 13px;">Buttons Configuration (Max 3)</label>
+                    <div id="sidebar-btn-list" class="mb-2"></div>
+                </div>
+
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
+                </div>
+            `;
+            break;
         default:
             html = `<p class="text-muted">No specific configuration for this node.</p>`;
     }
@@ -418,7 +441,7 @@ function showNodeConfig(nodeId) {
     configBody.innerHTML = html;
     
     // Special handling for interactive buttons in sidebar
-    if (node.name === 'interactive' || node.name === 'card') {
+    if (node.name === 'interactive' || node.name === 'card' || node.name === 'text-cta') {
         renderSidebarButtons(nodeId);
     }
 
@@ -482,6 +505,10 @@ function saveConfig(silent = false) {
             newData['image-url'] = document.getElementById('conf-card-img') ? document.getElementById('conf-card-img').value : newData['image-url'];
             newData.body = document.getElementById('conf-card-body') ? document.getElementById('conf-card-body').value : newData.body;
             newData.footer = document.getElementById('conf-card-footer') ? document.getElementById('conf-card-footer').value : newData.footer;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
+            break;
+        case 'text-cta':
+            newData.text = document.getElementById('conf-text-cta') ? document.getElementById('conf-text-cta').value : newData.text;
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
     }
@@ -562,6 +589,23 @@ function updateNodePreview(nodeId) {
             if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
 
             // Sync dynamic button labels on canvas
+            const labelsContainer = nodeEl.querySelector('.port-labels-container');
+            if (labelsContainer) {
+                const btn1 = node.data['btn-0'] || 'Btn 1';
+                const btn2 = node.data['btn-1'] || 'Btn 2';
+                const btn3 = node.data['btn-2'] || 'Btn 3';
+                
+                const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
+                if (btnLabels[1]) btnLabels[1].querySelector('span').textContent = btn1;
+                if (btnLabels[2]) btnLabels[2].querySelector('span').textContent = btn2;
+                if (btnLabels[3]) btnLabels[3].querySelector('span').textContent = btn3;
+            }
+            break;
+        }
+        case 'text-cta': {
+            const bodyBox = nodeEl.querySelector('.node-message-box');
+            if (bodyBox) bodyBox.innerHTML = node.data.text ? node.data.text.replace(/\n/g, '<br>') : '<strong>Your message here...</strong>';
+            
             const labelsContainer = nodeEl.querySelector('.port-labels-container');
             if (labelsContainer) {
                 const btn1 = node.data['btn-0'] || 'Btn 1';
@@ -878,6 +922,34 @@ function getNodeTemplate(type) {
                     </div>
                 </div>
             `;
+        case 'text-cta':
+            return `
+                <div class="node-root text-cta-node-root">
+                    <div class="node-header-custom" style="color: #05cd99;"><i class="bi bi-chat-square-text-fill me-1"></i> Text with Buttons</div>
+                    
+                    <div class="node-body-content p-3">
+                        <div class="node-message-box" style="font-size: 13px; color: #334155; line-height: 1.4;">
+                            <strong>Your message here...</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="port-labels-container">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">In</span>
+                            <span style="font-size:11px; color:#64748b; position: relative; left: -8px;">Next</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 2</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 3</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         default:
             return `<div>Node type not found</div>`;
     }
@@ -908,16 +980,19 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     let inputs = 1; let outputs = 1;
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
-    if (type === 'interactive' || type === 'card') outputs = 4;
+    if (type === 'interactive' || type === 'card' || type === 'text-cta') outputs = 4;
     if (type === 'cta') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
     const defaultData = {};
     if (type === 'start') {
-        defaultData.keywords = 'hi, hello';
-        defaultData.match = 'exact';
-        defaultData.delay = 0;
         defaultData.title = document.getElementById('flowNameInput')?.value || 'Demo_bot';
+    }
+    if (type === 'text-cta') {
+        defaultData.text = 'Hi! Choose an option:';
+        defaultData['btn-0'] = 'Option 1';
+        defaultData['btn-1'] = 'Option 2';
+        defaultData.delay = 0;
     }
 
     const nodeId = editor.addNode(type, inputs, outputs, pos_x, pos_y, type, defaultData, template);
@@ -985,13 +1060,13 @@ function validateFlow(data) {
                     return { valid: false, message: 'A Rich Card must have at least one button.', nodeId: id };
                 }
             }
-            if (node.name === 'interactive') {
-                if (!ndata.prompt || ndata.prompt.trim() === '') {
-                    return { valid: false, message: 'An Interactive Button node is missing its main message.', nodeId: id };
+            if (node.name === 'interactive' || node.name === 'text-cta') {
+                if ((ndata.prompt || ndata.text || '').trim() === '') {
+                    return { valid: false, message: 'A Button node is missing its main message.', nodeId: id };
                 }
                 const btns = Object.keys(ndata).filter(k => k.startsWith('btn-'));
                 if (btns.length === 0) {
-                    return { valid: false, message: 'An Interactive Button node must have at least one button configured.', nodeId: id };
+                    return { valid: false, message: 'A Button node must have at least one button configured.', nodeId: id };
                 }
             }
         }
@@ -1273,3 +1348,120 @@ function newFlow() {
 function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ============================================================
+ *  SIDEBAR HELPERS - Variables & Interactive Buttons
+ * ============================================================ */
+
+function insertAtCursor(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = el.value;
+    const before = text.substring(0, start);
+    const after  = text.substring(end, text.length);
+    
+    el.value = before + val + after;
+    el.selectionStart = el.selectionEnd = start + val.length;
+    el.focus();
+}
+
+function toggleCustomVars(btn, targetId) {
+    let existing = document.getElementById('custom-vars-popup');
+    if (existing) {
+        existing.remove();
+        return;
+    }
+
+    const vars = [
+        { name: 'Full Name', val: '#LEAD_USER_NAME#' },
+        { name: 'First Name', val: '#LEAD_USER_FIRST_NAME#' },
+        { name: 'Mobile', val: '#LEAD_USER_MOBILE#' },
+        { name: 'Email', val: '#LEAD_USER_EMAIL#' }
+    ];
+
+    const popup = document.createElement('div');
+    popup.id = 'custom-vars-popup';
+    popup.className = 'card shadow-sm p-1 position-absolute';
+    popup.style.zIndex = '9999';
+    popup.style.width = '160px';
+    popup.style.background = '#fff';
+    popup.style.border = '1px solid #ddd';
+    
+    const rect = btn.getBoundingClientRect();
+    popup.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+    popup.style.left = (rect.left + window.scrollX) + 'px';
+
+    vars.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'p-2 border-bottom-0 small';
+        item.style.cursor = 'pointer';
+        item.innerText = v.name;
+        item.onclick = () => {
+            insertAtCursor(targetId, v.val);
+            popup.remove();
+        };
+        item.onmouseenter = () => item.style.background = '#f8f9fa';
+        item.onmouseleave = () => item.style.background = 'transparent';
+        popup.appendChild(item);
+    });
+
+    document.body.appendChild(popup);
+    
+    setTimeout(() => {
+        const clickOut = (e) => {
+            if (!popup.contains(e.target) && e.target !== btn) {
+                popup.remove();
+                document.removeEventListener('mousedown', clickOut);
+            }
+        };
+        document.addEventListener('mousedown', clickOut);
+    }, 10);
+}
+
+function renderSidebarButtons(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    const container = document.getElementById('sidebar-btn-list');
+    if (!container || !node) return;
+    
+    container.innerHTML = '';
+    // Standard limit is 3 buttons for Interactive/Card in regular WhatsApp Flows
+    const btnCount = 3; 
+    
+    for(let i=0; i < btnCount; i++) {
+        const btnText = node.data['btn-' + i] || '';
+        const row = document.createElement('div');
+        row.className = 'mb-2 d-flex align-items-center gap-2';
+        row.innerHTML = `
+            <div class="input-group input-group-sm">
+                <span class="input-group-text border-0 ps-0 bg-transparent text-muted small" style="min-width:20px;">${i+1}</span>
+                <input type="text" class="form-control form-control-sm border" value="${btnText}" 
+                       placeholder="Button ${i+1} text" oninput="updateButtonData('${nodeId}', ${i}, this.value)"
+                       style="font-size:12px; border-radius:4px;">
+            </div>
+        `;
+        container.appendChild(row);
+    }
+}
+
+function updateButtonData(nodeId, index, value) {
+    const node = editor.getNodeFromId(nodeId);
+    if (node) {
+        node.data['btn-' + index] = value;
+        updateNodePreview(nodeId);
+    }
+}
+
+function addButtonToSelectedNode() {
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Max 3 buttons supported for this block.',
+        showConfirmButton: false,
+        timer: 2000
+    });
+}
+
