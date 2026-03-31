@@ -80,9 +80,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $flowData = json_decode($flow['flow_json'], true);
                     $nodes = $flowData['drawflow']['Home']['data'] ?? $flowData['drawflow']['home']['data'] ?? [];
                     
-                    // Look for connections on the specific output port
-                    // output_1 is 'Next', so buttons (0,1,2) map to output_2, output_3, output_4
-                    $outputName = 'output_' . ($portIndex + 2);
+                    // Dynamically map visual ports: Top port (index 0) is 'Next'. 
+                    // Buttons 0, 1, 2 map to visual ports 1, 2, 3 respectively.
+                    $nodeOutputs = $nodes[$flowNodeId]['outputs'] ?? [];
+                    $outputKeys = array_keys($nodeOutputs);
+                    $targetIndex = $portIndex + 1; // 0->1, 1->2, 2->3
+                    
+                    if (isset($outputKeys[$targetIndex])) {
+                        $outputName = $outputKeys[$targetIndex];
+                    } else {
+                        // Fallback strictly to typical logic if missing
+                        $outputName = 'output_' . ($portIndex + 2);
+                    }
+                    
                     $connections = $nodes[$flowNodeId]['outputs'][$outputName]['connections'] ?? [];
                     
                     file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Node $flowNodeId, Port $outputName, Connections: " . count($connections) . "\n", FILE_APPEND);
