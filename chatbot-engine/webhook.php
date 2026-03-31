@@ -61,16 +61,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] BUTTON CLICKED: '$replyId'\n", FILE_APPEND);
                 
                 // Expected Format: flow_btn_{nodeId}_{portIndex}
+                // e.g. flow_btn_5_0 -> nodeId=5, portIndex=0 -> output_2
                 if (strpos($replyId, 'flow_btn_') === 0) {
-                    $parts = explode('_', $replyId);
-                    if (count($parts) < 4) {
-                         file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] ERROR: Invalid button ID format: $replyId\n", FILE_APPEND);
-                         continue;
-                    }
-                    $flowNodeId = $parts[2];
-                    $portIndex = (int)$parts[3];
+                    // Split from end to handle any nodeId that might have underscores
+                    // ID format is always: flow_btn_{NODEID}_{0|1|2}
+                    $lastUnderscore = strrpos($replyId, '_');
+                    $portIndex = (int)substr($replyId, $lastUnderscore + 1);
+                    $nodeIdPart = substr($replyId, strlen('flow_btn_'), $lastUnderscore - strlen('flow_btn_'));
+                    $flowNodeId = $nodeIdPart;
+                    
+                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Parsed -> nodeId='$flowNodeId', portIndex=$portIndex\n", FILE_APPEND);
 
-                    // Find the user's master flow (currently selecting latest one for consistency)
+                    // Find the user's active flow
                     $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
                     if (!$flow) {
                         file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] ERROR: No flow found for user: $userId\n", FILE_APPEND);
@@ -79,29 +81,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $flowData = json_decode($flow['flow_json'], true);
                     $nodes = $flowData['drawflow']['Home']['data'] ?? $flowData['drawflow']['home']['data'] ?? [];
-                    
-                    // Dynamically map visual ports: Top port (index 0) is 'Next'. 
-                    // Buttons 0, 1, 2 map to visual ports 1, 2, 3 respectively.
-                    $nodeOutputs = $nodes[$flowNodeId]['outputs'] ?? [];
-                    $outputKeys = array_keys($nodeOutputs);
-                    $targetIndex = $portIndex + 1; // 0->1, 1->2, 2->3
-                    
-                    if (isset($outputKeys[$targetIndex])) {
-                        $outputName = $outputKeys[$targetIndex];
-                    } else {
-                        // Fallback strictly to typical logic if missing
-                        $outputName = 'output_' . ($portIndex + 2);
+
+                    // Debug: log all available node IDs
+                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Available node IDs: " . implode(',', array_keys($nodes)) . "\n", FILE_APPEND);
+
+                    if (!isset($nodes[$flowNodeId])) {
+                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] ERROR: Node '$flowNodeId' not found in flow!\n", FILE_APPEND);
+                        continue;
                     }
+
+                    // Drawflow card/interactive nodes have outputs:
+                    //   output_1 = Next (auto-advance port, not used for buttons)
+                    //   output_2 = Button 0 (btn-0)
+                    //   output_3 = Button 1 (btn-1)
+                    //   output_4 = Button 2 (btn-2)
+                    // So: portIndex 0->output_2, 1->output_3, 2->output_4
+                    $outputName = 'output_' . ($portIndex + 2);
+                    $nodeOutputs = $nodes[$flowNodeId]['outputs'] ?? [];
+
+                    // Debug: log all output ports for this node
+                    $outputDebug = [];
+                    foreach ($nodeOutputs as $opKey => $opVal) {
+                        $cCount = count($opVal['connections'] ?? []);
+                        $outputDebug[] = "$opKey($cCount conn)";
+                    }
+                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Node $flowNodeId outputs: " . implode(', ', $outputDebug) . "\n", FILE_APPEND);
+                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Targeting port: $outputName\n", FILE_APPEND);
                     
-                    $connections = $nodes[$flowNodeId]['outputs'][$outputName]['connections'] ?? [];
+                    $connections = $nodeOutputs[$outputName]['connections'] ?? [];
                     
-                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Node $flowNodeId, Port $outputName, Connections: " . count($connections) . "\n", FILE_APPEND);
+                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Connections on $outputName: " . count($connections) . "\n", FILE_APPEND);
 
                     if (!empty($connections)) {
                         $nextNodeId = $connections[0]['node'];
+                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Routing to next node: $nextNodeId\n", FILE_APPEND);
                         runFlow($from, $userId, $flow['id'], $nextNodeId, $phoneNumberId, $accessToken);
                     } else {
-                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] ERROR: No connections on $outputName for node $flowNodeId\n", FILE_APPEND);
+                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] ERROR: No connections on $outputName for node $flowNodeId. Check flow wiring!\n", FILE_APPEND);
                     }
                 }
             } 
