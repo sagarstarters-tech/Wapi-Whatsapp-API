@@ -29,8 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     editor.on('nodeUnselected', function() {
-        // Optional: close sidebar on unselect? 
-        // User might prefer it stay open for the clicked node until they close it manually.
+        closeConfig();
     });
 
     editor.on('connectionSelected', function(conn) {
@@ -612,64 +611,32 @@ function updateNodePreview(nodeId) {
             if (btnLabel) btnLabel.textContent = node.data.btnText || 'Visit Website';
             break;
         }
-        case 'interactive': {
-            const promptBox = nodeEl.querySelector('.node-message-box');
-            if (promptBox && node.data.prompt) promptBox.innerHTML = '<strong>' + node.data.prompt + '</strong>';
-            
-            // Sync dynamic button labels on canvas
-            const labelsContainer = nodeEl.querySelector('.port-labels-container');
-            if (labelsContainer) {
-                const btn1 = node.data['btn-0'] || 'Btn 1';
-                const btn2 = node.data['btn-1'] || 'Btn 2';
-                const btn3 = node.data['btn-2'] || 'Btn 3';
-                
-                const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
-                if (btnLabels[1]) btnLabels[1].querySelector('span').textContent = btn1;
-                if (btnLabels[2]) btnLabels[2].querySelector('span').textContent = btn2;
-                if (btnLabels[3]) btnLabels[3].querySelector('span').textContent = btn3;
-            }
-            break;
-        }
-        case 'cta': {
-            const promptBox = nodeEl.querySelector('.node-message-box');
-            if (promptBox && node.data.text) promptBox.innerHTML = node.data.text;
-            const urlLabel = nodeEl.querySelector('.url-label');
-            if (urlLabel && node.data.btnText) urlLabel.textContent = node.data.btnText;
-            break;
-        }
-        case 'card': {
-            const imgContainer = nodeEl.querySelector('.node-image-container');
-            if (imgContainer) {
-                if (node.data['image-url']) {
-                    imgContainer.innerHTML = `<img src="${node.data['image-url']}" style="width:100%; height:100px; object-fit:cover; border-radius:8px;">`;
-                } else {
-                    imgContainer.innerHTML = `<div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
-                }
-            }
-            const bodyBox = nodeEl.querySelector('.node-message-box');
-            if (bodyBox) bodyBox.innerHTML = node.data.body ? node.data.body.replace(/\n/g, '<br>') : '<strong>Message Body...</strong>';
-            
-            const footerBox = nodeEl.querySelector('.node-footer-box');
-            if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
-
-            // Sync dynamic button labels on canvas
-            const labelsContainer = nodeEl.querySelector('.port-labels-container');
-            if (labelsContainer) {
-                const btn1 = node.data['btn-0'] || 'Btn 1';
-                const btn2 = node.data['btn-1'] || 'Btn 2';
-                const btn3 = node.data['btn-2'] || 'Btn 3';
-                
-                const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
-                if (btnLabels[1]) btnLabels[1].querySelector('span').textContent = btn1;
-                if (btnLabels[2]) btnLabels[2].querySelector('span').textContent = btn2;
-                if (btnLabels[3]) btnLabels[3].querySelector('span').textContent = btn3;
-            }
-            break;
-        }
+        case 'interactive': 
+        case 'card': 
         case 'text-cta': {
-            const bodyBox = nodeEl.querySelector('.node-message-box');
-            if (bodyBox) bodyBox.innerHTML = node.data.text ? node.data.text.replace(/\n/g, '<br>') : '<strong>Your message here...</strong>';
+            if (node.name === 'card') {
+                const imgContainer = nodeEl.querySelector('.node-image-container');
+                if (imgContainer) {
+                    if (node.data['image-url']) {
+                        imgContainer.innerHTML = `<img src="${node.data['image-url']}" style="width:100%; height:100px; object-fit:cover; border-radius:8px;">`;
+                    } else {
+                        imgContainer.innerHTML = `<div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
+                    }
+                }
+                const bodyBox = nodeEl.querySelector('.node-message-box');
+                if (bodyBox) bodyBox.innerHTML = node.data.body ? node.data.body.replace(/\n/g, '<br>') : '<strong>Message Body...</strong>';
+                
+                const footerBox = nodeEl.querySelector('.node-footer-box');
+                if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
+            } else if (node.name === 'interactive') {
+                const promptBox = nodeEl.querySelector('.node-message-box');
+                if (promptBox && node.data.prompt) promptBox.innerHTML = '<strong>' + node.data.prompt + '</strong>';
+            } else if (node.name === 'text-cta') {
+                const bodyBox = nodeEl.querySelector('.node-message-box');
+                if (bodyBox) bodyBox.innerHTML = node.data.text ? node.data.text.replace(/\n/g, '<br>') : '<strong>Your message here...</strong>';
+            }
             
+            // Sync dynamic button labels on canvas
             const labelsContainer = nodeEl.querySelector('.port-labels-container');
             if (labelsContainer) {
                 const btn1 = node.data['btn-0'] || 'Btn 1';
@@ -677,9 +644,19 @@ function updateNodePreview(nodeId) {
                 const btn3 = node.data['btn-2'] || 'Btn 3';
                 
                 const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
-                if (btnLabels[1]) btnLabels[1].querySelector('span').textContent = btn1;
-                if (btnLabels[2]) btnLabels[2].querySelector('span').textContent = btn2;
-                if (btnLabels[3]) btnLabels[3].querySelector('span').textContent = btn3;
+                // Row 0 is In / Next for Card/Text-CTA, or In / Next for Interactive too now
+                if (btnLabels[1]) {
+                    const span = btnLabels[1].querySelector('span');
+                    if (span) span.textContent = btn1;
+                }
+                if (btnLabels[2]) {
+                    const span = btnLabels[2].querySelector('span');
+                    if (span) span.textContent = btn2;
+                }
+                if (btnLabels[3]) {
+                    const span = btnLabels[3].querySelector('span');
+                    if (span) span.textContent = btn3;
+                }
             }
             break;
         }
@@ -688,7 +665,7 @@ function updateNodePreview(nodeId) {
 
 function updateAllNodePreviews() {
     const exportData = editor.export();
-    const nodes = exportData.drawflow.Home.data || {};
+    const nodes = exportData.drawflow.Home?.data || exportData.drawflow.home?.data || {};
     Object.keys(nodes).forEach(id => updateNodePreview(id));
 }
 
@@ -1440,95 +1417,23 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ============================================================
- *  SIDEBAR HELPERS - Variables & Interactive Buttons
- * ============================================================ */
-
-function insertAtCursor(id, val) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const text = el.value;
-    const before = text.substring(0, start);
-    const after  = text.substring(end, text.length);
-    
-    el.value = before + val + after;
-    el.selectionStart = el.selectionEnd = start + val.length;
-    el.focus();
-}
-
-function toggleCustomVars(btn, targetId) {
-    let existing = document.getElementById('custom-vars-popup');
-    if (existing) {
-        existing.remove();
-        return;
-    }
-
-    const vars = [
-        { name: 'Full Name', val: '#LEAD_USER_NAME#' },
-        { name: 'First Name', val: '#LEAD_USER_FIRST_NAME#' },
-        { name: 'Mobile', val: '#LEAD_USER_MOBILE#' },
-        { name: 'Email', val: '#LEAD_USER_EMAIL#' }
-    ];
-
-    const popup = document.createElement('div');
-    popup.id = 'custom-vars-popup';
-    popup.className = 'card shadow-sm p-1 position-absolute';
-    popup.style.zIndex = '9999';
-    popup.style.width = '160px';
-    popup.style.background = '#fff';
-    popup.style.border = '1px solid #ddd';
-    
-    const rect = btn.getBoundingClientRect();
-    popup.style.top = (rect.bottom + window.scrollY + 5) + 'px';
-    popup.style.left = (rect.left + window.scrollX) + 'px';
-
-    vars.forEach(v => {
-        const item = document.createElement('div');
-        item.className = 'p-2 border-bottom-0 small';
-        item.style.cursor = 'pointer';
-        item.innerText = v.name;
-        item.onclick = () => {
-            insertAtCursor(targetId, v.val);
-            popup.remove();
-        };
-        item.onmouseenter = () => item.style.background = '#f8f9fa';
-        item.onmouseleave = () => item.style.background = 'transparent';
-        popup.appendChild(item);
-    });
-
-    document.body.appendChild(popup);
-    
-    setTimeout(() => {
-        const clickOut = (e) => {
-            if (!popup.contains(e.target) && e.target !== btn) {
-                popup.remove();
-                document.removeEventListener('mousedown', clickOut);
-            }
-        };
-        document.addEventListener('mousedown', clickOut);
-    }, 10);
-}
-
 function renderSidebarButtons(nodeId) {
     const node = editor.getNodeFromId(nodeId);
+    if (!node) return;
     const container = document.getElementById('sidebar-btn-list');
-    if (!container || !node) return;
-    
+    if (!container) return;
     container.innerHTML = '';
+
     // Standard limit is 3 buttons for Interactive/Card in regular WhatsApp Flows
-    const btnCount = 3; 
-    
-    for(let i=0; i < btnCount; i++) {
-        const btnText = node.data['btn-' + i] || '';
+    for (let i = 0; i < 3; i++) {
+        const key = 'btn-' + i;
+        const val = node.data[key] || '';
         const row = document.createElement('div');
         row.className = 'mb-2 d-flex align-items-center gap-2';
         row.innerHTML = `
             <div class="input-group input-group-sm">
                 <span class="input-group-text border-0 ps-0 bg-transparent text-muted small" style="min-width:20px;">${i+1}</span>
-                <input type="text" class="form-control form-control-sm border" value="${btnText}" 
+                <input type="text" class="form-control form-control-sm border" value="${val}" 
                        placeholder="Button ${i+1} text" oninput="updateButtonData('${nodeId}', ${i}, this.value)"
                        style="font-size:12px; border-radius:4px;">
             </div>
@@ -1542,7 +1447,6 @@ function updateButtonData(nodeId, index, value) {
     if (node) {
         const newData = { ...node.data };
         newData['btn-' + index] = value;
-        // Correctly update node data so Drawflow tracks changes for export
         editor.updateNodeDataFromId(nodeId, newData);
         updateNodePreview(nodeId);
     }

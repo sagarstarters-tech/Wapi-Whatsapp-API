@@ -136,11 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Message type: '$type', text: '$textBody'\n", FILE_APPEND);
 
-                // Find User's active flow
-                $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
-                if ($flow) {
-                    $flowData = json_decode($flow['flow_json'], true);
-                    $nodes = $flowData['drawflow']['Home']['data'] ?? [];
+                    // Find User's active flow
+                    $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
+                    if ($flow) {
+                        $flowData = json_decode($flow['flow_json'], true);
+                        $nodes = $flowData['drawflow']['Home']['data'] ?? $flowData['drawflow']['home']['data'] ?? [];
                     $isTrigger = false; $startNodeId = null;
                     
                     // Keyword matching only if we have text content
