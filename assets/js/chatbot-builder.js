@@ -694,21 +694,83 @@ function updateSidebarBtnText(key, val) {
     editor.updateNodeDataFromId(currentNodeId, node.data);
 }
 
+function renderSidebarButtons(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    if (!node) return;
+    const container = document.getElementById('sidebar-btn-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Standard limit is 3 buttons for Interactive/Card in regular WhatsApp Flows
+    for (let i = 0; i < 3; i++) {
+        const key = 'btn-' + i;
+        const val = node.data[key] || '';
+        const row = document.createElement('div');
+        row.className = 'mb-2 d-flex align-items-center gap-2';
+        row.innerHTML = `
+            <div class="input-group input-group-sm">
+                <span class="input-group-text border-0 ps-0 bg-transparent text-muted small" style="min-width:20px;">${i+1}</span>
+                <input type="text" class="form-control form-control-sm border" value="${val}" 
+                       placeholder="Button ${i+1} text" oninput="updateButtonData('${nodeId}', ${i}, this.value)"
+                       style="font-size:12px; border-radius:4px;">
+            </div>
+        `;
+        container.appendChild(row);
+    }
+}
+
+function updateButtonData(nodeId, index, value) {
+    const node = editor.getNodeFromId(nodeId);
+    if (node) {
+        // Create a copy of the data object
+        const newData = { ...node.data };
+        newData['btn-' + index] = value;
+        
+        // Use a single update call
+        editor.updateNodeDataFromId(nodeId, newData);
+        
+        // Debounce updateNodePreview? Or just do it.
+        updateNodePreview(nodeId);
+    }
+}
+
 function addButtonToSelectedNode() {
     if (!currentNodeId) return;
     const node = editor.getNodeFromId(currentNodeId);
-    const currentBtns = Object.keys(node.data).filter(k => k.startsWith('btn-'));
     
-    if (currentBtns.length >= 3) {
-        Swal.fire({ icon: 'warning', title: 'WhatsApp limit: 3 buttons' });
+    // Get total number of buttons
+    let count = 0;
+    for (let i = 0; i < 3; i++) {
+        if (node.data['btn-' + i]) count++;
+    }
+    
+    if (count >= 3) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'WhatsApp limit: 3 buttons',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
         return;
     }
 
-    const nextIdx = currentBtns.length;
-    node.data['btn-' + nextIdx] = "New Button";
-    editor.updateNodeDataFromId(currentNodeId, node.data);
-    editor.addNodeOutput(currentNodeId);
-    renderSidebarButtons(currentNodeId);
+    // Find first empty slot
+    let nextIdx = -1;
+    for (let i = 0; i < 3; i++) {
+        if (!node.data['btn-' + i]) {
+            nextIdx = i;
+            break;
+        }
+    }
+    
+    if (nextIdx !== -1) {
+        node.data['btn-' + nextIdx] = "New Button";
+        editor.updateNodeDataFromId(currentNodeId, node.data);
+        renderSidebarButtons(currentNodeId);
+        updateNodePreview(currentNodeId);
+    }
 }
 
 function removeButtonFromSelectedNode(key) {
@@ -1410,49 +1472,41 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function renderSidebarButtons(nodeId) {
-    const node = editor.getNodeFromId(nodeId);
-    if (!node) return;
-    const container = document.getElementById('sidebar-btn-list');
-    if (!container) return;
-    container.innerHTML = '';
-
-    // Standard limit is 3 buttons for Interactive/Card in regular WhatsApp Flows
-    for (let i = 0; i < 3; i++) {
-        const key = 'btn-' + i;
-        const val = node.data[key] || '';
-        const row = document.createElement('div');
-        row.className = 'mb-2 d-flex align-items-center gap-2';
-        row.innerHTML = `
-            <div class="input-group input-group-sm">
-                <span class="input-group-text border-0 ps-0 bg-transparent text-muted small" style="min-width:20px;">${i+1}</span>
-                <input type="text" class="form-control form-control-sm border" value="${val}" 
-                       placeholder="Button ${i+1} text" oninput="updateButtonData('${nodeId}', ${i}, this.value)"
-                       style="font-size:12px; border-radius:4px;">
-            </div>
-        `;
-        container.appendChild(row);
-    }
-}
-
-function updateButtonData(nodeId, index, value) {
-    const node = editor.getNodeFromId(nodeId);
-    if (node) {
-        const newData = { ...node.data };
-        newData['btn-' + index] = value;
-        editor.updateNodeDataFromId(nodeId, newData);
-        updateNodePreview(nodeId);
-    }
-}
-
 function addButtonToSelectedNode() {
-    Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'info',
-        title: 'Max 3 buttons supported for this block.',
-        showConfirmButton: false,
-        timer: 2000
-    });
-}
+    if (!currentNodeId) return;
+    const node = editor.getNodeFromId(currentNodeId);
+    
+    // Get total number of buttons
+    let count = 0;
+    for (let i = 0; i < 3; i++) {
+        if (node.data['btn-' + i]) count++;
+    }
+    
+    if (count >= 3) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'WhatsApp limit: 3 buttons',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+        return;
+    }
 
+    // Find first empty slot
+    let nextIdx = -1;
+    for (let i = 0; i < 3; i++) {
+        if (!node.data['btn-' + i]) {
+            nextIdx = i;
+            break;
+        }
+    }
+    
+    if (nextIdx !== -1) {
+        node.data['btn-' + nextIdx] = "New Button";
+        editor.updateNodeDataFromId(currentNodeId, node.data);
+        renderSidebarButtons(currentNodeId);
+        updateNodePreview(currentNodeId);
+    }
+}

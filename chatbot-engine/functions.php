@@ -118,10 +118,14 @@ function sendDocument($phone, $docUrl, $filename = '', $phoneId = null, $token =
 function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $token = null) {
     if (empty(trim($text)) || empty($buttonsData)) return false;
     $buttons = [];
+    $btnCounter = 0;
     foreach ($buttonsData as $key => $label) {
         if (trim($label) === '') continue;
-        if (count($buttons) >= 3) break;
-        $portIndex = str_replace('btn-', '', $key); 
+        if ($btnCounter >= 3) break;
+        
+        $portIndex = $btnCounter; // Always 0, 1, 2
+        $btnCounter++;
+        
         error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
         $buttons[] = [
             'type' => 'reply',
@@ -175,11 +179,15 @@ function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText =
 function sendCard($phone, $bodyText, $imageUrl = '', $footerText = '', $buttonsData = [], $nodeId, $phoneId = null, $token = null) {
     if (empty(trim($bodyText)) || empty($buttonsData)) return false;
     $buttons = [];
+    $btnCounter = 0;
     foreach ($buttonsData as $key => $label) {
         if (trim($label) === '') continue;
-        if (count($buttons) >= 3) break;
-        $portIndex = str_replace('btn-', '', $key); 
-        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
+        if ($btnCounter >= 3) break;
+        
+        $portIndex = $btnCounter; // Always 0, 1, 2
+        $btnCounter++;
+        
+        error_log("[ENGINE] Assigning Card Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
         $buttons[] = [
             'type' => 'reply',
             'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]

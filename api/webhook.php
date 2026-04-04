@@ -103,9 +103,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $replyId = $msg['interactive']['button_reply']['id'] ?? '';
 
                 if (strpos($replyId, 'flow_btn_') === 0) {
-                    $parts       = explode('_', $replyId);
-                    $flowNodeId  = $parts[2] ?? null;
-                    $portIndex   = (int)($parts[3] ?? 0);
+                    $lastUnderscore = strrpos($replyId, '_');
+                    $portIndex = (int)substr($replyId, $lastUnderscore + 1);
+                    $flowNodeId = substr($replyId, strlen('flow_btn_'), $lastUnderscore - strlen('flow_btn_'));
+                    $outputName  = 'output_' . ($portIndex + 1);
+
+                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] BUTTON CLICKED: '$replyId' | PortIndex $portIndex -> $outputName (Node $flowNodeId)\n", FILE_APPEND);
 
                     $flow = $db->fetch(
                         "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1",
@@ -114,12 +117,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($flow && $flowNodeId) {
                         $nodes       = $getNodes($flow['flow_json']);
-                        $outputName  = 'output_' . ($portIndex + 1);
-                        $connections = $nodes[$flowNodeId]['outputs'][$outputName]['connections'] ?? [];
-
-                        if (!empty($connections)) {
+                        $nodeData    = $nodes[$flowNodeId] ?? null;
+                        
+                        if (!$nodeData) {
+                             file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Node $flowNodeId NOT FOUND in flow " . $flow['id'] . "\n", FILE_APPEND);
+                             continue;
+                        }
+                        
+                        $connections = $nodeData['outputs'][$outputName]['connections'] ?? [];
+                        
+                        if (empty($connections)) {
+                             $available = implode(', ', array_keys($nodeData['outputs'] ?? []));
+                             file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] No connections on $outputName for node $flowNodeId. Available ports: $available\n", FILE_APPEND);
+                        } else {
                             $nextNodeId = $connections[0]['node'];
-                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Button reply -> runFlow node: $nextNodeId\n", FILE_APPEND);
+                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Routing to next node: $nextNodeId via $outputName\n", FILE_APPEND);
                             runFlow($from, $userId, $flow['id'], $nextNodeId, $phoneNumberId, $accessToken);
                         }
                     }
