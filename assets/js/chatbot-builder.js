@@ -17,8 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
         const node = editor.getNodeFromId(nodeId);
-        // Force correct port counts for interactive/card/text-cta if they differ (prevents corruption)
-        if (node.name === 'interactive' || node.name === 'card' || node.name === 'text-cta') {
+        // Force correct port counts for text-cta if they differ (prevents corruption)
+        if (node.name === 'text-cta') {
             restoreInteractivePorts(nodeId);
         }
     });
@@ -327,19 +327,6 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
-        case 'interactive':
-            html = `
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Message Prompt</label>
-                    <input type="text" class="form-control" id="conf-prompt" value="${data.prompt || ''}">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-primary">Buttons Configuration</label>
-                    <div id="sidebar-btn-list" class="mb-2"></div>
-                    <button class="btn btn-outline-primary btn-sm w-100" onclick="addButtonToSelectedNode()">+ Add Button</button>
-                </div>
-            `;
-            break;
         case 'cta':
             html = `
                 <div class="mb-3">
@@ -390,52 +377,6 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
-        case 'card':
-            html = `
-                <div class="mb-3">
-                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Card Header Image URL (Optional)</label>
-                    <input type="text" class="form-control cfg-input" id="conf-card-img" value="${data['image-url'] || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
-                </div>
-                
-                <div class="mb-3 mt-4">
-                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 20px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-card-media').click()">
-                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
-                        <input type="file" id="conf-upload-card-media" accept="image/png, image/jpeg, image/webp" style="display:none;" onchange="uploadMediaToBot(this, 'conf-card-img', 'upload-status-card-media')">
-                        <div id="upload-status-card-media" class="mt-2 text-muted" style="font-size:12px; font-weight: 500;">Click to upload (png, jpg, webp)</div>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message Body <span class="text-danger">*</span></label>
-                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-card-body')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-card-body', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
-                    </div>
-                    <div class="position-relative">
-                        <textarea class="form-control cfg-input" id="conf-card-body" rows="4" placeholder="Rich card main message..." style="background: #fafafa; border: 1px solid #ddd;">${data.body || ''}</textarea>
-                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Footer Text (Optional)</label>
-                    <input type="text" class="form-control cfg-input" id="conf-card-footer" value="${data.footer || ''}" placeholder="Small footer text" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-primary" style="font-size: 13px;">Buttons Configuration</label>
-                    <div id="sidebar-btn-list" class="mb-2"></div>
-                    <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="addButtonToSelectedNode()">+ Add Button</button>
-                </div>
-
-                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
-                    <div class="d-flex justify-content-between">
-                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
-                    </div>
-                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
-                </div>
-            `;
-            break;
         case 'text-cta':
             html = `
                 <div class="mb-3">
@@ -470,7 +411,7 @@ function showNodeConfig(nodeId) {
     configBody.innerHTML = html;
     
     // Special handling for interactive buttons in sidebar
-    if (node.name === 'interactive' || node.name === 'card' || node.name === 'text-cta') {
+    if (node.name === 'text-cta') {
         renderSidebarButtons(nodeId);
     }
 
@@ -521,21 +462,12 @@ function saveConfig(silent = false) {
             newData['file-url'] = document.getElementById('conf-url') ? document.getElementById('conf-url').value : newData['file-url'];
             newData.caption = document.getElementById('conf-caption') ? document.getElementById('conf-caption').value : newData.caption;
             break;
-        case 'interactive':
-            newData.prompt = document.getElementById('conf-prompt') ? document.getElementById('conf-prompt').value : newData.prompt;
-            break;
         case 'cta':
             newData.text = document.getElementById('conf-cta-text') ? document.getElementById('conf-cta-text').value : newData.text;
             newData.image = document.getElementById('conf-cta-image') ? document.getElementById('conf-cta-image').value : (newData.image || '');
             newData.footer = document.getElementById('conf-cta-footer') ? document.getElementById('conf-cta-footer').value : (newData.footer || '');
             newData.btnText = document.getElementById('conf-cta-btn-text') ? document.getElementById('conf-cta-btn-text').value : newData.btnText;
             newData.url = document.getElementById('conf-cta-url') ? document.getElementById('conf-cta-url').value : newData.url;
-            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
-            break;
-        case 'card':
-            newData['image-url'] = document.getElementById('conf-card-img') ? document.getElementById('conf-card-img').value : newData['image-url'];
-            newData.body = document.getElementById('conf-card-body') ? document.getElementById('conf-card-body').value : newData.body;
-            newData.footer = document.getElementById('conf-card-footer') ? document.getElementById('conf-card-footer').value : newData.footer;
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'text-cta':
@@ -611,30 +543,9 @@ function updateNodePreview(nodeId) {
             if (btnLabel) btnLabel.textContent = node.data.btnText || 'Visit Website';
             break;
         }
-        case 'interactive': 
-        case 'card': 
         case 'text-cta': {
-            if (node.name === 'card') {
-                const imgContainer = nodeEl.querySelector('.node-image-container');
-                if (imgContainer) {
-                    if (node.data['image-url']) {
-                        imgContainer.innerHTML = `<img src="${node.data['image-url']}" style="width:100%; height:100px; object-fit:cover; border-radius:8px;">`;
-                    } else {
-                        imgContainer.innerHTML = `<div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
-                    }
-                }
-                const bodyBox = nodeEl.querySelector('.node-message-box');
-                if (bodyBox) bodyBox.innerHTML = node.data.body ? node.data.body.replace(/\n/g, '<br>') : '<strong>Message Body...</strong>';
-                
-                const footerBox = nodeEl.querySelector('.node-footer-box');
-                if (footerBox) footerBox.textContent = node.data.footer || 'Footer text...';
-            } else if (node.name === 'interactive') {
-                const promptBox = nodeEl.querySelector('.node-message-box');
-                if (promptBox && node.data.prompt) promptBox.innerHTML = '<strong>' + node.data.prompt + '</strong>';
-            } else if (node.name === 'text-cta') {
-                const bodyBox = nodeEl.querySelector('.node-message-box');
-                if (bodyBox) bodyBox.innerHTML = node.data.text ? node.data.text.replace(/\n/g, '<br>') : '<strong>Your message here...</strong>';
-            }
+            const bodyBox = nodeEl.querySelector('.node-message-box');
+            if (bodyBox) bodyBox.innerHTML = node.data.text ? node.data.text.replace(/\n/g, '<br>') : '<strong>Your message here...</strong>';
             
             // Sync dynamic button labels on canvas
             const labelsContainer = nodeEl.querySelector('.port-labels-container');
@@ -644,7 +555,6 @@ function updateNodePreview(nodeId) {
                 const btn3 = node.data['btn-2'] || 'Btn 3';
                 
                 const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
-                // Row 0 is now Button 1, Row 1 is Button 2, etc. (since In|Next is gone)
                 if (btnLabels[0]) {
                     const span = btnLabels[0].querySelector('span');
                     if (span) span.textContent = btn1;
@@ -671,37 +581,12 @@ function updateAllNodePreviews() {
 
 function renderSidebarButtons(nodeId) {
     const node = editor.getNodeFromId(nodeId);
-    const container = document.getElementById('sidebar-btn-list');
-    container.innerHTML = '';
-
-    Object.keys(node.data).forEach(key => {
-        if (key.startsWith('btn-')) {
-            const row = document.createElement('div');
-            row.className = 'd-flex gap-2 mb-2';
-            row.innerHTML = `
-                <input type="text" class="form-control form-control-sm" value="${node.data[key]}" onchange="updateSidebarBtnText('${key}', this.value)">
-                <button class="btn btn-danger btn-sm" onclick="removeButtonFromSelectedNode('${key}')"><i class="bi bi-trash"></i></button>
-            `;
-            container.appendChild(row);
-        }
-    });
-}
-
-function updateSidebarBtnText(key, val) {
-    if (!currentNodeId) return;
-    const node = editor.getNodeFromId(currentNodeId);
-    node.data[key] = val;
-    editor.updateNodeDataFromId(currentNodeId, node.data);
-}
-
-function renderSidebarButtons(nodeId) {
-    const node = editor.getNodeFromId(nodeId);
     if (!node) return;
     const container = document.getElementById('sidebar-btn-list');
     if (!container) return;
     container.innerHTML = '';
 
-    // Standard limit is 3 buttons for Interactive/Card in regular WhatsApp Flows
+    // Standard limit is 3 buttons for Text-CTA in regular WhatsApp Flows
     for (let i = 0; i < 3; i++) {
         const key = 'btn-' + i;
         const val = node.data[key] || '';
@@ -883,24 +768,6 @@ function getNodeTemplate(type) {
                     </div>
                 </div>
             `;
-        case 'interactive':
-            return `
-                <div>
-                    <div class="node-header-custom interactive-hd"><i class="bi bi-menu-button-wide-fill"></i> Interactive</div>
-                    ${getDrawflowStats()}
-                    <div class="node-body-content p-2">
-                        <div class="node-message-box">
-                            <strong>Visit Our Site</strong><br>
-                            If you are interested to visit our site
-                        </div>
-                    </div>
-                    <div class="port-labels-container">
-                        <div class="port-label-row d-flex justify-content-between align-items-center"><span class="text-start">In</span><span class="text-end fw-bold">Btn 1</span></div>
-                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">Btn 2</span></div>
-                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">Btn 3</span></div>
-                    </div>
-                </div>
-            `;
         case 'cta':
             return `
                 <div class="node-root cta-node-root">
@@ -1007,35 +874,6 @@ function getNodeTemplate(type) {
                     </div>
                 </div>
             `;
-        case 'card':
-            return `
-                <div class="node-root card-node-root">
-                    <div class="node-header-custom" style="background:#f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 15px; border-radius: 12px 12px 0 0; color: #20C997; font-weight: 600;"><i class="bi bi-card-heading me-1"></i> Rich Card</div>
-                    
-                    <div class="node-body-content p-3" style="background:#fff;">
-                        <div class="node-image-container mb-2">
-                            <div style="background:#e2e8f0; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>
-                        </div>
-                        <div class="node-message-box" style="font-size: 13px; color: #334155; line-height: 1.4; margin-bottom: 8px;">
-                            <strong>Message Body...</strong>
-                        </div>
-                        <div class="node-footer-box" style="font-size: 11px; color: #94a3b8;">Footer text...</div>
-                    </div>
-                    
-                    <div class="port-labels-container" style="background: #f8fafc; border-top: 1px dashed #cbd5e1; padding: 10px 0; border-radius: 0 0 12px 12px;">
-                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
-                            <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">In</span>
-                            <span style="font-size:11px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
-                        </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
-                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 2</span>
-                        </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
-                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 3</span>
-                        </div>
-                    </div>
-                </div>
-            `;
         case 'text-cta':
             return `
                 <div class="node-root text-cta-node-root">
@@ -1091,7 +929,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     let inputs = 1; let outputs = 1;
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
-    if (type === 'interactive' || type === 'card' || type === 'text-cta') outputs = 3;
+    if (type === 'text-cta') outputs = 3;
     if (type === 'cta') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
@@ -1104,18 +942,6 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
         defaultData['btn-0'] = 'Option 1';
         defaultData['btn-1'] = 'Option 2';
         defaultData.delay = 0;
-    }
-    if (type === 'card') {
-        defaultData.body = 'Check out this offer!';
-        defaultData.footer = 'WAPI Chatbot';
-        defaultData['btn-0'] = 'Buy Now';
-        defaultData['btn-1'] = 'Btn 2';
-        defaultData.delay = 0;
-    }
-    if (type === 'interactive') {
-        defaultData.prompt = 'Please select an option below:';
-        defaultData['btn-0'] = 'Yes';
-        defaultData['btn-1'] = 'No';
     }
 
     const nodeId = editor.addNode(type, inputs, outputs, pos_x, pos_y, type, defaultData, template);
@@ -1174,16 +1000,7 @@ function validateFlow(data) {
             if (node.name === 'cta' && (!ndata.url || ndata.url.trim() === '' || !ndata.btnText || ndata.btnText.trim() === '')) {
                 return { valid: false, message: 'A Link Button node is incomplete. Both Button Text and URL are required.', nodeId: id };
             }
-            if (node.name === 'card' && (!ndata.body || ndata.body.trim() === '')) {
-                return { valid: false, message: 'A Rich Card node must have a Body Message.', nodeId: id };
-            }
-            if (node.name === 'card') {
-                const btns = Object.keys(ndata).filter(k => k.startsWith('btn-'));
-                if (btns.length === 0) {
-                    return { valid: false, message: 'A Rich Card must have at least one button.', nodeId: id };
-                }
-            }
-            if (node.name === 'interactive' || node.name === 'text-cta') {
+            if (node.name === 'text-cta') {
                 if ((ndata.prompt || ndata.text || '').trim() === '') {
                     return { valid: false, message: 'A Button node is missing its main message.', nodeId: id };
                 }

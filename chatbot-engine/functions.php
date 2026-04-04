@@ -176,51 +176,7 @@ function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText =
     return sendRequest($payload, $phoneId, $token);
 }
 
-function sendCard($phone, $bodyText, $imageUrl = '', $footerText = '', $buttonsData = [], $nodeId, $phoneId = null, $token = null) {
-    if (empty(trim($bodyText)) || empty($buttonsData)) return false;
-    $buttons = [];
-    $btnCounter = 0;
-    foreach ($buttonsData as $key => $label) {
-        if (trim($label) === '') continue;
-        if ($btnCounter >= 3) break;
-        
-        $portIndex = $btnCounter; // Always 0, 1, 2
-        $btnCounter++;
-        
-        error_log("[ENGINE] Assigning Card Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
-        $buttons[] = [
-            'type' => 'reply',
-            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
-        ];
-    }
-    if (empty($buttons)) return false;
 
-    $interactive = [
-        'type' => 'button',
-        'body' => ['text' => $bodyText],
-        'action' => ['buttons' => $buttons]
-    ];
-    
-    if (!empty(trim($imageUrl))) {
-        $interactive['header'] = [
-            'type' => 'image',
-            'image' => ['link' => trim($imageUrl)]
-        ];
-    }
-    
-    if (!empty(trim($footerText))) {
-        $interactive['footer'] = ['text' => mb_substr(trim($footerText), 0, 60)];
-    }
-
-    $payload = [
-        'messaging_product' => 'whatsapp', 
-        'recipient_type'    => 'individual', 
-        'to'                => $phone, 
-        'type'              => 'interactive',
-        'interactive'       => $interactive
-    ];
-    return sendRequest($payload, $phoneId, $token);
-}
 
 /**
  * Replace string variables like #LEAD_USER_FIRST_NAME# with actual data
@@ -348,21 +304,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             logChatbotMessage($userId, $phone, 'image', 'Image', $res, $nodeData['image-url'] ?? '');
             break;
             
-        case 'interactive':
-            $delaySecs = (int)($nodeData['delay'] ?? 0);
-            if ($delaySecs > 0 && $delaySecs <= 60) {
-                sleep($delaySecs);
-            }
-            $buttonsData = [];
-            foreach ($nodeData as $key => $val) {
-                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
-            }
-            ksort($buttonsData);
-            $prompt = replaceDynamicVariables($nodeData['prompt'] ?? 'Select an option:', $phone, $userId);
-            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
-            $isInteractive = true;
-            break;
+
             
         case 'audio':
             $delaySecs = (int)($nodeData['delay'] ?? 0);
@@ -413,25 +355,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             logChatbotMessage($userId, $phone, 'interactive', $textMsg, $res);
             break;
 
-        case 'card':
-            $delaySecs = (int)($nodeData['delay'] ?? 0);
-            if ($delaySecs > 0 && $delaySecs <= 60) {
-                sleep($delaySecs);
-            }
-            $buttonsData = [];
-            foreach ($nodeData as $key => $val) {
-                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
-            }
-            ksort($buttonsData);
-            
-            $body = replaceDynamicVariables($nodeData['body'] ?? 'Message details', $phone, $userId);
-            $footer = replaceDynamicVariables($nodeData['footer'] ?? '', $phone, $userId);
-            $imageUrl = $nodeData['image-url'] ?? '';
-            
-            $res = sendCard($phone, $body, $imageUrl, $footer, $buttonsData, $nodeId, $phoneId, $token);
-            logChatbotMessage($userId, $phone, 'card', $body, $res);
-            $isInteractive = true;
-            break;
+
 
         case 'text-cta':
             $delaySecs = (int)($nodeData['delay'] ?? 0);

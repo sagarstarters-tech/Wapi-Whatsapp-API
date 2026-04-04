@@ -138,7 +138,7 @@ body {
     border-radius: 12px 12px 0 0;
 }
 
-.node-header-custom.interactive-hd { color: #0f4c81; }
+
 .node-header-custom.button-hd { color: #1e3a8a; }
 
 /* Stats Row */
@@ -229,42 +229,20 @@ body {
     transform: translateY(-50%);
 }
 
-/* Card & Interactive specific buttons - align with footer rows */
-.drawflow-node.card .inputs .input_1,
-.drawflow-node.interactive .inputs .input_1,
 .drawflow-node.text-cta .inputs .input_1 { 
     top: auto !important; 
     bottom: 84px !important; 
     transform: none !important;
 }
 
-/* Force outputs into footer labels positions */
-.drawflow-node.card .outputs .output_1,
-.drawflow-node.interactive .outputs .output_1,
 .drawflow-node.text-cta .outputs .output_1 { top: auto !important; bottom: 84px !important; transform: none !important; }
-
-.drawflow-node.card .outputs .output_2, 
-.drawflow-node.interactive .outputs .output_2,
 .drawflow-node.text-cta .outputs .output_2 { top: auto !important; bottom: 63px !important; transform: none !important; }
-
-.drawflow-node.card .outputs .output_3, 
-.drawflow-node.interactive .outputs .output_3,
 .drawflow-node.text-cta .outputs .output_3 { top: auto !important; bottom: 42px !important; transform: none !important; }
-
-.drawflow-node.card .outputs .output_4, 
-.drawflow-node.interactive .outputs .output_4,
 .drawflow-node.text-cta .outputs .output_4 { top: auto !important; bottom: 21px !important; transform: none !important; }
 
-/* Hide ANY extra ports that might appear in card/interactive nodes (like at top corners) */
-.drawflow-node.card .outputs .output:nth-child(n+5),
-.drawflow-node.interactive .outputs .output:nth-child(n+5),
 .drawflow-node.text-cta .outputs .output:nth-child(n+5) {
     display: none !important;
 }
-
-/* Ensure no default Drawflow ports appear in top corner */
-.drawflow-node.card .outputs .output:not(.output_1):not(.output_2):not(.output_3):not(.output_4),
-.drawflow-node.interactive .outputs .output:not(.output_1):not(.output_2):not(.output_3):not(.output_4),
 .drawflow-node.text-cta .outputs .output:not(.output_1):not(.output_2):not(.output_3):not(.output_4) {
     display: none !important;
 }
