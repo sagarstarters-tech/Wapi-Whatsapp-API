@@ -247,6 +247,38 @@ body {
     display: none !important;
 }
 
+/* Interactive specific - 3 outputs total */
+.drawflow-node.interactive .inputs .input_1 { 
+    top: auto !important; 
+    bottom: 63px !important; 
+    transform: none !important;
+}
+
+.drawflow-node.interactive .outputs .output_1 { top: auto !important; bottom: 63px !important; transform: none !important; }
+.drawflow-node.interactive .outputs .output_2 { top: auto !important; bottom: 42px !important; transform: none !important; }
+.drawflow-node.interactive .outputs .output_3 { top: auto !important; bottom: 21px !important; transform: none !important; }
+
+.drawflow-node.interactive .outputs .output:nth-child(n+4) { display: none !important; }
+.drawflow-node.interactive .outputs .output:not(.output_1):not(.output_2):not(.output_3) { display: none !important; }
+
+.interactive-btn-preview-item {
+    font-size: 11px;
+    color: #0284c7;
+    font-weight: 500;
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    padding: 6px 0;
+    background: #f0f9ff;
+    cursor: default;
+}
+.interactive-btn-preview-item:first-child { border-top: none; border-radius: 6px 6px 0 0; }
+.interactive-btn-preview-item:last-child { border-radius: 0 0 6px 6px; }
+.interactive-buttons-preview {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
 /* Image, Video, Audio specific - 3 outputs total */
 .drawflow-node.image .inputs .input_1,
 .drawflow-node.image .outputs .output_1,

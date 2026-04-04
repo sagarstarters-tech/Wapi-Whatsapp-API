@@ -144,6 +144,56 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
     return sendRequest($payload, $phoneId, $token);
 }
 
+function sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $phoneId = null, $token = null) {
+    if (empty(trim($bodyText)) || empty($buttonsData)) return false;
+    $buttons = [];
+    $btnCounter = 0;
+    foreach ($buttonsData as $key => $label) {
+        if (trim($label) === '') continue;
+        if ($btnCounter >= 3) break;
+        
+        // Parse port index from key name if possible (e.g., 'btn1' -> 0, 'btn2' -> 1)
+        if (strpos($key, 'btn') === 0) {
+            $portIndex = (int)substr($key, 3) - 1;
+        } else {
+            $portIndex = $btnCounter;
+        }
+        
+        $btnCounter++;
+        
+        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
+        $buttons[] = [
+            'type' => 'reply',
+            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
+        ];
+    }
+
+    if (empty($buttons)) return false;
+
+    $interactive = [
+        'type' => 'button', 
+        'body' => ['text' => $bodyText], 
+        'action' => ['buttons' => $buttons]
+    ];
+
+    if (!empty($imageUrl)) {
+        $interactive['header'] = ['type' => 'image', 'image' => ['link' => $imageUrl]];
+    }
+    if (!empty($footerText)) {
+        $interactive['footer'] = ['text' => $footerText];
+    }
+
+    $payload = [
+        'messaging_product' => 'whatsapp', 
+        'recipient_type' => 'individual', 
+        'to' => $phone, 
+        'type' => 'interactive',
+        'interactive' => $interactive
+    ];
+    return sendRequest($payload, $phoneId, $token);
+}
+
+
 function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText = '', $phoneId = null, $token = null) {
     if (empty(trim($btnText)) || empty(trim($url))) return false;
     
@@ -370,6 +420,31 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             $prompt = replaceDynamicVariables($nodeData['text'] ?? 'Select an option:', $phone, $userId);
             $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
+            $isInteractive = true;
+            break;
+
+        case 'interactive':
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
+            $buttonsData = [];
+            if (!empty(trim($nodeData['btn1_label'] ?? ''))) {
+                $buttonsData['btn1'] = replaceDynamicVariables($nodeData['btn1_label'], $phone, $userId);
+            }
+            if (!empty(trim($nodeData['btn2_label'] ?? ''))) {
+                $buttonsData['btn2'] = replaceDynamicVariables($nodeData['btn2_label'], $phone, $userId);
+            }
+            if (!empty(trim($nodeData['btn3_label'] ?? ''))) {
+                $buttonsData['btn3'] = replaceDynamicVariables($nodeData['btn3_label'], $phone, $userId);
+            }
+            
+            $bodyText = replaceDynamicVariables($nodeData['body_text'] ?? 'Select an option:', $phone, $userId);
+            $footerText = replaceDynamicVariables($nodeData['footer_text'] ?? '', $phone, $userId);
+            $imageUrl = $nodeData['image'] ?? '';
+            
+            $res = sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $bodyText, $res);
             $isInteractive = true;
             break;
 

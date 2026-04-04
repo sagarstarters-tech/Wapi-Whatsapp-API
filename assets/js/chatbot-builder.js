@@ -17,8 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.on('nodeCreated', function(nodeId) {
         console.log("Node created " + nodeId);
         const node = editor.getNodeFromId(nodeId);
-        // Force correct port counts for text-cta if they differ (prevents corruption)
-        if (node.name === 'text-cta') {
+        // Force correct port counts for text-cta / interactive if they differ (prevents corruption)
+        if (node.name === 'text-cta' || node.name === 'interactive') {
             restoreInteractivePorts(nodeId);
         }
     });
@@ -404,6 +404,54 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
+        case 'interactive':
+            html = `
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 600; font-size: 14px; color: #e85d04;"><i class="bi bi-hand-index-thumb-fill me-1"></i> Interactive Node Config</label>
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Header Image (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-interactive-image" value="${data.image || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                
+                <div class="mb-3">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #e85d04; border-radius: 4px; padding: 25px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-interactive-img').click()">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 1.5rem; color: #e85d04;"></i>
+                        <input type="file" id="conf-upload-interactive-img" accept="image/png, image/jpeg, image/webp" style="display:none;" onchange="uploadMediaToBot(this, 'conf-interactive-image', 'upload-status-interactive-img')">
+                        <div id="upload-status-interactive-img" class="mt-1 text-muted" style="font-size:11px; font-weight: 500;">Click to upload (png, jpg, webp)</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Body Message</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-interactive-body')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-interactive-body', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-interactive-body" rows="4" placeholder="Enter message..." style="background: #fafafa; border: 1px solid #ddd;">${data.body_text || ''}</textarea>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Footer Text (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-interactive-footer" value="${data.footer_text || ''}" placeholder="Footer text..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary" style="font-size: 13px;"><i class="bi bi-hand-index me-1"></i> Buttons Configuration</label>
+                    <div id="sidebar-interactive-btn-list" class="mb-2"></div>
+                </div>
+
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
+                </div>
+            `;
+            break;
         default:
             html = `<p class="text-muted">No specific configuration for this node.</p>`;
     }
@@ -413,6 +461,9 @@ function showNodeConfig(nodeId) {
     // Special handling for interactive buttons in sidebar
     if (node.name === 'text-cta') {
         renderSidebarButtons(nodeId);
+    }
+    if (node.name === 'interactive') {
+        renderInteractiveSidebarButtons(nodeId);
     }
 
     openConfig();
@@ -472,6 +523,12 @@ function saveConfig(silent = false) {
             break;
         case 'text-cta':
             newData.text = document.getElementById('conf-text-cta') ? document.getElementById('conf-text-cta').value : newData.text;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
+            break;
+        case 'interactive':
+            newData.image = document.getElementById('conf-interactive-image') ? document.getElementById('conf-interactive-image').value : (newData.image || '');
+            newData.body_text = document.getElementById('conf-interactive-body') ? document.getElementById('conf-interactive-body').value : (newData.body_text || '');
+            newData.footer_text = document.getElementById('conf-interactive-footer') ? document.getElementById('conf-interactive-footer').value : (newData.footer_text || '');
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
     }
@@ -567,6 +624,75 @@ function updateNodePreview(nodeId) {
                     const span = btnLabels[2].querySelector('span');
                     if (span) span.textContent = btn3;
                 }
+            }
+            break;
+        }
+        case 'interactive': {
+            // Update header image
+            const imgContainer = nodeEl.querySelector('.interactive-header-img');
+            if (imgContainer) {
+                if (node.data.image) {
+                    imgContainer.innerHTML = `<img src="${node.data.image}" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
+                    imgContainer.style.display = 'block';
+                } else {
+                    imgContainer.innerHTML = '';
+                    imgContainer.style.display = 'none';
+                }
+            }
+            // Update body text
+            const bodyBoxI = nodeEl.querySelector('.interactive-body-text');
+            if (bodyBoxI) bodyBoxI.innerHTML = node.data.body_text ? node.data.body_text.replace(/\n/g, '<br>') : '<em style="color:#94a3b8;">Enter message...</em>';
+            
+            // Update footer text
+            const footerBoxI = nodeEl.querySelector('.interactive-footer-text');
+            if (footerBoxI) {
+                if (node.data.footer_text) {
+                    footerBoxI.textContent = node.data.footer_text;
+                    footerBoxI.style.display = 'block';
+                } else {
+                    footerBoxI.style.display = 'none';
+                }
+            }
+
+            // Update buttons preview
+            const btn1El = nodeEl.querySelector('.interactive-btn-1');
+            const btn2El = nodeEl.querySelector('.interactive-btn-2');
+            const btn3El = nodeEl.querySelector('.interactive-btn-3');
+            
+            if (btn1El) {
+                if (node.data.btn1_label && node.data.btn1_label.trim() !== '') {
+                    btn1El.textContent = node.data.btn1_label;
+                    btn1El.style.display = 'block';
+                } else {
+                    btn1El.style.display = 'none';
+                }
+            }
+            if (btn2El) {
+                if (node.data.btn2_label && node.data.btn2_label.trim() !== '') {
+                    btn2El.textContent = node.data.btn2_label;
+                    btn2El.style.display = 'block';
+                } else {
+                    btn2El.style.display = 'none';
+                }
+            }
+            if (btn3El) {
+                if (node.data.btn3_label && node.data.btn3_label.trim() !== '') {
+                    btn3El.textContent = node.data.btn3_label;
+                    btn3El.style.display = 'block';
+                } else {
+                    btn3El.style.display = 'none';
+                }
+            }
+
+            // Update port labels
+            const portLabels = nodeEl.querySelector('.port-labels-container');
+            if (portLabels) {
+                const rows = portLabels.querySelectorAll('.port-label-row');
+                const labels = [node.data.btn1_label || 'Btn1', node.data.btn2_label || 'Btn2', node.data.btn3_label || 'Btn3'];
+                rows.forEach((row, idx) => {
+                    const rightSpan = row.querySelector('span:last-child');
+                    if (rightSpan && labels[idx]) rightSpan.textContent = labels[idx];
+                });
             }
             break;
         }
@@ -899,6 +1025,43 @@ function getNodeTemplate(type) {
                     </div>
                 </div>
             `;
+        case 'interactive':
+            return `
+                <div class="node-root interactive-node-root">
+                    <div class="node-header-custom" style="background: linear-gradient(135deg, #fff7ed, #fed7aa); border-bottom: 1px solid #fdba74; color: #c2410c; font-weight: 700;">
+                        <i class="bi bi-hand-index-thumb-fill me-1"></i> Interactive
+                    </div>
+                    
+                    <div class="node-body-content p-3" style="background:#fff;">
+                        <div class="interactive-header-img mb-2" style="display:none;"></div>
+                        
+                        <div class="interactive-body-text" style="font-size: 13px; color: #334155; line-height: 1.5; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap;">
+                            <em style="color:#94a3b8;">Enter message...</em>
+                        </div>
+                        
+                        <div class="interactive-footer-text" style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; display:none;"></div>
+                        
+                        <div class="interactive-buttons-preview">
+                            <div class="interactive-btn-1 interactive-btn-preview-item">Button 1</div>
+                            <div class="interactive-btn-2 interactive-btn-preview-item">Button 2</div>
+                            <div class="interactive-btn-3 interactive-btn-preview-item">Button 3</div>
+                        </div>
+                    </div>
+
+                    <div class="port-labels-container" style="border-top: 1px dashed #fdba74;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">In</span>
+                            <span style="font-size:11px; color:#c2410c; font-weight: 600; position: relative; left: -8px;">Btn1</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#c2410c; font-weight: 600; position: relative; left: -8px;">Btn2</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:10px; color:#c2410c; font-weight: 600; position: relative; left: -8px;">Btn3</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         default:
             return `<div>Node type not found</div>`;
     }
@@ -930,6 +1093,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
     if (type === 'text-cta') outputs = 3;
+    if (type === 'interactive') outputs = 3;
     if (type === 'cta') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
@@ -941,6 +1105,15 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
         defaultData.text = 'Hi! Choose an option:';
         defaultData['btn-0'] = 'Option 1';
         defaultData['btn-1'] = 'Option 2';
+        defaultData.delay = 0;
+    }
+    if (type === 'interactive') {
+        defaultData.body_text = '';
+        defaultData.footer_text = '';
+        defaultData.image = '';
+        defaultData.btn1_label = 'Button 1';
+        defaultData.btn2_label = 'Button 2';
+        defaultData.btn3_label = 'Button 3';
         defaultData.delay = 0;
     }
 
@@ -1007,6 +1180,15 @@ function validateFlow(data) {
                 const btns = Object.keys(ndata).filter(k => k.startsWith('btn-'));
                 if (btns.length === 0) {
                     return { valid: false, message: 'A Button node must have at least one button configured.', nodeId: id };
+                }
+            }
+            if (node.name === 'interactive') {
+                if ((ndata.body_text || '').trim() === '') {
+                    return { valid: false, message: 'An Interactive node is missing its body message.', nodeId: id };
+                }
+                const hasAnyBtn = (ndata.btn1_label || '').trim() !== '' || (ndata.btn2_label || '').trim() !== '' || (ndata.btn3_label || '').trim() !== '';
+                if (!hasAnyBtn) {
+                    return { valid: false, message: 'An Interactive node must have at least one button label.', nodeId: id };
                 }
             }
         }
@@ -1325,5 +1507,42 @@ function addButtonToSelectedNode() {
         editor.updateNodeDataFromId(currentNodeId, node.data);
         renderSidebarButtons(currentNodeId);
         updateNodePreview(currentNodeId);
+    }
+}
+
+/**
+ * Interactive Node - Sidebar Buttons Renderer
+ */
+function renderInteractiveSidebarButtons(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    if (!node) return;
+    const container = document.getElementById('sidebar-interactive-btn-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const btnKeys = ['btn1_label', 'btn2_label', 'btn3_label'];
+    btnKeys.forEach((key, idx) => {
+        const val = node.data[key] || '';
+        const row = document.createElement('div');
+        row.className = 'mb-2 d-flex align-items-center gap-2';
+        row.innerHTML = `
+            <div class="input-group input-group-sm">
+                <span class="input-group-text border-0 ps-0 bg-transparent" style="min-width:20px; font-size:12px; color: #c2410c; font-weight:600;">${idx+1}</span>
+                <input type="text" class="form-control form-control-sm border" value="${val}" 
+                       placeholder="Button ${idx+1} label" oninput="updateInteractiveBtnData('${nodeId}', '${key}', this.value)"
+                       style="font-size:12px; border-radius:4px;">
+            </div>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function updateInteractiveBtnData(nodeId, key, value) {
+    const node = editor.getNodeFromId(nodeId);
+    if (node) {
+        const newData = { ...node.data };
+        newData[key] = value;
+        editor.updateNodeDataFromId(nodeId, newData);
+        updateNodePreview(nodeId);
     }
 }
