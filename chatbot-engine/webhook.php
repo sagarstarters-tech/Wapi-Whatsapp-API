@@ -58,19 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Handle Interactive Replied (Flow Buttons)
             if ($type === 'interactive' && isset($msg['interactive']['button_reply'])) {
                 $replyId = $msg['interactive']['button_reply']['id'] ?? '';
-                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] BUTTON CLICKED: '$replyId'\n", FILE_APPEND);
+                error_log("[WEBHOOK] BUTTON CLICKED: '$replyId'");
                 
-                // Expected Format: flow_btn_{nodeId}_{portIndex}
-                // e.g. flow_btn_5_0 -> nodeId=5, portIndex=0 -> output_2
                 if (strpos($replyId, 'flow_btn_') === 0) {
-                    // Split from end to handle any nodeId that might have underscores
-                    // ID format is always: flow_btn_{NODEID}_{0|1|2}
                     $lastUnderscore = strrpos($replyId, '_');
                     $portIndex = (int)substr($replyId, $lastUnderscore + 1);
                     $nodeIdPart = substr($replyId, strlen('flow_btn_'), $lastUnderscore - strlen('flow_btn_'));
                     $flowNodeId = $nodeIdPart;
                     
-                    file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Parsed -> nodeId='$flowNodeId', portIndex=$portIndex\n", FILE_APPEND);
+                    error_log("[WEBHOOK] Parsed -> nodeId='$flowNodeId', portIndex=$portIndex");
 
                     // Find the user's active flow
                     $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
@@ -97,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     //   output_4 = Button 2 (btn-2)
                     // So: portIndex 0->output_2, 1->output_3, 2->output_4
                     $outputName = 'output_' . ($portIndex + 2);
+                    error_log("[WEBHOOK] PortIndex $portIndex maps to OutputName $outputName (Node $flowNodeId)");
                     $nodeOutputs = $nodes[$flowNodeId]['outputs'] ?? [];
 
                     // Debug: log all output ports for this node

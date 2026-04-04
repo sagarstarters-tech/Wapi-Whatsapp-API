@@ -122,6 +122,7 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
         if (trim($label) === '') continue;
         if (count($buttons) >= 3) break;
         $portIndex = str_replace('btn-', '', $key); 
+        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
         $buttons[] = [
             'type' => 'reply',
             'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
@@ -178,6 +179,7 @@ function sendCard($phone, $bodyText, $imageUrl = '', $footerText = '', $buttonsD
         if (trim($label) === '') continue;
         if (count($buttons) >= 3) break;
         $portIndex = str_replace('btn-', '', $key); 
+        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
         $buttons[] = [
             'type' => 'reply',
             'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
@@ -347,6 +349,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             foreach ($nodeData as $key => $val) {
                 if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
             }
+            ksort($buttonsData);
             $prompt = replaceDynamicVariables($nodeData['prompt'] ?? 'Select an option:', $phone, $userId);
             $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
@@ -411,6 +414,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             foreach ($nodeData as $key => $val) {
                 if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
             }
+            ksort($buttonsData);
             
             $body = replaceDynamicVariables($nodeData['body'] ?? 'Message details', $phone, $userId);
             $footer = replaceDynamicVariables($nodeData['footer'] ?? '', $phone, $userId);
@@ -430,6 +434,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             foreach ($nodeData as $key => $val) {
                 if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
             }
+            ksort($buttonsData);
             $prompt = replaceDynamicVariables($nodeData['text'] ?? 'Select an option:', $phone, $userId);
             $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
