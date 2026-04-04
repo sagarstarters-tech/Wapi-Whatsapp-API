@@ -197,6 +197,11 @@ function sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $butt
 function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText = '', $phoneId = null, $token = null) {
     if (empty(trim($btnText)) || empty(trim($url))) return false;
     
+    $url = trim($url);
+    if (!preg_match('~^(?:f|ht)tps?://~i', $url)) {
+        $url = "https://" . $url;
+    }
+    
     $interactive = [
         'type'   => 'cta_url',
         'body'   => ['text' => (empty(trim($text)) ? 'Click below' : $text)],
