@@ -1109,7 +1109,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
         defaultData.body = 'Check out this offer!';
         defaultData.footer = 'WAPI Chatbot';
         defaultData['btn-0'] = 'Buy Now';
-        defaultData['btn-1'] = 'Know More';
+        defaultData['btn-1'] = 'Btn 2';
         defaultData.delay = 0;
     }
     if (type === 'interactive') {
