@@ -18,7 +18,7 @@ $extraCss = [
 $extraJs = [
     'https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
-    asset('assets/js/chatbot-builder.js')
+    asset('assets/js/chatbot-builder.js?v=' . time())
 ];
 
 include __DIR__ . '/../includes/header.php';
