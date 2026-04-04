@@ -87,12 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     // Drawflow card/interactive nodes have outputs:
-                    //   output_1 = Next (auto-advance port, not used for buttons)
-                    //   output_2 = Button 0 (btn-0)
-                    //   output_3 = Button 1 (btn-1)
-                    //   output_4 = Button 2 (btn-2)
-                    // So: portIndex 0->output_2, 1->output_3, 2->output_4
-                    $outputName = 'output_' . ($portIndex + 2);
+                    //   output_1 = Button 0 (btn-0)
+                    //   output_2 = Button 1 (btn-1)
+                    //   output_3 = Button 2 (btn-2)
+                    // So: portIndex 0->output_1, 1->output_2, 2->output_3
+                    $outputName = 'output_' . ($portIndex + 1);
                     error_log("[WEBHOOK] PortIndex $portIndex maps to OutputName $outputName (Node $flowNodeId)");
                     $nodeOutputs = $nodes[$flowNodeId]['outputs'] ?? [];
 

@@ -644,17 +644,17 @@ function updateNodePreview(nodeId) {
                 const btn3 = node.data['btn-2'] || 'Btn 3';
                 
                 const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
-                // Row 0 is In / Next for Card/Text-CTA, or In / Next for Interactive too now
+                // Row 0 is now Button 1, Row 1 is Button 2, etc. (since In|Next is gone)
+                if (btnLabels[0]) {
+                    const span = btnLabels[0].querySelector('span');
+                    if (span) span.textContent = btn1;
+                }
                 if (btnLabels[1]) {
                     const span = btnLabels[1].querySelector('span');
-                    if (span) span.textContent = btn1;
+                    if (span) span.textContent = btn2;
                 }
                 if (btnLabels[2]) {
                     const span = btnLabels[2].querySelector('span');
-                    if (span) span.textContent = btn2;
-                }
-                if (btnLabels[3]) {
-                    const span = btnLabels[3].querySelector('span');
                     if (span) span.textContent = btn3;
                 }
             }
@@ -833,10 +833,9 @@ function getNodeTemplate(type) {
                         </div>
                     </div>
                     <div class="port-labels-container">
-                        <div class="port-label-row"><span class="text-start">Reply</span><span class="text-end">Next</span></div>
-                        <div class="port-label-row justify-content-end"><span class="text-end fw-bold">Buttons</span></div>
-                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">List Messages</span></div>
-                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">E-commerce</span></div>
+                        <div class="port-label-row d-flex justify-content-between align-items-center"><span class="text-start">In</span><span class="text-end fw-bold">Btn 1</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">Btn 2</span></div>
+                        <div class="port-label-row justify-content-end"><span class="text-end text-muted">Btn 3</span></div>
                     </div>
                 </div>
             `;
@@ -964,15 +963,12 @@ function getNodeTemplate(type) {
                     <div class="port-labels-container" style="background: #f8fafc; border-top: 1px dashed #cbd5e1; padding: 10px 0; border-radius: 0 0 12px 12px;">
                         <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
                             <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">In</span>
-                            <span style="font-size:11px; color:#64748b; position: relative; left: -8px;">Next</span>
+                            <span style="font-size:11px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
                         </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
-                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
-                        </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
                             <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 2</span>
                         </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
                             <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 3</span>
                         </div>
                     </div>
@@ -992,15 +988,12 @@ function getNodeTemplate(type) {
                     <div class="port-labels-container">
                         <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
                             <span style="font-size:11px; color:#64748b; position: relative; right: -8px;">In</span>
-                            <span style="font-size:11px; color:#64748b; position: relative; left: -8px;">Next</span>
+                            <span style="font-size:11px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
                         </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
-                            <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 1</span>
-                        </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
                             <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 2</span>
                         </div>
-                        <div class="port-label-row d-flex justify-content-end align-items-center mt-2" style="padding: 2px 15px;">
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
                             <span style="font-size:10px; color:#64748b; font-weight: 500; position: relative; left: -8px;">Btn 3</span>
                         </div>
                     </div>
@@ -1036,7 +1029,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     let inputs = 1; let outputs = 1;
     if (type === 'start') inputs = 0;
     if (type === 'condition') outputs = 2;
-    if (type === 'interactive' || type === 'card' || type === 'text-cta') outputs = 4;
+    if (type === 'interactive' || type === 'card' || type === 'text-cta') outputs = 3;
     if (type === 'cta') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
