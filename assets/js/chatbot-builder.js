@@ -452,6 +452,44 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
+        case 'condition':
+            html = `
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 600; font-size: 14px; color: #AF52DE;"><i class="bi bi-chevron-right me-1"></i> Condition Config</label>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Variable to Check</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-cond-var', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <input type="text" class="form-control cfg-input" id="conf-cond-var" value="${data.variable || ''}" placeholder="e.g. #LEAD_USER_FIRST_NAME# or {Phone}" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Operator</label>
+                    <select class="form-control cfg-input" id="conf-cond-op" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                        <option value="equals" ${data.operator === 'equals' ? 'selected' : ''}>Equals (==)</option>
+                        <option value="contains" ${data.operator === 'contains' ? 'selected' : ''}>Contains</option>
+                        <option value="starts_with" ${data.operator === 'starts_with' ? 'selected' : ''}>Starts With</option>
+                        <option value="not_empty" ${data.operator === 'not_empty' ? 'selected' : ''}>Is Not Empty</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Target Value</label>
+                    <input type="text" class="form-control cfg-input" id="conf-cond-val" value="${data.value || ''}" placeholder="Value to compare..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block border p-2" style="border-radius:4px; font-size:11px; background:#f8fafc;">
+                        <strong>Routes:</strong><br>
+                        Top Port (output_1): <b style="color:green;">True</b> match<br>
+                        Bottom Port (output_2): <b style="color:red;">False</b> match
+                    </small>
+                </div>
+            `;
+            break;
         default:
             html = `<p class="text-muted">No specific configuration for this node.</p>`;
     }
@@ -531,6 +569,11 @@ function saveConfig(silent = false) {
             newData.footer_text = document.getElementById('conf-interactive-footer') ? document.getElementById('conf-interactive-footer').value : (newData.footer_text || '');
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
+        case 'condition':
+            newData.variable = document.getElementById('conf-cond-var') ? document.getElementById('conf-cond-var').value : newData.variable;
+            newData.operator = document.getElementById('conf-cond-op') ? document.getElementById('conf-cond-op').value : newData.operator;
+            newData.value = document.getElementById('conf-cond-val') ? document.getElementById('conf-cond-val').value : newData.value;
+            break;
     }
 
     editor.updateNodeDataFromId(currentNodeId, newData);
@@ -598,6 +641,21 @@ function updateNodePreview(nodeId) {
 
             const btnLabel = nodeEl.querySelector('.url-label');
             if (btnLabel) btnLabel.textContent = node.data.btnText || 'Visit Website';
+            break;
+        }
+        case 'condition': {
+            const previewBox = nodeEl.querySelector('.node-message-box');
+            if (previewBox) {
+                if (node.data.variable && node.data.operator) {
+                    let opStr = '==';
+                    if (node.data.operator === 'contains') opStr = 'in';
+                    if (node.data.operator === 'starts_with') opStr = '^=';
+                    if (node.data.operator === 'not_empty') opStr = 'not empty';
+                    previewBox.innerHTML = `<span style="font-size:11px;">IF: ${node.data.variable}<br>${opStr} ${node.data.operator === 'not_empty' ? '' : (node.data.value || '')}</span>`;
+                } else {
+                    previewBox.innerHTML = `Set Logic In Sidebar`;
+                }
+            }
             break;
         }
         case 'text-cta': {
@@ -993,10 +1051,10 @@ function getNodeTemplate(type) {
             `;
         case 'condition':
             return `
-                <div>
-                    <div class="node-header-custom"><i class="bi bi-chevron-right" style="color:#AF52DE;"></i> Condition</div>
-                    <div class="node-body-content">
-                        <div class="node-message-box py-1 text-center">Set Logic In Sidebar</div>
+                <div class="node-root condition-node-root">
+                    <div class="node-header-custom" style="color:#AF52DE; border-bottom: 1px solid #e2e8f0; padding: 8px 15px;"><i class="bi bi-chevron-right me-1"></i> Condition</div>
+                    <div class="node-body-content" style="background:#fff;">
+                        <div class="node-message-box p-2 text-center" style="font-size:12px; font-weight: 500; color:#555;">Set Logic In Sidebar</div>
                     </div>
                 </div>
             `;
@@ -1100,6 +1158,11 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     const defaultData = {};
     if (type === 'start') {
         defaultData.title = document.getElementById('flowNameInput')?.value || 'Demo_bot';
+    }
+    if (type === 'condition') {
+        defaultData.variable = '';
+        defaultData.operator = 'equals';
+        defaultData.value = '';
     }
     if (type === 'text-cta') {
         defaultData.text = 'Hi! Choose an option:';

@@ -453,6 +453,41 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             $isInteractive = true;
             break;
 
+        case 'condition':
+            $var = replaceDynamicVariables($nodeData['variable'] ?? '', $phone, $userId);
+            $op = $nodeData['operator'] ?? 'equals';
+            $valStr = strtolower(trim(replaceDynamicVariables($nodeData['value'] ?? '', $phone, $userId)));
+            $varStr = strtolower(trim($var));
+            
+            $conditionMet = false;
+            switch ($op) {
+                case 'equals':
+                    $conditionMet = ($varStr === $valStr);
+                    break;
+                case 'contains':
+                    if ($valStr !== '') {
+                        $conditionMet = (strpos($varStr, $valStr) !== false);
+                    }
+                    break;
+                case 'starts_with':
+                    if ($valStr !== '') {
+                        $conditionMet = (strpos($varStr, $valStr) === 0);
+                    }
+                    break;
+                case 'not_empty':
+                    $conditionMet = ($varStr !== '');
+                    break;
+            }
+            
+            $selectedOutput = $conditionMet ? 'output_1' : 'output_2';
+            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Condition evaluated. Var: '$varStr', Target: '$valStr', Op: $op => Result: " . ($conditionMet ? 'TRUE' : 'FALSE') . "\n", FILE_APPEND);
+            
+            // Override outputs to ONLY process the matching one to dictate route branch
+            $currentNode['outputs'] = [
+                $selectedOutput => $currentNode['outputs'][$selectedOutput] ?? ['connections' => []]
+            ];
+            break;
+
         case 'delay':
             $secs = max(1, min(10, (int)($nodeData['delay-seconds'] ?? 2)));
             sleep($secs);
