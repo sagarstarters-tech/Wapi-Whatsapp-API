@@ -108,12 +108,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Connections on $outputName: " . count($connections) . "\n", FILE_APPEND);
 
+                    $logFile = dirname(__DIR__) . '/api/webhook_debug.txt';
                     if (!empty($connections)) {
                         $nextNodeId = $connections[0]['node'];
-                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Routing to next node: $nextNodeId\n", FILE_APPEND);
+                        file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] (ENGINE) SUCCESS: Routing to next node: $nextNodeId\n", FILE_APPEND);
                         runFlow($from, $userId, $flow['id'], $nextNodeId, $phoneNumberId, $accessToken);
                     } else {
-                        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] ERROR: No connections on $outputName for node $flowNodeId. Check flow wiring!\n", FILE_APPEND);
+                        file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] (ENGINE) ERROR: No connections on $outputName for node $flowNodeId. Available ports: " . implode(', ', array_keys($nodeOutputs)) . "\n", FILE_APPEND);
                     }
                 }
             } 
