@@ -174,6 +174,70 @@ function toggleCustomVars(btn, fieldId) {
     document.addEventListener('mousedown', closeListener);
 }
 
+/**
+ * Toggle emoji picker popup
+ */
+function toggleEmojiPicker(btn, fieldId) {
+    const existing = btn.parentElement.querySelector('.emoji-picker-dropdown');
+    if (existing) {
+        existing.remove();
+        return;
+    }
+
+    // Close others
+    document.querySelectorAll('.custom-vars-dropdown, .emoji-picker-dropdown').forEach(d => d.remove());
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'emoji-picker-dropdown border shadow-sm position-absolute bg-white rounded p-2';
+    dropdown.style.zIndex = '1000';
+    dropdown.style.width = '200px';
+    dropdown.style.top = '100%';
+    dropdown.style.right = '0';
+    dropdown.style.display = 'grid';
+    dropdown.style.gridTemplateColumns = 'repeat(6, 1fr)';
+    dropdown.style.gap = '5px';
+    
+    // Popular WhatsApp emojis
+    const emojis = [
+        '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰',
+        '😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏',
+        '😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠',
+        '😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥',
+        '😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐',
+        '🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀',
+        '☠️','👽','👾','🤖','🎃','😺','😸','😻','😼','😽','🙀','😿','😾','🤲','👐','🙌',
+        '👏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','✌️','🤟','🤘','👌','🤏','👈','👉',
+        '👆','👇','☝️','✋','🤚','🖐','🖖','👋','🤙','💪','🦾','👂','🦻','👃','🧠','👣',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖'
+    ];
+
+    emojis.forEach(emoji => {
+        const span = document.createElement('span');
+        span.className = 'emoji-item text-center cursor-pointer';
+        span.style.fontSize = '18px';
+        span.style.cursor = 'pointer';
+        span.innerText = emoji;
+        span.onclick = () => {
+            insertAtCursor(fieldId, emoji);
+            // Don't close immediately so user can pick multiple? 
+            // Most WhatsApp apps keep it open. Let's keep it open but update UI if needed.
+        };
+        dropdown.appendChild(span);
+    });
+
+    btn.parentElement.classList.add('position-relative');
+    btn.parentElement.appendChild(dropdown);
+
+    // Close on click outside
+    const closeListener = (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.remove();
+            document.removeEventListener('mousedown', closeListener);
+        }
+    };
+    document.addEventListener('mousedown', closeListener);
+}
+
 
 function showNodeConfig(nodeId) {
     const node = editor.getNodeFromId(nodeId);
@@ -228,7 +292,7 @@ function showNodeConfig(nodeId) {
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-text" rows="5" placeholder="#LEAD_USER_FIRST_NAME# How are you?" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
-                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji" onclick="toggleEmojiPicker(this, 'conf-text')"></i>
                     </div>
                 </div>
                 
@@ -264,7 +328,7 @@ function showNodeConfig(nodeId) {
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-caption" rows="4" placeholder="Type your image message here..." style="background: #fafafa; border: 1px solid #ddd;">${data.caption || ''}</textarea>
-                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji" onclick="toggleEmojiPicker(this, 'conf-caption')"></i>
                     </div>
                 </div>
                 
@@ -358,7 +422,7 @@ function showNodeConfig(nodeId) {
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-cta-text" rows="3" placeholder="Visit our website now!" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
-                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji" onclick="toggleEmojiPicker(this, 'conf-cta-text')"></i>
                     </div>
                 </div>
 
@@ -395,7 +459,7 @@ function showNodeConfig(nodeId) {
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-text-cta" rows="5" placeholder="Hi! Select an option below..." style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
-                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji"></i>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji" onclick="toggleEmojiPicker(this, 'conf-text-cta')"></i>
                     </div>
                 </div>
                 
