@@ -100,6 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $from = $msg['from'] ?? '';
             $type = $msg['type'] ?? 'text';
 
+            // Make sure logs dir exists for debugging
+            if (!is_dir(__DIR__ . '/../logs')) {
+                @mkdir(__DIR__ . '/../logs', 0755, true);
+            }
+
             // Auto-sync contact to database so variables work
             if (!empty($profileName)) {
                 $exists = $db->fetch("SELECT id FROM contacts WHERE phone = ? AND user_id = ?", [$from, $userId]);
@@ -109,8 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $db->insert('contacts', [
                         'user_id' => $userId,
                         'name'    => $profileName,
-                        'phone'   => $from,
-                        'source'  => 'whatsapp'
+                        'phone'   => $from
                     ]);
                 }
             }
