@@ -350,6 +350,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             }
             return; // exit this call — the recursive call handles everything
 
+        case 'text':
             $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId, $senderName);
             if (empty($textMsg)) {
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WARNING: text node $nodeId has empty message!\n", FILE_APPEND);

@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // Process incoming webhook (POST request)
 // -------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input   = file_get_contents('php://input');
+    $input   = $rawInput; // Reuse the raw input already read on line 9 (php://input can only be read once)
     $payload = json_decode($input, true);
 
     file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] PAYLOAD RECEIVED: " . substr($input, 0, 500) . "\n", FILE_APPEND);
