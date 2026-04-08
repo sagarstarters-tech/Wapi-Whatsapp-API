@@ -1225,6 +1225,22 @@ h5 { font-size: 1.125rem; }
     .hero-stats { gap: 1.5rem; }
     .pricing-card.popular { transform: none; }
     .pricing-card.popular:hover { transform: translateY(-8px); }
+
+    /* Mobile Navbar Menu Fix */
+    .navbar-collapse {
+        background: var(--bg-primary);
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        margin-top: 0.5rem;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-color);
+        position: relative;
+        z-index: 1001;
+    }
+
+    [data-theme="dark"] .navbar-collapse {
+        background: var(--bg-secondary);
+    }
 }
 
 @media (max-width: 767.98px) {
