@@ -52,14 +52,36 @@ try {
     if (strpos($e->getMessage(), 'Unknown column') !== false || strpos($e->getMessage(), '1054') !== false) {
         try {
             // Fix Chatbot Flows Table
-            $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `flow_json` LONGTEXT AFTER `name` ");
-            $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) DEFAULT 1 AFTER `flow_json` ");
-            $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
+            $db->query("CREATE TABLE IF NOT EXISTS `chatbot_flows` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `name` VARCHAR(255) NOT NULL,
+                `flow_json` LONGTEXT NULL,
+                `is_active` TINYINT(1) DEFAULT 1,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            
+            try { $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN `flow_json` LONGTEXT AFTER `name` "); } catch (Exception $e) {}
+            try { $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN `is_active` TINYINT(1) DEFAULT 1 AFTER `flow_json` "); } catch (Exception $e) {}
+            try { $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL"); } catch (Exception $e) {}
             
             // Fix Chatbot Sessions Table (Optional but important for engine)
-            $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `state` VARCHAR(50) NOT NULL DEFAULT 'start' AFTER `phone`");
-            $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `flow_id` INT AFTER `state` ");
-            $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN IF NOT EXISTS `current_node_id` VARCHAR(50) AFTER `flow_id` ");
+            $db->query("CREATE TABLE IF NOT EXISTS `chatbot_sessions` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `phone` VARCHAR(20) NOT NULL,
+                `user_id` INT NOT NULL DEFAULT 0,
+                `flow_id` INT NULL,
+                `current_node_id` VARCHAR(100) NULL,
+                `state` VARCHAR(50) NOT NULL DEFAULT 'start',
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_phone_user` (`phone`, `user_id`),
+                INDEX `idx_phone` (`phone`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+            try { $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `flow_id` INT AFTER `phone` "); } catch (Exception $e) {}
+            try { $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `current_node_id` VARCHAR(100) AFTER `flow_id` "); } catch (Exception $e) {}
+            try { $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `state` VARCHAR(50) NOT NULL DEFAULT 'start' AFTER `current_node_id`"); } catch (Exception $e) {}
 
             // Retry Save
             $flowId = performSave($db, $userId, $flowName, $flowJson);

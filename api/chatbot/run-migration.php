@@ -18,24 +18,38 @@ $db = Database::getInstance();
 try {
     echo "Starting Migration...<br>";
 
-    // 1. Add flow_json to chatbot_flows
-    echo "Updating chatbot_flows table...<br>";
-    $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `flow_json` LONGTEXT AFTER `name` ");
-    $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) DEFAULT 1 AFTER `flow_json` ");
-    $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
+    echo "Creating/Updating chatbot_flows table...<br>";
+    $db->query("CREATE TABLE IF NOT EXISTS `chatbot_flows` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT NOT NULL,
+        `name` VARCHAR(255) NOT NULL,
+        `flow_json` LONGTEXT NULL,
+        `is_active` TINYINT(1) DEFAULT 1,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    
+    // Add columns just in case it existed but old
+    try { $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN `flow_json` LONGTEXT AFTER `name` "); } catch (Exception $e) {}
+    try { $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN `is_active` TINYINT(1) DEFAULT 1 AFTER `flow_json` "); } catch (Exception $e) {}
 
-    // 2. Update chatbot_sessions
-    echo "Updating chatbot_sessions table...<br>";
-    // Since IF NOT EXISTS for columns is MySQL 8.0.12+, we'll do it safely with a check
-    $columns = $db->fetchAll("DESCRIBE `chatbot_sessions` ");
-    $colNames = array_column($columns, 'Field');
+    echo "Creating/Updating chatbot_sessions table...<br>";
+    $db->query("CREATE TABLE IF NOT EXISTS `chatbot_sessions` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `phone` VARCHAR(20) NOT NULL,
+        `user_id` INT NOT NULL DEFAULT 0,
+        `flow_id` INT NULL,
+        `current_node_id` VARCHAR(100) NULL,
+        `state` VARCHAR(50) NOT NULL DEFAULT 'start',
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY `uk_phone_user` (`phone`, `user_id`),
+        INDEX `idx_phone` (`phone`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    if (!in_array('flow_id', $colNames)) {
-        $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `flow_id` INT AFTER `phone` ");
-    }
-    if (!in_array('current_node_id', $colNames)) {
-        $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `current_node_id` VARCHAR(50) AFTER `user_id` ");
-    }
+    // Add columns in case it existed
+    try { $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `flow_id` INT AFTER `phone` "); } catch (Exception $e) {}
+    try { $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `current_node_id` VARCHAR(100) AFTER `flow_id` "); } catch (Exception $e) {}
+    try { $db->query("ALTER TABLE `chatbot_sessions` ADD COLUMN `state` VARCHAR(50) NOT NULL DEFAULT 'start' AFTER `current_node_id`"); } catch (Exception $e) {}
 
     echo "<br><b>Migration completed successfully!</b><br>";
     echo "You can now go back and save your flows.";
