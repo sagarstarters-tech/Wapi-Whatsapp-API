@@ -102,11 +102,14 @@ function sendVideo($phone, $videoUrl, $caption = '', $phoneId = null, $token = n
     return sendRequest($payload, $phoneId, $token);
 }
 
-function sendDocument($phone, $docUrl, $filename = '', $phoneId = null, $token = null) {
+function sendDocument($phone, $docUrl, $filename = '', $caption = '', $phoneId = null, $token = null) {
     if (empty($docUrl)) return false;
     $media = ['link' => $docUrl];
     if (trim($filename) !== '') {
         $media['filename'] = $filename;
+    }
+    if (trim($caption) !== '') {
+        $media['caption'] = $caption;
     }
     $payload = [
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'document',
@@ -389,7 +392,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
                 $ext = pathinfo(parse_url($audioUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
                 $fallbackName = !empty($ext) ? "voice_message.$ext" : "voice_message.mp3";
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('H:i') . "] sendAudio failed, attempting sendDocument fallback for: $audioUrl\n", FILE_APPEND);
-                $res = sendDocument($phone, $audioUrl, $fallbackName, $phoneId, $token);
+                $res = sendDocument($phone, $audioUrl, $fallbackName, '', $phoneId, $token);
             }
             
             logChatbotMessage($userId, $phone, 'audio', 'Audio', $res, $audioUrl);
@@ -406,7 +409,15 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             break;
             
         case 'file':
-            $res = sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document', $phoneId, $token);
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
+            $body = replaceDynamicVariables($nodeData['body_text'] ?? '', $phone, $userId, $senderName);
+            $footer = replaceDynamicVariables($nodeData['footer_text'] ?? '', $phone, $userId, $senderName);
+            $caption = trim($body . (!empty($footer) ? "\n\n" . $footer : ''));
+            
+            $res = sendDocument($phone, $nodeData['file-url'] ?? '', $nodeData['filename'] ?? 'document', $caption, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'document', 'Document', $res, $nodeData['file-url'] ?? '');
             break;
             

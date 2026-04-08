@@ -390,12 +390,40 @@ function showNodeConfig(nodeId) {
         case 'file':
             html = `
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Resource URL</label>
-                    <input type="text" class="form-control" id="conf-url" value="${data['file-url'] || ''}" placeholder="https://...">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your document url</label>
+                    <input type="text" class="form-control cfg-input" id="conf-url" value="${data['file-url'] || ''}" placeholder="https://..." style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
+                
+                <div class="mb-3 mt-4">
+                    <div class="upload-box-wrapper" style="border: 1px dashed #007bff; border-radius: 4px; padding: 40px; text-align: center; background: transparent; cursor: pointer; position: relative;" onclick="document.getElementById('conf-upload-media-file').click()">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size: 2rem; color: #007bff;"></i>
+                        <input type="file" id="conf-upload-media-file" accept="application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain, application/vnd.ms-excel" style="display:none;" onchange="uploadMediaToBot(this, 'conf-url', 'upload-status-media-file')">
+                        <div id="upload-status-media-file" class="mt-2 text-muted" style="font-size:12px; font-weight: 500;">Click to upload (pdf, docx, txt, etc)</div>
+                    </div>
+                </div>
+
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Caption (Optional)</label>
-                    <input type="text" class="form-control" id="conf-caption" value="${data.caption || ''}">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Body Message (Optional)</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-body')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-body', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-body" rows="4" placeholder="Type your document message here..." style="background: #fafafa; border: 1px solid #ddd;">${data.body_text || data.caption || ''}</textarea>
+                        <i class="bi bi-emoji-smile position-absolute text-muted" style="top: 8px; right: 10px; cursor:pointer;" title="Emoji" onclick="toggleEmojiPicker(this, 'conf-body')"></i>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Footer Text (Optional)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-footer" value="${data.footer_text || ''}" placeholder="Thank you!" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
                 </div>
             `;
             break;
@@ -621,7 +649,10 @@ function saveConfig(silent = false) {
             break;
         case 'file':
             newData['file-url'] = document.getElementById('conf-url') ? document.getElementById('conf-url').value : newData['file-url'];
-            newData.caption = document.getElementById('conf-caption') ? document.getElementById('conf-caption').value : newData.caption;
+            newData.body_text = document.getElementById('conf-body') ? document.getElementById('conf-body').value : (newData.body_text || newData.caption);
+            newData.caption = newData.body_text; // backwards compat
+            newData.footer_text = document.getElementById('conf-footer') ? document.getElementById('conf-footer').value : newData.footer_text;
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'cta':
             newData.text = document.getElementById('conf-cta-text') ? document.getElementById('conf-cta-text').value : newData.text;
