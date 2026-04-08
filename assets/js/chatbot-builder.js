@@ -25,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     editor.on('nodeSelected', function(nodeId) {
         currentNodeId = nodeId;
-        showNodeConfig(nodeId);
     });
 
     editor.on('nodeUnselected', function() {
@@ -57,6 +56,15 @@ document.addEventListener("DOMContentLoaded", () => {
             e.stopPropagation();
         }
     }, true);
+    
+    // Open config on Double Click
+    canvas.addEventListener('dblclick', (e) => {
+        const nodeEl = e.target.closest('.drawflow-node');
+        if (nodeEl) {
+            const nodeId = nodeEl.id.replace('node-', '');
+            showNodeConfig(nodeId);
+        }
+    });
 
     // Canvas Mouse Wheel Zoom Logic
     canvas.addEventListener('wheel', (e) => {
