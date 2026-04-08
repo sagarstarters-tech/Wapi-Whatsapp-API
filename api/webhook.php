@@ -6,7 +6,8 @@
 require_once __DIR__ . '/../config/config.php';
 
 // AT THE VERY TOP: DEBUG LOG
-file_put_contents(__DIR__ . '/webhook_test.log', "[" . date('H:i:s') . "] METHOD: " . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
+$rawInput = file_get_contents('php://input');
+file_put_contents(__DIR__ . '/webhook_raw.log', "[" . date('Y-m-d H:i:s') . "] RAW PAYLOAD: " . $rawInput . "\n", FILE_APPEND);
 
 header('Content-Type: application/json');
 
@@ -176,110 +177,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Message from $from: type='$type', text='$textBody'\n", FILE_APPEND);
 
-            // Load user's active flow (latest by default)
-            $flow = $db->fetch(
-                "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1",
+            // Load ALL active flows for this user
+            $activeFlows = $db->fetchAll(
+                "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY updated_at DESC",
                 [$userId]
             );
 
-            if (!$flow) {
-                file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No chatbot flow for user $userId\n", FILE_APPEND);
+            if (empty($activeFlows)) {
+                file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No active chatbot flows found for user $userId\n", FILE_APPEND);
                 continue;
             }
 
-            $nodes      = $getNodes($flow['flow_json']);
-            $isTrigger  = false;
+            $matchedFlow = null;
             $startNodeId = null;
 
-            // Find start node and check keyword match (only if we have text to match)
+            // 1. Check for Trigger Keywords in ALL active flows
             if (!empty($textBody)) {
-                foreach ($nodes as $nId => $nData) {
-                    if ($nData['name'] !== 'start') continue;
+                foreach ($activeFlows as $f) {
+                    $nodes = $getNodes($f['flow_json']);
+                    if (empty($nodes)) continue;
 
-                    $keywords = strtolower(trim($nData['data']['keywords'] ?? ''));
+                    foreach ($nodes as $nId => $nData) {
+                        if (($nData['name'] ?? '') !== 'start') continue;
 
-                    if (empty($keywords)) {
-                        // No keywords set: match common greeting words
-                        $defaults = ['hi', 'hello', 'start', 'menu', 'hey', 'demo', 'helo', 'hai'];
-                        if (in_array($textBody, $defaults)) {
-                            $isTrigger   = true;
-                            $startNodeId = $nId;
-                            break;
-                        }
-                    } else {
-                        $matchType  = $nData['data']['match'] ?? 'exact';
-                        $keywordArr = array_map('trim', explode(',', $keywords));
-                        $keywordArr = array_map('strtolower', $keywordArr);
+                        $keywords = strtolower(trim($nData['data']['keywords'] ?? ''));
+                        
+                        // Default keywords if none set
+                        $keywordArr = !empty($keywords) 
+                            ? array_map('strtolower', array_map('trim', explode(',', $keywords)))
+                            : ['hi', 'hello', 'start', 'menu', 'hey', 'demo', 'helo', 'hai'];
+
+                        $matchType = $nData['data']['match'] ?? 'exact';
+                        $isMatch = false;
 
                         if ($matchType === 'contains') {
                             foreach ($keywordArr as $kw) {
-                                if ($kw && strpos($textBody, $kw) !== false) {
-                                    $isTrigger   = true;
-                                    $startNodeId = $nId;
-                                    break 2;
+                                if ($kw !== '' && strpos($textBody, $kw) !== false) {
+                                    $isMatch = true;
+                                    break;
                                 }
                             }
                         } else {
-                            // Exact match
                             if (in_array($textBody, $keywordArr)) {
-                                $isTrigger   = true;
-                                $startNodeId = $nId;
-                                break;
+                                $isMatch = true;
                             }
+                        }
+
+                        if ($isMatch) {
+                            $matchedFlow = $f;
+                            $startNodeId = $nId;
+                            break 2; // Found a trigger, stop searching
                         }
                     }
                 }
             }
 
-            if ($isTrigger) {
-                // ---- CRITICAL FIX: Start node does not send a message.
-                // We must find the node connected to the start node's output_1
-                // and run from THERE, not from the start node itself.
-                $nodes        = $getNodes($flow['flow_json']); // already fetched above
-                $startNode    = $nodes[$startNodeId] ?? null;
-                $firstConns   = $startNode['outputs']['output_1']['connections'] ?? [];
+            // 2. If a trigger was found, start that specific flow
+            if ($matchedFlow && $startNodeId) {
+                $nodes      = $getNodes($matchedFlow['flow_json']);
+                $startNode  = $nodes[$startNodeId] ?? null;
+                $firstConns = $startNode['outputs']['output_1']['connections'] ?? [];
 
                 if (!empty($firstConns)) {
                     $firstNodeId = $firstConns[0]['node'];
-                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Trigger matched! Starting at node: $firstNodeId\n", FILE_APPEND);
-                    runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken, $profileName);
+                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Flow '{$matchedFlow['id']}' triggered by keyword. Starting at node: $firstNodeId\n", FILE_APPEND);
+                    runFlow($from, $userId, $matchedFlow['id'], $firstNodeId, $phoneNumberId, $accessToken, $profileName);
                 } else {
-                    // Start node has no connections — pass null so runFlow finds first node
-                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Trigger matched but start node has no connections.\n", FILE_APPEND);
-                    runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken, $profileName);
+                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Flow '{$matchedFlow['id']}' triggered but start node has no connections.\n", FILE_APPEND);
+                    runFlow($from, $userId, $matchedFlow['id'], null, $phoneNumberId, $accessToken, $profileName);
                 }
             } else {
-                // Check active session — works for ALL message types (text, image, sticker, etc.)
-                $session = getSession($from, $userId);
-                if (
-                    $session &&
-                    ($session['state'] ?? '') === 'active' &&
-                    ($session['flow_id'] ?? 0) == $flow['id'] &&
-                    !empty($session['current_node_id'])
-                ) {
-                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Continuing session (type=$type) at node: " . $session['current_node_id'] . "\n", FILE_APPEND);
-                    runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken, $profileName);
-                } else {
-                    // No trigger, no active session
-                    // For non-text messages without active session, auto-start the flow
-                    if ($type !== 'text') {
-                        // Find the first start node and auto-start flow
-                        foreach ($nodes as $nId => $nData) {
-                            if ($nData['name'] === 'start') {
-                                $startNode  = $nData;
-                                $firstConns = $startNode['outputs']['output_1']['connections'] ?? [];
-                                if (!empty($firstConns)) {
-                                    $firstNodeId = $firstConns[0]['node'];
-                                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Auto-starting flow for non-text message (type=$type) at node: $firstNodeId\n", FILE_APPEND);
-                                    runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken, $profileName);
-                                } else {
-                                    runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken, $profileName);
-                                }
-                                break;
-                            }
+                // 3. No keyword trigger found: Is there an existing Active Session?
+                require_once __DIR__ . '/../chatbot-engine/functions.php'; // Ensure functions are available
+                if (function_exists('getSession')) {
+                    $session = getSession($from, $userId);
+                    if ($session && ($session['state'] ?? '') === 'active' && !empty($session['current_node_id'])) {
+                        $sessionFlowId = $session['flow_id'];
+                        
+                        // Verify if the session flow is still in our active list
+                        $activeFlowIds = array_column($activeFlows, 'id');
+                        if (in_array($sessionFlowId, $activeFlowIds)) {
+                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Continuing session for flow '$sessionFlowId' at node: " . $session['current_node_id'] . "\n", FILE_APPEND);
+                            runFlow($from, $userId, $sessionFlowId, $session['current_node_id'], $phoneNumberId, $accessToken, $profileName);
+                        } else {
+                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Session exists but flow '$sessionFlowId' is no longer active.\n", FILE_APPEND);
                         }
                     } else {
-                        file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No trigger match and no active session for '$textBody'\n", FILE_APPEND);
+                        // 4. No trigger and no session: Handle fallback (auto-start LATEST flow only for non-text)
+                        if ($type !== 'text') {
+                            $latestFlow = $activeFlows[0]; 
+                            $nodes = $getNodes($latestFlow['flow_json']);
+                            foreach ($nodes as $nId => $nData) {
+                                if (($nData['name'] ?? '') === 'start') {
+                                    $startNode = $nData;
+                                    $firstConns = $startNode['outputs']['output_1']['connections'] ?? [];
+                                    $targetNodeId = (!empty($firstConns)) ? $firstConns[0]['node'] : null;
+                                    
+                                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Auto-starting latest flow '{$latestFlow['id']}' for non-text message type '$type'.\n", FILE_APPEND);
+                                    runFlow($from, $userId, $latestFlow['id'], $targetNodeId, $phoneNumberId, $accessToken, $profileName);
+                                    break;
+                                }
+                            }
+                        } else {
+                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No trigger match and no active session for '$textBody'\n", FILE_APPEND);
+                        }
                     }
                 }
             }
