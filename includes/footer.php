@@ -43,8 +43,6 @@ $contactPhone = $settings->get('contact_phone', '');
                     <h5>Company</h5>
                     <ul class="footer-links">
                         <li><a href="<?= baseUrl('about.php'); ?>">About Us</a></li>
-                        <li><a href="#">Blog</a></li>
-                        <li><a href="#">Careers</a></li>
                         <li><a href="<?= baseUrl('contact.php'); ?>">Contact</a></li>
                     </ul>
                 </div>
