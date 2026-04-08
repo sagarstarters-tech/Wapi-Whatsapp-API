@@ -81,7 +81,7 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
                     $logoPath = str_replace('/wapi/', '', $siteLogo);
                     $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
                 ?>
-                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="max-height: 40px;">
+                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="max-height: 48px;">
                 <?php else: ?>
                     <span class="brand"><?= e($siteName); ?></span>
                 <?php endif; ?>
