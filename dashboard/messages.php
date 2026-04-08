@@ -16,12 +16,23 @@ $hideNav = true; // Prevents landing page nav from appearing in dashboard
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
 
 // Handle send message
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!CSRF::validateToken()) {
+        if (isAjax()) {
+            jsonResponse(['success' => false, 'message' => 'Security token mismatch. Please refresh the page.']);
+        }
+        setFlash('danger', 'Security token mismatch.');
+        redirect('dashboard/messages.php');
+    }
+
     if (!$waAccount) {
+        if (isAjax()) {
+            jsonResponse(['success' => false, 'message' => 'Please configure your WhatsApp API settings first.']);
+        }
         setFlash('danger', 'Please configure your WhatsApp API settings first.');
         redirect('dashboard/whatsapp.php');
     }
-
+    
     $to = sanitize($_POST['to'] ?? '');
     $type = sanitize($_POST['message_type'] ?? 'text');
     $content = $_POST['content'] ?? '';
@@ -200,7 +211,18 @@ document.getElementById('sendMessageForm').addEventListener('submit', async func
     const formData = new FormData(this);
     try {
         const res = await fetch('', { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'} });
-        const result = await res.json();
+        const text = await res.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch(e) {
+            console.error('Failed to parse JSON:', text);
+            showAlert('#alertContainer', 'danger', 'Server returned invalid response. Check console.');
+            btn.innerHTML = '<i class="bi bi-send-fill"></i> Send Message';
+            btn.disabled = false;
+            return;
+        }
+
         showAlert('#alertContainer', result.success ? 'success' : 'danger', result.message);
         if (result.success) {
             document.getElementById('msgContent').value = '';
@@ -208,6 +230,7 @@ document.getElementById('sendMessageForm').addEventListener('submit', async func
             updatePreview();
         }
     } catch(err) {
+        console.error('Fetch Error:', err);
         showAlert('#alertContainer', 'danger', 'Network error. Please try again.');
     }
     btn.innerHTML = '<i class="bi bi-send-fill"></i> Send Message';

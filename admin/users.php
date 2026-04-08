@@ -115,6 +115,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                         'status' => $status
                     ], 'id = ?', [$userId]);
 
+                    // Handle Credits update safely
+                    $addCredits = sanitizeInt($_POST['add_credits'] ?? 0);
+                    if ($addCredits > 0) {
+                        $db->query("UPDATE credits SET total_credits = total_credits + ? WHERE user_id = ?", [$addCredits, $userId]);
+                        
+                        // Log credit transaction
+                        $currentCredits = $db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$userId]);
+                        $balance = $currentCredits ? ($currentCredits['total_credits'] - $currentCredits['used_credits']) : 0;
+                        
+                        $db->insert('credit_transactions', [
+                            'user_id' => $userId,
+                            'type' => 'credit',
+                            'amount' => $addCredits,
+                            'balance_after' => $balance,
+                            'description' => 'Added by Admin',
+                            'reference_id' => $_SESSION['user_id'] // Admin ID
+                        ]);
+                    }
+
                     // Handle Plan update
                     $currentActiveSubscription = $db->fetch("SELECT plan_id, id FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1", [$userId]);
                     $currentPlanId = $currentActiveSubscription ? (int)$currentActiveSubscription['plan_id'] : 0;
@@ -187,7 +206,12 @@ if ($statusFilter) {
 
 $totalUsers = $db->count('users', $where, $params);
 $pagination = paginate($totalUsers, $page);
-$users = $db->fetchAll("SELECT u.*, (SELECT plan_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan FROM users u WHERE {$where} ORDER BY u.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
+$users = $db->fetchAll("SELECT u.*, 
+    (SELECT plan_id FROM subscriptions WHERE user_id = u.id AND status = 'active' ORDER BY created_at DESC LIMIT 1) as active_plan,
+    c.total_credits, c.used_credits
+    FROM users u 
+    LEFT JOIN credits c ON u.id = c.user_id 
+    WHERE {$where} ORDER BY u.created_at DESC LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params);
 
 // Get plan names and add to users array
 $plans = $db->fetchAll("SELECT id, name, message_limit FROM plans WHERE is_active = 1 ORDER BY sort_order");
@@ -404,6 +428,25 @@ include __DIR__ . '/../includes/header.php';
                         </select>
                         <div class="form-text">Changing plan will reset user credits to the new plan's limit.</div>
                     </div>
+
+                    <div class="row g-3 mt-1 border-top pt-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem;">Current Total Credits</label>
+                            <input type="text" id="edit_total_credits" class="form-control" readonly style="background: #f8f9fa;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem;">Used Credits</label>
+                            <input type="text" id="edit_used_credits" class="form-control" readonly style="background: #f8f9fa;">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label fw-bold text-success">Add New Credits</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-success text-white"><i class="bi bi-plus-lg"></i></span>
+                                <input type="number" name="add_credits" class="form-control" placeholder="0" min="0">
+                            </div>
+                            <div class="form-text">Enter the amount of credits to ADD to the current total.</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
@@ -488,6 +531,8 @@ function editUser(user) {
     document.getElementById('edit_phone').value = user.phone || '';
     document.getElementById('edit_status').value = user.status;
     document.getElementById('edit_plan_id').value = user.active_plan || 0;
+    document.getElementById('edit_total_credits').value = user.total_credits || 0;
+    document.getElementById('edit_used_credits').value = user.used_credits || 0;
     
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
