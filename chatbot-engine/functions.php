@@ -242,22 +242,31 @@ function replaceDynamicVariables($text, $phone, $userId) {
     $name = 'User';
     $firstName = 'User';
     
+    // Normalize phone for searching (remove +)
+    $cleanPhone = ltrim($phone, '+');
+    
     $db = Database::getInstance();
     try {
-        $contact = $db->fetch("SELECT * FROM contacts WHERE phone = ? AND user_id = ? LIMIT 1", [$phone, $userId]);
+        // Try exact match or match with leading +
+        $contact = $db->fetch("SELECT * FROM contacts WHERE (phone = ? OR phone = ?) AND user_id = ? LIMIT 1", [$cleanPhone, '+' . $cleanPhone, $userId]);
+        
         if ($contact && !empty($contact['name'])) {
             $name = $contact['name'];
             $nameParts = explode(' ', trim($name));
             $firstName = $nameParts[0];
         }
     } catch (Exception $e) {
+        // Log error if needed: error_log("Variable Replacement Error: " . $e->getMessage());
     }
 
     $replacements = [
-        '#LEAD_USER_NAME#' => $name,
+        '#LEAD_USER_NAME#'       => $name,
         '#LEAD_USER_FIRST_NAME#' => $firstName,
-        '#LEAD_USER_MOBILE#' => $phone,
-        '#USER_WHATSAPP_NUMBER#' => $phone
+        '#NAME#'                 => $name,
+        '#FIRST_NAME#'           => $firstName,
+        '#LEAD_USER_MOBILE#'     => $phone,
+        '#USER_WHATSAPP_NUMBER#' => $phone,
+        '#PHONE#'                => $phone
     ];
 
     return str_replace(array_keys($replacements), array_values($replacements), $text);

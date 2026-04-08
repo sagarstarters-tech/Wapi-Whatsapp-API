@@ -143,9 +143,9 @@ function toggleCustomVars(btn, fieldId) {
     dropdown.style.left = '0';
     
     const vars = [
-        { label: 'Full Name', value: '#LEAD_USER_NAME#' },
-        { label: 'Mobile Number', value: '#LEAD_USER_MOBILE#' },
-        { label: 'WhatsApp Number', value: '#USER_WHATSAPP_NUMBER#' }
+        { label: 'Full Name', value: '#NAME#' },
+        { label: 'First Name', value: '#FIRST_NAME#' },
+        { label: 'Phone Number', value: '#PHONE#' }
     ];
 
     vars.forEach(v => {
@@ -224,7 +224,7 @@ function showNodeConfig(nodeId) {
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply message</label>
                     <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
                         <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-text')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-text', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-text', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-text" rows="5" placeholder="#LEAD_USER_FIRST_NAME# How are you?" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
@@ -260,7 +260,7 @@ function showNodeConfig(nodeId) {
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message (Optional)</label>
                     <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
                         <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-caption')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-caption', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-caption', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-caption" rows="4" placeholder="Type your image message here..." style="background: #fafafa; border: 1px solid #ddd;">${data.caption || ''}</textarea>
@@ -354,7 +354,7 @@ function showNodeConfig(nodeId) {
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message Body (Optional)</label>
                     <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
                         <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-cta-text')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-cta-text', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-cta-text', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-cta-text" rows="3" placeholder="Visit our website now!" style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
@@ -391,7 +391,7 @@ function showNodeConfig(nodeId) {
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Please provide your reply message</label>
                     <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
                         <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-text-cta')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-text-cta', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-text-cta', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-text-cta" rows="5" placeholder="Hi! Select an option below..." style="background: #fafafa; border: 1px solid #ddd;">${data.text || ''}</textarea>
@@ -435,7 +435,7 @@ function showNodeConfig(nodeId) {
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Body Message</label>
                     <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
                         <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-interactive-body')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-interactive-body', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-interactive-body', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <div class="position-relative">
                         <textarea class="form-control cfg-input" id="conf-interactive-body" rows="4" placeholder="Enter message..." style="background: #fafafa; border: 1px solid #ddd;">${data.body_text || ''}</textarea>
@@ -469,7 +469,7 @@ function showNodeConfig(nodeId) {
                 <div class="mb-3">
                     <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Variable to Check</label>
                     <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
-                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-cond-var', '#LEAD_USER_FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-cond-var', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
                     </div>
                     <input type="text" class="form-control cfg-input" id="conf-cond-var" value="${data.variable || ''}" placeholder="e.g. #LEAD_USER_FIRST_NAME# or {Phone}" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
                 </div>
