@@ -19,7 +19,7 @@ $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND s
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     if (!$waAccount) {
         setFlash('danger', 'Please configure your WhatsApp API settings first.');
-        redirect('dashboard/settings.php');
+        redirect('dashboard/whatsapp.php');
     }
 
     $to = sanitize($_POST['to'] ?? '');
@@ -67,7 +67,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
         <?php if (!$waAccount): ?>
-        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> Please <a href="<?= baseUrl('dashboard/settings.php'); ?>" class="fw-bold">configure your WhatsApp API</a> to start sending messages.</div>
+        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> Please <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>" class="fw-bold">configure your WhatsApp API</a> to start sending messages.</div>
         <?php endif; ?>
 
         <div class="row g-4">
