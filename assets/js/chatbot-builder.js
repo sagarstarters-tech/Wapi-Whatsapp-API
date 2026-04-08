@@ -1422,6 +1422,7 @@ function loadFlowsList() {
                 const updatedDate = flow.updated_at
                     ? new Date(flow.updated_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
                     : '';
+                const isActive = parseInt(flow.is_active) === 1;
                 return `
                 <div class="flow-item-card d-flex align-items-center justify-content-between mb-2 p-3"
                      style="background:#f8f9ff; border:1px solid #e3e8f0; border-radius:10px; transition: box-shadow 0.15s;">
@@ -1434,15 +1435,21 @@ function loadFlowsList() {
                             <i class="bi bi-clock me-1"></i>${updatedDate}
                         </div>
                     </div>
-                    <div class="d-flex gap-2 ms-2 flex-shrink-0">
+                    <div class="d-flex align-items-center gap-3 ms-2 flex-shrink-0">
+                        <div class="form-check form-switch p-0 m-0" title="${isActive ? 'Flow is Active' : 'Flow is Inactive'}">
+                            <input class="form-check-input ms-0 cursor-pointer" type="checkbox" role="switch" 
+                                   ${isActive ? 'checked' : ''} 
+                                   onchange="toggleFlowStatus(${flow.id}, this.checked)"
+                                   style="width: 2.2rem; height: 1.1rem; cursor: pointer;">
+                        </div>
                         <button class="btn btn-sm btn-outline-primary px-2 py-1"
                                 onclick="openFlow(${flow.id}, '${escapeHtml(flow.name).replace(/'/g,"\\'")}');"
-                                title="Edit Flow" style="font-size:12px;">
-                            <i class="bi bi-pencil-fill"></i> Edit
+                                title="Edit Flow" style="font-size:11px;">
+                            <i class="bi bi-pencil-fill"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger px-2 py-1"
                                 onclick="deleteFlow(${flow.id}, '${escapeHtml(flow.name).replace(/'/g,"\\'")}');"
-                                title="Delete Flow" style="font-size:12px;">
+                                title="Delete Flow" style="font-size:11px;">
                             <i class="bi bi-trash3-fill"></i>
                         </button>
                     </div>
@@ -1506,6 +1513,34 @@ function deleteFlow(flowId, flowName) {
             }
         })
         .catch(() => Swal.fire('Error', 'Connection failed.', 'error'));
+    });
+}
+
+function toggleFlowStatus(flowId, status) {
+    fetch('../api/chatbot/toggle-flow-status.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flow_id: flowId, is_active: status ? 1 : 0 })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            Swal.fire({
+                icon: 'success',
+                title: status ? 'Flow Activated' : 'Flow Deactivated',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+            loadFlowsList(); // Revert toggle on error
+        }
+    })
+    .catch(() => {
+        Swal.fire('Error', 'Connection failed.', 'error');
+        loadFlowsList();
     });
 }
 

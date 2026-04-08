@@ -21,6 +21,7 @@ try {
     // 1. Add flow_json to chatbot_flows
     echo "Updating chatbot_flows table...<br>";
     $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `flow_json` LONGTEXT AFTER `name` ");
+    $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) DEFAULT 1 AFTER `flow_json` ");
     $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
 
     // 2. Update chatbot_sessions

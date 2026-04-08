@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('Y-m-d H:i:s') . "] PARSED: nodeId='$flowNodeId', portIndex=$portIndex -> $outputName\n", FILE_APPEND);
 
                     $flow = $db->fetch(
-                        "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+                        "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1",
                         [$userId]
                     );
 
@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Load user's active flow (latest by default)
             $flow = $db->fetch(
-                "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+                "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1",
                 [$userId]
             );
 

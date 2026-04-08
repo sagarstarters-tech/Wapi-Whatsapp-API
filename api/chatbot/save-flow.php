@@ -53,6 +53,7 @@ try {
         try {
             // Fix Chatbot Flows Table
             $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `flow_json` LONGTEXT AFTER `name` ");
+            $db->query("ALTER TABLE `chatbot_flows` ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) DEFAULT 1 AFTER `flow_json` ");
             $db->query("ALTER TABLE `chatbot_flows` MODIFY COLUMN `response_content` TEXT NULL");
             
             // Fix Chatbot Sessions Table (Optional but important for engine)

@@ -18,7 +18,7 @@ $userId = $_SESSION['user_id'];
 
 try {
     $flows = $db->fetchAll(
-        "SELECT id, name, updated_at, created_at FROM chatbot_flows WHERE user_id = ? ORDER BY updated_at DESC, id DESC",
+        "SELECT id, name, is_active, updated_at, created_at FROM chatbot_flows WHERE user_id = ? ORDER BY updated_at DESC, id DESC",
         [$userId]
     );
 
