@@ -6,7 +6,7 @@
 require_once __DIR__ . '/../config/config.php';
 
 // AT THE VERY TOP: DEBUG LOG
-file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] METHOD: " . $_SERVER['REQUEST_METHOD'] . " | IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'cli') . "\n", FILE_APPEND);
+file_put_contents(__DIR__ . '/webhook_test.log', "[" . date('H:i:s') . "] METHOD: " . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
 
 header('Content-Type: application/json');
 

@@ -14,7 +14,7 @@ if (!Auth::isLoggedIn()) {
 
 $db = Database::getInstance();
 $userId = $_SESSION['user_id'];
-$data    = json_decode(file_get_contents('php-input'), true);
+$data    = json_decode(file_get_contents('php://input'), true);
 $flowId  = sanitizeInt($data['flow_id'] ?? 0);
 $status  = sanitizeInt($data['is_active'] ?? 1);
 
