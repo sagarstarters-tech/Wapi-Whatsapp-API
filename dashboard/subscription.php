@@ -200,7 +200,7 @@ function initManualUPI(planId, planName, amount) {
 }
 
 function activateFreePlan(planId) {
-    if (confirm('Activate the free plan?')) {
+    if (confirm('Activate the 14 Days Free Trial?')) {
         window.location.href = '<?= baseUrl('api/activate-plan.php'); ?>?plan_id=' + planId;
     }
 }

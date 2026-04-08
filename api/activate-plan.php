@@ -51,5 +51,5 @@ $db->insert('payments', [
     'payment_method' => 'free'
 ]);
 
-setFlash('success', 'Free plan activated successfully!');
+setFlash('success', '14 Days Free Trial activated successfully!');
 redirect('dashboard/subscription.php');
