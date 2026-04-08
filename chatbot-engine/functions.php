@@ -123,7 +123,12 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
         if (trim($label) === '') continue;
         if ($btnCounter >= 3) break;
         
-        $portIndex = $btnCounter; // Always 0, 1, 2
+        // Extract port index from key like 'btn-0', 'btn-1'
+        $portIndex = $btnCounter;
+        if (strpos($key, 'btn-') === 0) {
+            $portIndex = (int)explode('-', $key)[1];
+        }
+        
         $btnCounter++;
         
         error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");

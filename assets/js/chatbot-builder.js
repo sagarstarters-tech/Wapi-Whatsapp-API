@@ -743,15 +743,15 @@ function updateNodePreview(nodeId) {
                 
                 const btnLabels = labelsContainer.querySelectorAll('.port-label-row');
                 if (btnLabels[0]) {
-                    const span = btnLabels[0].querySelector('span');
+                    const span = btnLabels[0].querySelector('span:last-child');
                     if (span) span.textContent = btn1;
                 }
                 if (btnLabels[1]) {
-                    const span = btnLabels[1].querySelector('span');
+                    const span = btnLabels[1].querySelector('span:last-child');
                     if (span) span.textContent = btn2;
                 }
                 if (btnLabels[2]) {
-                    const span = btnLabels[2].querySelector('span');
+                    const span = btnLabels[2].querySelector('span:last-child');
                     if (span) span.textContent = btn3;
                 }
             }
