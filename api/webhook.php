@@ -91,10 +91,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ?? [];
         };
 
-        // 4. Process each incoming message
+        // 4. Extract Contact Name from WhatsApp Profile (if available)
+        $profileName = $entry['contacts'][0]['profile']['name'] ?? '';
+
+        // 5. Process each incoming message
         foreach ($messages as $msg) {
             $from = $msg['from'] ?? '';
             $type = $msg['type'] ?? 'text';
+
+            // Auto-sync contact to database so variables work
+            if (!empty($profileName)) {
+                $exists = $db->fetch("SELECT id FROM contacts WHERE phone = ? AND user_id = ?", [$from, $userId]);
+                if ($exists) {
+                    $db->update('contacts', ['name' => $profileName], 'id = ?', [$exists['id']]);
+                } else {
+                    $db->insert('contacts', [
+                        'user_id' => $userId,
+                        'name'    => $profileName,
+                        'phone'   => $from,
+                        'source'  => 'whatsapp'
+                    ]);
+                }
+            }
 
             // -----------------------------------------------
             // A. Interactive button reply (chatbot flow nav)
@@ -133,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             $nextNodeId = $connections[0]['node'];
                             file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('Y-m-d H:i:s') . "] SUCCESS: Routing to next node: $nextNodeId via $outputName\n", FILE_APPEND);
-                            runFlow($from, $userId, $flow['id'], $nextNodeId, $phoneNumberId, $accessToken);
+                            runFlow($from, $userId, $flow['id'], $nextNodeId, $phoneNumberId, $accessToken, $profileName);
                         }
                     }
                 }
@@ -224,11 +242,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($firstConns)) {
                     $firstNodeId = $firstConns[0]['node'];
                     file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Trigger matched! Starting at node: $firstNodeId\n", FILE_APPEND);
-                    runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken);
+                    runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken, $profileName);
                 } else {
                     // Start node has no connections — pass null so runFlow finds first node
                     file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Trigger matched but start node has no connections.\n", FILE_APPEND);
-                    runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                    runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken, $profileName);
                 }
             } else {
                 // Check active session — works for ALL message types (text, image, sticker, etc.)
@@ -240,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     !empty($session['current_node_id'])
                 ) {
                     file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Continuing session (type=$type) at node: " . $session['current_node_id'] . "\n", FILE_APPEND);
-                    runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
+                    runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken, $profileName);
                 } else {
                     // No trigger, no active session
                     // For non-text messages without active session, auto-start the flow
@@ -253,9 +271,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if (!empty($firstConns)) {
                                     $firstNodeId = $firstConns[0]['node'];
                                     file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Auto-starting flow for non-text message (type=$type) at node: $firstNodeId\n", FILE_APPEND);
-                                    runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken);
+                                    runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken, $profileName);
                                 } else {
-                                    runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
+                                    runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken, $profileName);
                                 }
                                 break;
                             }

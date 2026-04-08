@@ -241,11 +241,11 @@ function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText =
 /**
  * Replace string variables like #LEAD_USER_FIRST_NAME# with actual data
  */
-function replaceDynamicVariables($text, $phone, $userId) {
+function replaceDynamicVariables($text, $phone, $userId, $senderName = null) {
     if (empty(trim($text))) return $text;
 
-    $name = 'User';
-    $firstName = 'User';
+    $name = !empty($senderName) ? $senderName : 'User';
+    $firstName = !empty($senderName) ? explode(' ', trim($senderName))[0] : 'User';
     
     // Normalize phone for searching (remove +)
     $cleanPhone = ltrim($phone, '+');
@@ -280,7 +280,7 @@ function replaceDynamicVariables($text, $phone, $userId) {
 /**
  * 3. Dynamic Flow Engine (JSON Parser)
  */
-function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $token = null) {
+function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $token = null, $senderName = null) {
     $db = Database::getInstance();
 
     file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] runFlow: phone=$phone, userId=$userId, flowId=$flowId, nodeId=$nodeId\n", FILE_APPEND);
@@ -350,8 +350,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             }
             return; // exit this call — the recursive call handles everything
 
-        case 'text':
-            $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId);
+            $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId, $senderName);
             if (empty($textMsg)) {
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] WARNING: text node $nodeId has empty message!\n", FILE_APPEND);
             }
@@ -368,7 +367,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $caption = replaceDynamicVariables($nodeData['caption'] ?? '', $phone, $userId);
+            $caption = replaceDynamicVariables($nodeData['caption'] ?? '', $phone, $userId, $senderName);
             $res = sendImage($phone, $nodeData['image-url'] ?? '', $caption, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'image', 'Image', $res, $nodeData['image-url'] ?? '');
             break;
@@ -400,7 +399,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $caption = replaceDynamicVariables($nodeData['caption'] ?? '', $phone, $userId);
+            $caption = replaceDynamicVariables($nodeData['caption'] ?? '', $phone, $userId, $senderName);
             $res = sendVideo($phone, $nodeData['video-url'] ?? '', $caption, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'video', 'Video', $res, $nodeData['video-url'] ?? '');
             break;
@@ -415,9 +414,9 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($delaySecs > 0 && $delaySecs <= 60) {
                 sleep($delaySecs);
             }
-            $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId);
-            $footerMsg = replaceDynamicVariables($nodeData['footer'] ?? '', $phone, $userId);
-            $btnText = replaceDynamicVariables($nodeData['btnText'] ?? '', $phone, $userId);
+            $textMsg = replaceDynamicVariables($nodeData['text'] ?? '', $phone, $userId, $senderName);
+            $footerMsg = replaceDynamicVariables($nodeData['footer'] ?? '', $phone, $userId, $senderName);
+            $btnText = replaceDynamicVariables($nodeData['btnText'] ?? '', $phone, $userId, $senderName);
             $imageUrl = $nodeData['image'] ?? '';
             
             $res = sendCtaUrl($phone, $textMsg, $btnText, $nodeData['url'] ?? '', $imageUrl, $footerMsg, $phoneId, $token);
@@ -433,10 +432,10 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             }
             $buttonsData = [];
             foreach ($nodeData as $key => $val) {
-                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId);
+                if (strpos($key, 'btn-') === 0) $buttonsData[$key] = replaceDynamicVariables($val, $phone, $userId, $senderName);
             }
             ksort($buttonsData);
-            $prompt = replaceDynamicVariables($nodeData['text'] ?? 'Select an option:', $phone, $userId);
+            $prompt = replaceDynamicVariables($nodeData['text'] ?? 'Select an option:', $phone, $userId, $senderName);
             $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
             $isInteractive = true;
@@ -449,17 +448,17 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             }
             $buttonsData = [];
             if (!empty(trim($nodeData['btn1_label'] ?? ''))) {
-                $buttonsData['btn1'] = replaceDynamicVariables($nodeData['btn1_label'], $phone, $userId);
+                $buttonsData['btn1'] = replaceDynamicVariables($nodeData['btn1_label'], $phone, $userId, $senderName);
             }
             if (!empty(trim($nodeData['btn2_label'] ?? ''))) {
-                $buttonsData['btn2'] = replaceDynamicVariables($nodeData['btn2_label'], $phone, $userId);
+                $buttonsData['btn2'] = replaceDynamicVariables($nodeData['btn2_label'], $phone, $userId, $senderName);
             }
             if (!empty(trim($nodeData['btn3_label'] ?? ''))) {
-                $buttonsData['btn3'] = replaceDynamicVariables($nodeData['btn3_label'], $phone, $userId);
+                $buttonsData['btn3'] = replaceDynamicVariables($nodeData['btn3_label'], $phone, $userId, $senderName);
             }
             
-            $bodyText = replaceDynamicVariables($nodeData['body_text'] ?? 'Select an option:', $phone, $userId);
-            $footerText = replaceDynamicVariables($nodeData['footer_text'] ?? '', $phone, $userId);
+            $bodyText = replaceDynamicVariables($nodeData['body_text'] ?? 'Select an option:', $phone, $userId, $senderName);
+            $footerText = replaceDynamicVariables($nodeData['footer_text'] ?? '', $phone, $userId, $senderName);
             $imageUrl = $nodeData['image'] ?? '';
             
             $res = sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $phoneId, $token);
@@ -468,9 +467,9 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             break;
 
         case 'condition':
-            $var = replaceDynamicVariables($nodeData['variable'] ?? '', $phone, $userId);
+            $var = replaceDynamicVariables($nodeData['variable'] ?? '', $phone, $userId, $senderName);
             $op = $nodeData['operator'] ?? 'equals';
-            $valStr = strtolower(trim(replaceDynamicVariables($nodeData['value'] ?? '', $phone, $userId)));
+            $valStr = strtolower(trim(replaceDynamicVariables($nodeData['value'] ?? '', $phone, $userId, $senderName)));
             $varStr = strtolower(trim($var));
             
             $conditionMet = false;
@@ -526,7 +525,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
                 sleep(1);
                 
                 file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Moving to next node via $outputKey: $nextNodeId\n", FILE_APPEND);
-                runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token); 
+                runFlow($phone, $userId, $flowId, $nextNodeId, $phoneId, $token, $senderName); 
             }
         }
         
