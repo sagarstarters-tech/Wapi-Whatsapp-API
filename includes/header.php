@@ -82,9 +82,8 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
                     $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
                 ?>
                     <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="max-height: 48px;">
-                <?php else: ?>
-                    <span class="brand"><?= e($siteName); ?></span>
                 <?php endif; ?>
+                <span class="brand"><?= e($siteName); ?></span>
             </a>
             
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
