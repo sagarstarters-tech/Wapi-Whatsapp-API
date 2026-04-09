@@ -10,6 +10,16 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_logs') {
+    if (!CSRF::validateToken()) {
+        setFlash('danger', 'Invalid security token.');
+    } else {
+        $db->query("DELETE FROM messages WHERE user_id = ?", [$userId]);
+        setFlash('success', 'All message logs have been cleared successfully.');
+    }
+    redirect('dashboard/message-logs.php');
+}
+
 $hideNav = true; // Prevents landing page nav from appearing in dashboard
 
 $search = sanitize($_GET['search'] ?? '');
@@ -50,20 +60,33 @@ include __DIR__ . '/../includes/header.php';
             <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
         </div>
 
+        <?php $flash = getFlash(); if ($flash): ?>
+            <div class="alert alert-<?= $flash['type']; ?> fade-in"><i class="bi bi-<?= $flash['type'] === 'success' ? 'check' : 'exclamation'; ?>-circle-fill"></i> <?= e($flash['message']); ?></div>
+        <?php endif; ?>
+
         <div class="data-table">
             <div class="data-table-header">
                 <h5 class="data-table-title mb-0">All Messages (<?= $totalMessages; ?>)</h5>
-                <form method="GET" class="d-flex gap-2 flex-wrap">
-                    <div class="search-box"><i class="bi bi-search"></i><input name="search" class="form-control" placeholder="Search..." value="<?= e($search); ?>"></div>
-                    <select name="status" class="form-control" style="width: auto;" onchange="this.form.submit()">
-                        <option value="">All</option>
-                        <option value="sent" <?= $statusFilter === 'sent' ? 'selected' : ''; ?>>Sent</option>
-                        <option value="delivered" <?= $statusFilter === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                        <option value="failed" <?= $statusFilter === 'failed' ? 'selected' : ''; ?>>Failed</option>
-                        <option value="queued" <?= $statusFilter === 'queued' ? 'selected' : ''; ?>>Queued</option>
-                        <option value="read" <?= $statusFilter === 'read' ? 'selected' : ''; ?>>Read</option>
-                    </select>
-                </form>
+                <div class="d-flex gap-2 flex-wrap">
+                    <form method="GET" class="d-flex gap-2 flex-wrap m-0">
+                        <div class="search-box"><i class="bi bi-search"></i><input name="search" class="form-control" placeholder="Search..." value="<?= e($search); ?>"></div>
+                        <select name="status" class="form-control" style="width: auto;" onchange="this.form.submit()">
+                            <option value="">All</option>
+                            <option value="sent" <?= $statusFilter === 'sent' ? 'selected' : ''; ?>>Sent</option>
+                            <option value="delivered" <?= $statusFilter === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
+                            <option value="failed" <?= $statusFilter === 'failed' ? 'selected' : ''; ?>>Failed</option>
+                            <option value="queued" <?= $statusFilter === 'queued' ? 'selected' : ''; ?>>Queued</option>
+                            <option value="read" <?= $statusFilter === 'read' ? 'selected' : ''; ?>>Read</option>
+                        </select>
+                    </form>
+                    <?php if ($totalMessages > 0): ?>
+                    <form method="POST" class="m-0" onsubmit="return confirm('WARNING: This will safely securely clear ALL your message logs! Are you absolutely sure?');">
+                        <?= CSRF::tokenField(); ?>
+                        <input type="hidden" name="action" value="clear_logs">
+                        <button type="submit" class="btn btn-danger" style="display: flex; align-items: center; gap: 5px;"><i class="bi bi-trash"></i> Clear Logs</button>
+                    </form>
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table">

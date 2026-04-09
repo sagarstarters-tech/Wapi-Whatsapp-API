@@ -11,6 +11,20 @@ $db = Database::getInstance();
 $userId = $_SESSION['user_id'];
 $hideNav = true;
 
+// Handle Clear Chat
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_chat') {
+    if (!CSRF::validateToken()) {
+        if (isAjax()) jsonResponse(['success' => false, 'message' => 'Invalid security token.']);
+    } else {
+        $chatPhone = sanitize($_POST['phone'] ?? '');
+        if ($chatPhone) {
+            $db->query("DELETE FROM messages WHERE user_id = ? AND to_number = ?", [$userId, $chatPhone]);
+            if (isAjax()) jsonResponse(['success' => true]);
+        }
+    }
+    if (isAjax()) jsonResponse(['success' => false, 'message' => 'Failed to clear chat.']);
+}
+
 // Get active WhatsApp account
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
 
@@ -152,8 +166,11 @@ include __DIR__ . '/../includes/header.php';
             <!-- Main Chat Area -->
             <div class="chat-main">
                 <div class="chat-header">
-                    <div id="activeContactName" class="fw-bold">Select a conversation</div>
-                    <div class="text-success small" id="activeStatus"></div>
+                    <div>
+                        <div id="activeContactName" class="fw-bold">Select a conversation</div>
+                        <div class="text-success small" id="activeStatus"></div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" id="clearChatBtn" style="display: none; align-items: center; gap: 5px;" onclick="clearCurrentChat()"><i class="bi bi-trash"></i> Clear Chat</button>
                 </div>
                 
                 <div class="chat-messages" id="chatMessages">
@@ -188,6 +205,7 @@ include __DIR__ . '/../includes/header.php';
         el.classList.add('active');
         document.getElementById('activeContactName').innerText = phone;
         document.getElementById('chatFooter').style.display = 'block';
+        document.getElementById('clearChatBtn').style.display = 'flex';
         
         // In a real app, this would be an AJAX call
         document.getElementById('chatMessages').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
@@ -231,6 +249,25 @@ include __DIR__ . '/../includes/header.php';
             }
         });
     });
+
+    function clearCurrentChat() {
+        if (!currentChat) return;
+        if (confirm('WARNING: This will safely and securely clear ALL messages in this conversation! Are you absolutely sure?')) {
+            fetch('<?= baseUrl('dashboard/live-chat.php'); ?>', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=clear_chat&phone=${encodeURIComponent(currentChat)}&_csrf_token=<?= CSRF::generateToken(); ?>`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Error clearing chat.');
+                }
+            });
+        }
+    }
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
