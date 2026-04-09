@@ -108,12 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                             'status' => $status
                         ];
                         
-                        if ($existing) {
-                            $db->update('templates', $tplData, 'id = ?', [$existing['id']]);
-                        } else {
-                            $db->insert('templates', $tplData);
+                        try {
+                            if ($existing) {
+                                $db->update('templates', $tplData, 'id = ?', [$existing['id']]);
+                            } else {
+                                $db->insert('templates', $tplData);
+                            }
+                            $syncedCount++;
+                        } catch (Exception $ex) {
+                            file_put_contents(__DIR__ . '/../sync_error.txt', json_encode($tplData) . "\n" . $ex->getMessage() . "\n" . $ex->getTraceAsString());
+                            throw $ex; // re-throw so it 500s or stops
                         }
-                        $syncedCount++;
                     }
                     setFlash('success', "Successfully synced $syncedCount templates from Meta.");
                 } else {
