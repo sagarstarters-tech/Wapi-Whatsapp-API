@@ -6,6 +6,10 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
 Auth::requireLogin();
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+
 $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
