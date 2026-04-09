@@ -189,6 +189,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Message from $from: type='$type', text='$textBody'\n", FILE_APPEND);
 
+            // --- INTERCEPT TEXT replies for active Confirm nodes ---
+            if (!empty($textBody)) {
+                require_once __DIR__ . '/../chatbot-engine/functions.php';
+                $session = function_exists('getSession') ? getSession($from, $userId) : null;
+                if ($session && ($session['state'] ?? '') === 'active' && !empty($session['current_node_id'])) {
+                    $sessionFlowId = $session['flow_id'];
+                    $flow = $db->fetch("SELECT id, flow_json FROM chatbot_flows WHERE id = ?", [$sessionFlowId]);
+                    if ($flow) {
+                        $nodes = $getNodes($flow['flow_json']);
+                        $activeNode = $nodes[$session['current_node_id']] ?? null;
+                        if ($activeNode && $activeNode['name'] === 'confirm') {
+                            $tb = $textBody;
+                            $isYes = in_array($tb, ['yes', 'y', 'haan', 's', 'confirm', 'ok']);
+                            $isNo = in_array($tb, ['no', 'n', 'nahin', 'cancel', 'abort']);
+                            
+                            // Also check if text matches the configured labels
+                            if (!$isYes && !$isNo) {
+                                $lblYes = strtolower(trim($activeNode['data']['btn_yes_label'] ?? ''));
+                                $lblNo = strtolower(trim($activeNode['data']['btn_no_label'] ?? ''));
+                                if ($lblYes !== '' && $tb === $lblYes) $isYes = true;
+                                if ($lblNo !== '' && $tb === $lblNo) $isNo = true;
+                            }
+                            
+                            if ($isYes || $isNo) {
+                                $portName = $isYes ? 'output_1' : 'output_2';
+                                $connections = $activeNode['outputs'][$portName]['connections'] ?? [];
+                                if (!empty($connections)) {
+                                    $nextNodeId = $connections[0]['node'];
+                                    file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('H:i:s') . "] SUCCESS: Text '$tb' matched $portName. Routing to next node: $nextNodeId\n", FILE_APPEND);
+                                    runFlow($from, $userId, $sessionFlowId, $nextNodeId, $phoneNumberId, $accessToken, $profileName);
+                                    continue; // Skip the rest of the loop for this message
+                                } else {
+                                    // It matched but no connections exist. Still, we processed it, so don't hit trigger keywords.
+                                    file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('H:i:s') . "] SUCCESS: Text '$tb' matched $portName but no connection found.\n", FILE_APPEND);
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Load ALL active flows for this user
             $activeFlows = $db->fetchAll(
                 "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY updated_at DESC",

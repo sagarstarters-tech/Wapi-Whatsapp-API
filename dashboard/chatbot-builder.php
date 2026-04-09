@@ -59,6 +59,9 @@ include __DIR__ . '/../includes/header.php';
             <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="interactive" title="Interactive Node">
                 <i class="bi bi-hand-index-thumb-fill" style="color: #e85d04;"></i>
             </div>
+            <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="confirm" title="Yes/No Confirmation">
+                <i class="bi bi-ui-checks" style="color: #E91E63;"></i>
+            </div>
 
             <div class="drag-drawflow icon-item" draggable="true" ondragstart="drag(event)" data-node="condition" title="Condition">
                 <i class="bi bi-chevron-right" style="color: #AF52DE;"></i>

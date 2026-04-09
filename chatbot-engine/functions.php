@@ -478,6 +478,24 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             $isInteractive = true;
             break;
 
+        case 'confirm':
+            $delaySecs = (int)($nodeData['delay'] ?? 0);
+            if ($delaySecs > 0 && $delaySecs <= 60) {
+                sleep($delaySecs);
+            }
+            $buttonsData = [];
+            $btnYes = replaceDynamicVariables($nodeData['btn_yes_label'] ?? 'Yes, Confirm', $phone, $userId, $senderName);
+            $btnNo = replaceDynamicVariables($nodeData['btn_no_label'] ?? 'No, Cancel', $phone, $userId, $senderName);
+            
+            if ($btnYes !== '') $buttonsData['btn-0'] = $btnYes;
+            if ($btnNo !== '') $buttonsData['btn-1'] = $btnNo;
+            
+            $prompt = replaceDynamicVariables($nodeData['body_text'] ?? 'Are you sure?', $phone, $userId, $senderName);
+            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
+            logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
+            $isInteractive = true;
+            break;
+
         case 'condition':
             $var = replaceDynamicVariables($nodeData['variable'] ?? '', $phone, $userId, $senderName);
             $op = $nodeData['operator'] ?? 'equals';

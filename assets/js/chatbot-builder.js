@@ -552,6 +552,37 @@ function showNodeConfig(nodeId) {
                 </div>
             `;
             break;
+        case 'confirm':
+            html = `
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 600; font-size: 14px; color: #E91E63;"><i class="bi bi-ui-checks me-1"></i> Yes/No Confirmation Config</label>
+                </div>
+                <div class="mb-3">
+                    <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Message Body</label>
+                    <div class="d-flex align-items-center gap-2 mb-2 mt-1 position-relative">
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="toggleCustomVars(this, 'conf-confirm-body')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-link-45deg"></i> Custom <i class="bi bi-caret-down-fill" style="font-size:10px;"></i></button>
+                        <button type="button" class="btn btn-sm btn-light text-primary border" onclick="insertAtCursor('conf-confirm-body', '#FIRST_NAME#')" style="font-size:12px; font-weight: 500; background: #fff;"><i class="bi bi-person"></i> Name</button>
+                    </div>
+                    <div class="position-relative">
+                        <textarea class="form-control cfg-input" id="conf-confirm-body" rows="4" placeholder="Are you sure?" style="background: #fafafa; border: 1px solid #ddd;">${data.body_text || ''}</textarea>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-success" style="font-size: 13px;"><i class="bi bi-check-circle me-1"></i> Yes Button Label (Output 1)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-confirm-yes" value="${data.btn_yes_label || ''}" placeholder="Yes, Confirm" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-danger" style="font-size: 13px;"><i class="bi bi-x-circle me-1"></i> No Button Label (Output 2)</label>
+                    <input type="text" class="form-control cfg-input" id="conf-confirm-no" value="${data.btn_no_label || ''}" placeholder="No, Cancel" style="background: #fafafa; border: 1px solid #ddd; height: 38px;">
+                </div>
+                <div class="mb-3 mt-4 pt-3 border-top" style="border-top-color: #ddd !important;">
+                    <div class="d-flex justify-content-between">
+                        <label class="cfg-label" style="font-weight: 500; font-size: 13px; color: #555;">Delay in reply - <span id="delay-val">${data.delay || 0}</span> sec</label>
+                    </div>
+                    <input type="range" class="form-range mt-2" id="conf-delay" min="0" max="60" value="${data.delay || 0}" oninput="document.getElementById('delay-val').innerText = this.value">
+                </div>
+            `;
+            break;
         case 'condition':
             html = `
                 <div class="mb-3">
@@ -670,6 +701,12 @@ function saveConfig(silent = false) {
             newData.image = document.getElementById('conf-interactive-image') ? document.getElementById('conf-interactive-image').value : (newData.image || '');
             newData.body_text = document.getElementById('conf-interactive-body') ? document.getElementById('conf-interactive-body').value : (newData.body_text || '');
             newData.footer_text = document.getElementById('conf-interactive-footer') ? document.getElementById('conf-interactive-footer').value : (newData.footer_text || '');
+            newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
+            break;
+        case 'confirm':
+            newData.body_text = document.getElementById('conf-confirm-body') ? document.getElementById('conf-confirm-body').value : (newData.body_text || '');
+            newData.btn_yes_label = document.getElementById('conf-confirm-yes') ? document.getElementById('conf-confirm-yes').value : (newData.btn_yes_label || '');
+            newData.btn_no_label = document.getElementById('conf-confirm-no') ? document.getElementById('conf-confirm-no').value : (newData.btn_no_label || '');
             newData.delay = document.getElementById('conf-delay') ? document.getElementById('conf-delay').value : newData.delay;
             break;
         case 'condition':
@@ -854,6 +891,27 @@ function updateNodePreview(nodeId) {
                     const rightSpan = row.querySelector('span:last-child');
                     if (rightSpan && labels[idx]) rightSpan.textContent = labels[idx];
                 });
+            }
+            break;
+        }
+        case 'confirm': {
+            const bodyBoxC = nodeEl.querySelector('.node-message-box');
+            if (bodyBoxC) bodyBoxC.innerHTML = node.data.body_text ? node.data.body_text.replace(/\n/g, '<br>') : '<strong>Are you sure?</strong>';
+            
+            const portLabels = nodeEl.querySelector('.port-labels-container');
+            if (portLabels) {
+                const rows = portLabels.querySelectorAll('.port-label-row');
+                const btnYes = node.data.btn_yes_label || 'Yes';
+                const btnNo = node.data.btn_no_label || 'No';
+                
+                if (rows[0]) {
+                    const span = rows[0].querySelector('span:last-child');
+                    if (span) span.textContent = btnYes;
+                }
+                if (rows[1]) {
+                    const span = rows[1].querySelector('span:last-child');
+                    if (span) span.textContent = btnNo;
+                }
             }
             break;
         }
@@ -1223,6 +1281,26 @@ function getNodeTemplate(type) {
                     </div>
                 </div>
             `;
+        case 'confirm':
+            return `
+                <div class="node-root confirm-node-root">
+                    <div class="node-header-custom" style="background:#fdf2f8; border-bottom: 1px solid #fbcfe8; color: #E91E63; font-weight: 600;"><i class="bi bi-ui-checks me-1"></i> Yes/No Confirmation</div>
+                    <div class="node-body-content p-3" style="background:#fff;">
+                        <div class="node-message-box" style="font-size: 13px; color: #334155; line-height: 1.4; margin-bottom: 8px;">
+                            <strong>Are you sure?</strong>
+                        </div>
+                    </div>
+                    <div class="port-labels-container" style="border-top: 1px dashed #fbcfe8; padding-top: 5px;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#555; position: relative; right: -8px;">In</span>
+                            <span style="font-size:11px; color:#10b981; font-weight: 600; position: relative; left: -8px;">Yes</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#ef4444; font-weight: 600; position: relative; left: -8px;">No</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         default:
             return `<div>Node type not found</div>`;
     }
@@ -1256,6 +1334,7 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
     if (type === 'text-cta') outputs = 3;
     if (type === 'interactive') outputs = 3;
     if (type === 'cta') outputs = 2;
+    if (type === 'confirm') outputs = 2;
     if (type === 'image' || type === 'video' || type === 'audio') outputs = 3;
 
     const defaultData = {};
@@ -1280,6 +1359,12 @@ function addNodeToDrawflow(type, pos_x, pos_y) {
         defaultData.btn1_label = 'Button 1';
         defaultData.btn2_label = 'Button 2';
         defaultData.btn3_label = 'Button 3';
+        defaultData.delay = 0;
+    }
+    if (type === 'confirm') {
+        defaultData.body_text = 'Are you sure?';
+        defaultData.btn_yes_label = 'Yes, Confirm';
+        defaultData.btn_no_label = 'No, Cancel';
         defaultData.delay = 0;
     }
 
@@ -1355,6 +1440,14 @@ function validateFlow(data) {
                 const hasAnyBtn = (ndata.btn1_label || '').trim() !== '' || (ndata.btn2_label || '').trim() !== '' || (ndata.btn3_label || '').trim() !== '';
                 if (!hasAnyBtn) {
                     return { valid: false, message: 'An Interactive node must have at least one button label.', nodeId: id };
+                }
+            }
+            if (node.name === 'confirm') {
+                if ((ndata.body_text || '').trim() === '') {
+                    return { valid: false, message: 'A Confirm node is missing its body message.', nodeId: id };
+                }
+                if ((ndata.btn_yes_label || '').trim() === '' || (ndata.btn_no_label || '').trim() === '') {
+                    return { valid: false, message: 'A Confirm node must have both Yes and No buttons labeled.', nodeId: id };
                 }
             }
         }
