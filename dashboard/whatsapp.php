@@ -393,6 +393,7 @@ async function startQrSession() {
                     <i class="bi bi-exclamation-octagon-fill me-2"></i>
                     <strong>QR Service is not running!</strong><br>
                     <small>Start it in terminal: <code>node services/whatsapp-qr/server.js</code></small>
+                    <p class="mt-2 mb-0 text-muted" style="font-size:0.85rem;"><i class="bi bi-bug me-1"></i> ${data.error || 'Unknown error'}</p>
                 </div>
                 <button class="btn btn-success btn-lg px-5 py-3 mt-3" onclick="startQrSession()" style="border-radius:12px; font-weight:600;">
                     <i class="bi bi-arrow-repeat me-2"></i> Retry
