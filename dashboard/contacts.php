@@ -12,6 +12,20 @@ $userId = $_SESSION['user_id'];
 
 $hideNav = true; // Prevents landing page nav from appearing in dashboard
 
+// Handle Export (CSV)
+if (!empty($_GET['export'])) {
+    $allContacts = $db->fetchAll("SELECT name, phone, email, company, tags, notes FROM contacts WHERE user_id = ? ORDER BY id DESC", [$userId]);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=wapi_contacts_' . date('Ymd_His') . '.csv');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['Name', 'Phone', 'Email', 'Company', 'Tags', 'Notes']);
+    foreach ($allContacts as $c) {
+        fputcsv($output, [$c['name'], $c['phone'], $c['email'], $c['company'], $c['tags'], $c['notes']]);
+    }
+    fclose($output);
+    exit;
+}
+
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $action = $_POST['action'] ?? '';
@@ -37,6 +51,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     } elseif ($action === 'delete') {
         $db->delete('contacts', 'id = ? AND user_id = ?', [sanitizeInt($_POST['contact_id']), $userId]);
         setFlash('success', 'Contact deleted.');
+    } elseif ($action === 'import' && isset($_FILES['import_file'])) {
+        $file = $_FILES['import_file']['tmp_name'];
+        if (is_uploaded_file($file)) {
+            $handle = fopen($file, "r");
+            $header = fgetcsv($handle); // Skip header row
+            $imported = 0;
+            while (($row = fgetcsv($handle)) !== false) {
+                $name = sanitize($row[0] ?? '');
+                $phone = sanitize($row[1] ?? '');
+                if (!empty($name) && !empty($phone)) {
+                    $db->insert('contacts', [
+                        'user_id' => $userId,
+                        'name' => $name,
+                        'phone' => preg_replace('/[^0-9+]/', '', $phone), // allow + for international
+                        'email' => sanitizeEmail($row[2] ?? ''),
+                        'company' => sanitize($row[3] ?? ''),
+                        'tags' => sanitize($row[4] ?? ''),
+                        'notes' => sanitize($row[5] ?? '')
+                    ]);
+                    $imported++;
+                }
+            }
+            fclose($handle);
+            setFlash('success', "$imported contacts imported successfully.");
+        } else {
+            setFlash('danger', 'Failed to read the imported file.');
+        }
     }
     redirect('dashboard/contacts.php');
 }
@@ -72,6 +113,8 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+                <a href="?export=1" class="btn btn-outline-secondary btn-sm" title="Export CSV"><i class="bi bi-download"></i></a>
+                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal" title="Import CSV"><i class="bi bi-upload"></i></button>
                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#contactModal" onclick="resetContactForm()"><i class="bi bi-plus-lg"></i> Add Contact</button>
             </div>
         </div>
@@ -143,6 +186,32 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data">
+                <?= CSRF::tokenField(); ?>
+                <input type="hidden" name="action" value="import">
+                <div class="modal-header"><h5 class="modal-title">Import Contacts (CSV)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Upload CSV File</label>
+                        <input type="file" name="import_file" class="form-control" accept=".csv" required>
+                        <div class="form-text mt-2">
+                            <strong>Required Format:</strong><br>
+                            Ensure your CSV has exactly these columns in order:<br>
+                            <code>Name, Phone, Email, Company, Tags, Notes</code><br>
+                            <small class="text-muted">(Phone numbers should include country code without '+')</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Import</button></div>
             </form>
         </div>
     </div>
