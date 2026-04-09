@@ -141,7 +141,7 @@ include __DIR__ . '/../includes/header.php';
                                     <small class="text-muted"><?= date('H:i', strtotime($c['created_at'])); ?></small>
                                 </div>
                                 <div class="text-muted text-truncate mini-msg" style="font-size: 0.75rem;">
-                                    <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?= e(substr($msg['content'] ?? '', 0, 30)); ?>
+                                    <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?= e(substr($c['content'] ?? '', 0, 30)); ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>

@@ -252,10 +252,14 @@ class WhatsApp {
         $msgType = $msg['type'] ?? 'text';
 
         // Handle button clicks (interactive replies)
-        if ($msgType === 'interactive' && isset($msg['interactive']['button_reply'])) {
-            $replyId = $msg['interactive']['button_reply']['id'] ?? '';
-            $text = $msg['interactive']['button_reply']['title'] ?? '';
-            
+        if ($msgType === 'interactive') {
+            if (isset($msg['interactive']['button_reply'])) {
+                $text = $msg['interactive']['button_reply']['title'] ?? '';
+            } elseif (isset($msg['interactive']['list_reply'])) {
+                $text = $msg['interactive']['list_reply']['title'] ?? '';
+            }
+        } elseif ($msgType === 'button') {
+            $text = $msg['button']['text'] ?? '';
         }
 
         // Find user by phone_number_id

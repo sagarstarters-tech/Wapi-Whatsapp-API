@@ -176,6 +176,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $textBody = strtolower(trim($msg['video']['caption'] ?? ''));
             } elseif ($type === 'document') {
                 $textBody = strtolower(trim($msg['document']['caption'] ?? ''));
+            } elseif ($type === 'button') {
+                $textBody = strtolower(trim($msg['button']['text'] ?? ''));
+            } elseif ($type === 'interactive') {
+                if (isset($msg['interactive']['button_reply'])) {
+                    $textBody = strtolower(trim($msg['interactive']['button_reply']['title'] ?? ''));
+                } elseif (isset($msg['interactive']['list_reply'])) {
+                    $textBody = strtolower(trim($msg['interactive']['list_reply']['title'] ?? ''));
+                }
             }
             // For sticker, audio, location, contacts etc. — textBody stays empty
 
