@@ -27,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             'header_type' => sanitize($_POST['header_type'] ?? 'none'),
             'header_content' => sanitize($_POST['header_content'] ?? ''),
             'body' => sanitize($_POST['body_content']),
-            'variables' => sanitize($_POST['variables'] ?? ''),
-            'buttons' => sanitize($_POST['buttons'] ?? ''),
+            'variables' => trim($_POST['variables'] ?? '') === '' ? null : sanitize($_POST['variables']),
+            'buttons' => trim($_POST['buttons'] ?? '') === '' ? null : (is_array(json_decode($_POST['buttons'], true)) ? $_POST['buttons'] : json_encode(array_map('trim', explode(',', $_POST['buttons'])))),
             'footer' => sanitize($_POST['footer_content'] ?? ''),
             'status' => 'pending'
         ];
@@ -74,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                         $headerType = 'none';
                         $bodyContent = '';
                         $footerContent = '';
-                        $variablesContent = '';
-                        $buttonsContent = '';
+                        $variablesContent = null;
+                        $buttonsContent = null;
                         
                         if (!empty($tpl['components'])) {
                             foreach ($tpl['components'] as $comp) {
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                                 } elseif ($comp['type'] === 'FOOTER') {
                                     $footerContent = sanitize($comp['text'] ?? '');
                                 } elseif ($comp['type'] === 'BUTTONS') {
-                                    $buttonsContent = is_array($comp['buttons'] ?? null) ? json_encode($comp['buttons']) : '';
+                                    $buttonsContent = is_array($comp['buttons'] ?? null) ? json_encode($comp['buttons']) : null;
                                 }
                             }
                         }
@@ -253,8 +253,24 @@ function editTemplate(t) {
     document.getElementById('tplCategory').value = t.category;
     document.getElementById('tplLang').value = t.language;
     document.getElementById('tplBody').value = t.body;
-    document.getElementById('tplVariables').value = t.variables || '';
-    document.getElementById('tplButtons').value = t.buttons || '';
+    document.getElementById('tplVariables').value = t.variables ? (Array.isArray(t.variables) ? t.variables.join(', ') : t.variables.replace(/[\[\]"]/g, '')) : '';
+    let btnStr = '';
+    if (t.buttons) {
+        try {
+            let parsed = JSON.parse(t.buttons);
+            if (Array.isArray(parsed)) {
+                // If it's an array of meta buttons like {type: 'URL', text: 'Visit'}
+                if (parsed.length > 0 && typeof parsed[0] === 'object') {
+                    btnStr = parsed.map(b => b.text).join(', ');
+                } else {
+                    btnStr = parsed.join(', ');
+                }
+            } else {
+                btnStr = t.buttons;
+            }
+        } catch(e) { btnStr = t.buttons; }
+    }
+    document.getElementById('tplButtons').value = btnStr;
     document.getElementById('tplHeader').value = t.header_content || '';
     document.getElementById('tplFooter').value = t.footer || '';
     new bootstrap.Modal(document.getElementById('templateModal')).show();
