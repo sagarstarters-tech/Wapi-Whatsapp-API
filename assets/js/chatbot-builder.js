@@ -1217,6 +1217,15 @@ function getNodeTemplate(type) {
                     <div class="node-body-content" style="background:#fff;">
                         <div class="node-message-box p-2 text-center" style="font-size:12px; font-weight: 500; color:#555;">Set Logic In Sidebar</div>
                     </div>
+                    <div class="port-labels-container" style="border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+                        <div class="port-label-row d-flex justify-content-between align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#555; position: relative; right: -8px;">In</span>
+                            <span style="font-size:11px; color:#10b981; font-weight: 600; position: relative; left: -8px;">True</span>
+                        </div>
+                        <div class="port-label-row d-flex justify-content-end align-items-center" style="padding: 2px 15px;">
+                            <span style="font-size:11px; color:#ef4444; font-weight: 600; position: relative; left: -8px;">False</span>
+                        </div>
+                    </div>
                 </div>
             `;
         case 'text-cta':
