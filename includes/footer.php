@@ -73,8 +73,8 @@ $contactPhone = $settings->get('contact_phone', '');
         </div>
     </footer>
 
-    <!-- WhatsApp Chat Widget -->
-    <?php if ($chatWidgetEnabled === '1' && $chatWidgetNumber): ?>
+    <!-- WhatsApp Chat Widget (Home Page Only) -->
+    <?php if ($chatWidgetEnabled === '1' && $chatWidgetNumber && basename($_SERVER['PHP_SELF']) === 'index.php'): ?>
     <div class="chat-widget">
         <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $chatWidgetNumber); ?>?text=<?= urlencode($chatWidgetMessage); ?>" 
            target="_blank" class="chat-widget-btn" aria-label="Chat on WhatsApp">
