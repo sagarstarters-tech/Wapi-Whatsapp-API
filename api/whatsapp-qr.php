@@ -43,7 +43,7 @@ function proxyToNode($url, $method = 'GET', $postData = null) {
     curl_close($ch);
 
     if ($error) {
-        return ['success' => false, 'error' => 'QR Service is not running. Start it with: node services/whatsapp-qr/server.js', 'service_down' => true];
+        return ['success' => false, 'error' => 'QR Service is not running. Details: ' . $error, 'service_down' => true];
     }
 
     $data = json_decode($response, true);

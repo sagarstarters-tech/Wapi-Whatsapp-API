@@ -23,6 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             'header_type' => sanitize($_POST['header_type'] ?? 'none'),
             'header_content' => sanitize($_POST['header_content'] ?? ''),
             'body' => sanitize($_POST['body_content']),
+            'variables' => sanitize($_POST['variables'] ?? ''),
+            'buttons' => sanitize($_POST['buttons'] ?? ''),
             'footer' => sanitize($_POST['footer_content'] ?? ''),
             'status' => 'pending'
         ];
@@ -68,6 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                         $headerType = 'none';
                         $bodyContent = '';
                         $footerContent = '';
+                        $variablesContent = '';
+                        $buttonsContent = '';
                         
                         if (!empty($tpl['components'])) {
                             foreach ($tpl['components'] as $comp) {
@@ -78,6 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                                     $bodyContent = sanitize($comp['text'] ?? '');
                                 } elseif ($comp['type'] === 'FOOTER') {
                                     $footerContent = sanitize($comp['text'] ?? '');
+                                } elseif ($comp['type'] === 'BUTTONS') {
+                                    $buttonsContent = is_array($comp['buttons'] ?? null) ? json_encode($comp['buttons']) : '';
                                 }
                             }
                         }
@@ -92,7 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                             'header_type' => $headerType,
                             'header_content' => $headerContent,
                             'body' => $bodyContent,
+                            'variables' => $variablesContent,
                             'footer' => $footerContent,
+                            'buttons' => $buttonsContent,
                             'status' => $status
                         ];
                         
@@ -216,6 +224,8 @@ include __DIR__ . '/../includes/header.php';
                             </select>
                         </div>
                         <div class="col-12"><label class="form-label">Body Content *</label><textarea name="body_content" id="tplBody" class="form-control" rows="4" required placeholder="Hello {{1}}, your order {{2}} has been confirmed!"></textarea><small class="text-muted">Use {{1}}, {{2}}, etc. for variables</small></div>
+                        <div class="col-md-6"><label class="form-label">Variables (optional)</label><input type="text" name="variables" id="tplVariables" class="form-control" placeholder="e.g. name, order_number (comma separated)"></div>
+                        <div class="col-md-6"><label class="form-label">Buttons (optional)</label><input type="text" name="buttons" id="tplButtons" class="form-control" placeholder="e.g. Visit Website, Call Now (comma separated)"></div>
                         <div class="col-md-6"><label class="form-label">Header (optional)</label><input type="text" name="header_content" id="tplHeader" class="form-control"></div>
                         <div class="col-md-6"><label class="form-label">Footer (optional)</label><input type="text" name="footer_content" id="tplFooter" class="form-control"></div>
                     </div>
@@ -234,6 +244,8 @@ function editTemplate(t) {
     document.getElementById('tplCategory').value = t.category;
     document.getElementById('tplLang').value = t.language;
     document.getElementById('tplBody').value = t.body;
+    document.getElementById('tplVariables').value = t.variables || '';
+    document.getElementById('tplButtons').value = t.buttons || '';
     document.getElementById('tplHeader').value = t.header_content || '';
     document.getElementById('tplFooter').value = t.footer || '';
     new bootstrap.Modal(document.getElementById('templateModal')).show();

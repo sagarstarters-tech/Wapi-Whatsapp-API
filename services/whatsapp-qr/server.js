@@ -50,7 +50,7 @@ function getSession(userId) {
     return sessions[userId];
 }
 
-// ─── Auth Middleware (for POST routes) ───────────────────────
+// ─── Auth Middleware (for secured POST routes) ──────────────
 function authMiddleware(req, res, next) {
     const key = req.body.apiKey || req.headers['x-api-key'];
     if (key !== API_KEY) {
@@ -59,9 +59,9 @@ function authMiddleware(req, res, next) {
     next();
 }
 
-// ─── Start Session ───────────────────────────────────────────
-app.post('/session/start', authMiddleware, async (req, res) => {
-    const { userId } = req.body;
+// ─── Start Session (supports both GET and POST) ─────────────
+async function handleStartSession(req, res) {
+    const userId = req.body.userId || req.query.userId;
     if (!userId) {
         return res.status(400).json({ success: false, error: 'userId is required' });
     }
@@ -167,7 +167,11 @@ app.post('/session/start', authMiddleware, async (req, res) => {
         console.error(`[User ${userId}] Start error:`, err.message);
         res.status(500).json({ success: false, error: err.message });
     }
-});
+}
+
+// Register start routes (GET for browser direct, POST for PHP proxy)
+app.get('/session/start', handleStartSession);
+app.post('/session/start', handleStartSession);
 
 // ─── Get QR Code ─────────────────────────────────────────────
 app.get('/session/qr/:userId', (req, res) => {
@@ -190,9 +194,9 @@ app.get('/session/status/:userId', (req, res) => {
     });
 });
 
-// ─── Disconnect Session ──────────────────────────────────────
-app.post('/session/disconnect', authMiddleware, async (req, res) => {
-    const { userId } = req.body;
+// ─── Disconnect Session (GET + POST) ─────────────────────────
+async function handleDisconnect(req, res) {
+    const userId = req.body.userId || req.query.userId;
     if (!userId) {
         return res.status(400).json({ success: false, error: 'userId is required' });
     }
@@ -227,8 +231,10 @@ app.post('/session/disconnect', authMiddleware, async (req, res) => {
     delete sessions[userId];
     console.log(`[User ${userId}] Session disconnected and cleaned up`);
     res.json({ success: true, status: 'disconnected' });
-});
+}
 
+app.get('/session/disconnect', handleDisconnect);
+app.post('/session/disconnect', handleDisconnect);
 // ─── Health Check ────────────────────────────────────────────
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), activeSessions: Object.keys(sessions).length });
