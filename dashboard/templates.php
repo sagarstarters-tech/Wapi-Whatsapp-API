@@ -36,6 +36,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     } elseif ($action === 'delete') {
         $db->delete('templates', 'id = ? AND user_id = ?', [sanitizeInt($_POST['template_id']), $userId]);
         setFlash('success', 'Template deleted.');
+    } elseif ($action === 'sync') {
+        $waAccount = $db->fetch("SELECT waba_id, access_token FROM whatsapp_accounts WHERE user_id = ? LIMIT 1", [$userId]);
+        if (!$waAccount || empty($waAccount['waba_id']) || empty($waAccount['access_token'])) {
+            setFlash('danger', 'WhatsApp API is not connected or WABA ID is missing. Setup your API credentials first.');
+        } else {
+            $wabaId = $waAccount['waba_id'];
+            $accessToken = $waAccount['access_token'];
+            $url = "https://graph.facebook.com/v18.0/{$wabaId}/message_templates";
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$accessToken}"]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                if (isset($data['data']) && is_array($data['data'])) {
+                    $syncedCount = 0;
+                    foreach ($data['data'] as $tpl) {
+                        $name = sanitize($tpl['name']);
+                        $language = sanitize($tpl['language']);
+                        $category = sanitize(strtolower($tpl['category']));
+                        $status = sanitize(strtolower($tpl['status']));
+                        
+                        $headerContent = '';
+                        $headerType = 'none';
+                        $bodyContent = '';
+                        $footerContent = '';
+                        
+                        if (!empty($tpl['components'])) {
+                            foreach ($tpl['components'] as $comp) {
+                                if ($comp['type'] === 'HEADER') {
+                                    $headerType = sanitize(strtolower($comp['format'] ?? 'text'));
+                                    $headerContent = sanitize($comp['text'] ?? '');
+                                } elseif ($comp['type'] === 'BODY') {
+                                    $bodyContent = sanitize($comp['text'] ?? '');
+                                } elseif ($comp['type'] === 'FOOTER') {
+                                    $footerContent = sanitize($comp['text'] ?? '');
+                                }
+                            }
+                        }
+                        
+                        $existing = $db->fetch("SELECT id FROM templates WHERE user_id = ? AND name = ? AND language = ?", [$userId, $name, $language]);
+                        
+                        $tplData = [
+                            'user_id' => $userId,
+                            'name' => $name,
+                            'category' => $category,
+                            'language' => $language,
+                            'header_type' => $headerType,
+                            'header_content' => $headerContent,
+                            'body' => $bodyContent,
+                            'footer' => $footerContent,
+                            'status' => $status
+                        ];
+                        
+                        if ($existing) {
+                            $db->update('templates', $tplData, 'id = ?', [$existing['id']]);
+                        } else {
+                            $db->insert('templates', $tplData);
+                        }
+                        $syncedCount++;
+                    }
+                    setFlash('success', "Successfully synced $syncedCount templates from Meta.");
+                } else {
+                    setFlash('danger', 'Received an invalid response from Meta API.');
+                }
+            } else {
+                $errorData = json_decode($response, true);
+                $errorMsg = $errorData['error']['message'] ?? 'Unknown Meta API error';
+                setFlash('danger', "Failed to sync templates: $errorMsg");
+            }
+        }
     }
     redirect('dashboard/templates.php');
 }
@@ -58,6 +135,11 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+                <form method="POST" style="margin: 0; display: inline-block;">
+                    <?= CSRF::tokenField(); ?>
+                    <input type="hidden" name="action" value="sync">
+                    <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-arrow-repeat"></i> Sync from Meta</button>
+                </form>
                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Create Template</button>
             </div>
         </div>
