@@ -67,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                     foreach ($data['data'] as $tpl) {
                         $name = sanitize($tpl['name']);
                         $language = sanitize($tpl['language']);
-                        $category = sanitize(strtolower($tpl['category']));
-                        $status = sanitize(strtolower($tpl['status']));
+                        $category = sanitize(strtolower($tpl['category'] ?? ''));
+                        $status = sanitize(strtolower($tpl['status'] ?? 'pending'));
                         
                         $headerContent = '';
                         $headerType = 'none';
