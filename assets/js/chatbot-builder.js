@@ -1647,6 +1647,11 @@ function loadFlowsList() {
                                    onchange="toggleFlowStatus(${flow.id}, this.checked)"
                                    style="width: 2.2rem; height: 1.1rem; cursor: pointer;">
                         </div>
+                        <button class="btn btn-sm btn-outline-secondary px-2 py-1"
+                                onclick="downloadFlow(${flow.id}, '${escapeHtml(flow.name).replace(/'/g,"\\'")}');"
+                                title="Download JSON Flow" style="font-size:11px;">
+                            <i class="bi bi-download"></i>
+                        </button>
                         <button class="btn btn-sm btn-outline-primary px-2 py-1"
                                 onclick="openFlow(${flow.id}, '${escapeHtml(flow.name).replace(/'/g,"\\'")}');"
                                 title="Edit Flow" style="font-size:11px;">
@@ -1848,4 +1853,101 @@ function updateInteractiveBtnData(nodeId, key, value) {
         editor.updateNodeDataFromId(nodeId, newData);
         updateNodePreview(nodeId);
     }
+}
+
+/* ============================================================
+ *  FLOW EXPORT & IMPORT (Download / Upload)
+ * ============================================================ */
+function downloadFlow(flowId, flowName) {
+    Swal.fire({ title: 'Preparing Download...', didOpen: () => Swal.showLoading() });
+    fetch('../api/chatbot/get-flow.php?id=' + encodeURIComponent(flowId))
+        .then(r => r.json())
+        .then(res => {
+            if (res.success && res.flow) {
+                Swal.close();
+                const exportData = {
+                    name: res.flow_name || flowName,
+                    flow: res.flow
+                };
+                const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute('href', dataStr);
+                const safeName = (exportData.name || 'flow').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                downloadAnchorNode.setAttribute('download', safeName + '_wapi_flow.json');
+                document.body.appendChild(downloadAnchorNode); 
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Could not load flow for download.' });
+            }
+        })
+        .catch(() => Swal.fire('Error', 'Connection failed.', 'error'));
+}
+
+function uploadFlowJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    event.target.value = ''; // Reset input to allow re-upload
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Validate JSON format
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid JSON structure');
+            }
+
+            let flowJson = null;
+            let defaultName = 'Imported Flow ' + Math.floor(Math.random() * 1000);
+
+            if (data.flow && data.flow.drawflow) {
+                flowJson = data.flow;
+                if (data.name) defaultName = data.name + ' (Import)';
+            } else if (data.drawflow) {
+                flowJson = data;
+            } else {
+                throw new Error('JSON is missing drawflow structure');
+            }
+
+            Swal.fire({
+                title: 'Import Flow',
+                text: 'Enter a name for this imported flow:',
+                input: 'text',
+                inputValue: defaultName,
+                showCancelButton: true,
+                confirmButtonText: '<i class=\"bi bi-cloud-upload\"></i> Upload & Save',
+                confirmButtonColor: '#25d366'
+            }).then((result) => {
+                if (result.isConfirmed && result.value.trim() !== '') {
+                    const finalName = result.value.trim();
+                    
+                    Swal.fire({ title: 'Uploading...', didOpen: () => Swal.showLoading() });
+                    
+                    fetch('../api/chatbot/save-flow.php', {
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: finalName, flow: flowJson })
+                    })
+                    .then(res => res.json())
+                    .then(apiRes => {
+                        if (apiRes.success) {
+                            Swal.fire({ icon: 'success', title: 'Successfully Imported!', text: finalName + ' is now available in your flows.', timer: 2000, showConfirmButton: false });
+                            loadFlowsList(); // Automatically reload the panel to show newly imported flow
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Failed to Import', text: apiRes.message || 'Unknown error occurred.' });
+                        }
+                    })
+                    .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Network connection failed.' }));
+                }
+            });
+
+        } catch (error) {
+            console.error('Flow Import Error:', error);
+            Swal.fire({ icon: 'error', title: 'Invalid File', text: 'The uploaded file is not a valid WAPI Flow JSON.' });
+        }
+    };
+    reader.readAsText(file);
 }

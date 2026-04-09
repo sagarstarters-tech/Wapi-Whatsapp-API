@@ -148,11 +148,15 @@ include __DIR__ . '/../includes/header.php';
         </button>
     </div>
 
-    <!-- New Flow Button -->
-    <div style="padding: 14px 18px; border-bottom: 1px solid #f0f0f0; background: #f8f9ff; flex-shrink: 0;">
-        <button onclick="newFlow()" class="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-2" style="font-weight: 500; padding: 9px;">
+    <!-- New Flow & Upload Buttons -->
+    <div style="padding: 14px 18px; border-bottom: 1px solid #f0f0f0; background: #f8f9ff; flex-shrink: 0; display: flex; gap: 10px;">
+        <button onclick="newFlow()" class="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2" style="font-weight: 500; padding: 9px;">
             <i class="bi bi-plus-circle-fill"></i> Create New Flow
         </button>
+        <button onclick="document.getElementById('uploadFlowInput').click()" class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center gap-2" style="font-weight: 500; padding: 9px;" title="Upload JSON Flow">
+            <i class="bi bi-upload"></i> Upload
+        </button>
+        <input type="file" id="uploadFlowInput" accept=".json" style="display:none;" onchange="uploadFlowJSON(event)">
     </div>
 
     <!-- Flows List -->
