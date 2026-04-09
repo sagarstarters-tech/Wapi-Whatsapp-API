@@ -369,8 +369,7 @@ include __DIR__ . '/../includes/header.php';
 
 <!-- QR Session JavaScript -->
 <script>
-const QR_SERVICE_URL = 'http://127.0.0.1:3001';
-const USER_ID = <?= (int)$userId ?>;
+const QR_API = '../api/whatsapp-qr.php';
 let qrPollTimer = null;
 
 async function startQrSession() {
@@ -385,8 +384,22 @@ async function startQrSession() {
     statusEl.innerHTML = '';
 
     try {
-        const res = await fetch(`${QR_SERVICE_URL}/session/start?userId=${USER_ID}`);
+        const res = await fetch(QR_API + '?action=start', { method: 'POST' });
         const data = await res.json();
+
+        if (data.service_down) {
+            display.innerHTML = `
+                <div class="alert alert-danger text-start" style="border-radius:12px;">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                    <strong>QR Service is not running!</strong><br>
+                    <small>Start it in terminal: <code>node services/whatsapp-qr/server.js</code></small>
+                    <p class="mt-2 mb-0 text-muted" style="font-size:0.85rem;"><i class="bi bi-bug me-1"></i> ${data.error || 'Unknown error'}</p>
+                </div>
+                <button class="btn btn-success btn-lg px-5 py-3 mt-3" onclick="startQrSession()" style="border-radius:12px; font-weight:600;">
+                    <i class="bi bi-arrow-repeat me-2"></i> Retry
+                </button>`;
+            return;
+        }
 
         if (data.status === 'connected') {
             showConnectedState(data.info);
@@ -397,12 +410,9 @@ async function startQrSession() {
         startQrPolling();
 
     } catch (err) {
-        // Direct fetch failed, Node is likely not running on the user's localhost port 3001
         display.innerHTML = `
-            <div class="alert alert-danger text-start" style="border-radius:12px;">
-                <i class="bi bi-exclamation-octagon-fill me-2"></i>
-                <strong>QR Service is not running!</strong><br>
-                <small>Start it in your local terminal: <code>node services/whatsapp-qr/server.js</code></small>
+            <div class="alert alert-danger" style="border-radius:12px;">
+                <i class="bi bi-wifi-off me-2"></i> Failed to connect to QR service.
             </div>
             <button class="btn btn-success btn-lg px-5 py-3 mt-3" onclick="startQrSession()" style="border-radius:12px; font-weight:600;">
                 <i class="bi bi-arrow-repeat me-2"></i> Retry
@@ -418,7 +428,7 @@ function startQrPolling() {
 
 async function pollQrCode() {
     try {
-        const res = await fetch(`${QR_SERVICE_URL}/session/qr/${USER_ID}`);
+        const res = await fetch(QR_API + '?action=qr');
         const data = await res.json();
         const display = document.getElementById('qrDisplay');
         const statusEl = document.getElementById('qrStatus');
@@ -426,7 +436,7 @@ async function pollQrCode() {
         if (data.status === 'connected') {
             stopPolling();
             // Fetch full status with info
-            const statusRes = await fetch(`${QR_SERVICE_URL}/session/status/${USER_ID}`);
+            const statusRes = await fetch(QR_API + '?action=status');
             const statusData = await statusRes.json();
             showConnectedState(statusData.info);
             return;
@@ -490,7 +500,7 @@ async function disconnectQrSession() {
     if (!confirm('Are you sure you want to disconnect this QR session?')) return;
 
     try {
-        await fetch(`${QR_SERVICE_URL}/session/disconnect?userId=${USER_ID}`);
+        await fetch(QR_API + '?action=disconnect', { method: 'POST' });
     } catch (e) {}
 
     document.getElementById('qrSection').style.display = 'block';
@@ -512,7 +522,7 @@ function stopPolling() {
 // Auto-check QR session status on tab switch
 document.getElementById('qrscan-tab')?.addEventListener('shown.bs.tab', async () => {
     try {
-        const res = await fetch(`${QR_SERVICE_URL}/session/status/${USER_ID}`);
+        const res = await fetch(QR_API + '?action=status');
         const data = await res.json();
         if (data.status === 'connected' && data.info) {
             showConnectedState(data.info);
