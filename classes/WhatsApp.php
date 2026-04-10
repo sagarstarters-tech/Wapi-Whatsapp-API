@@ -247,44 +247,118 @@ class WhatsApp {
      * Handle incoming message
      */
     private function handleIncomingMessage($msg, $phoneNumberId, $userId = null) {
-        $from = $msg['from'] ?? '';
-        $text = $msg['text']['body'] ?? '';
+        $from    = $msg['from'] ?? '';
         $msgType = $msg['type'] ?? 'text';
 
-        // Handle button clicks (interactive replies)
-        if ($msgType === 'interactive') {
-            if (isset($msg['interactive']['button_reply'])) {
-                $text = $msg['interactive']['button_reply']['title'] ?? '';
-            } elseif (isset($msg['interactive']['list_reply'])) {
-                $text = $msg['interactive']['list_reply']['title'] ?? '';
-            }
-        } elseif ($msgType === 'button') {
-            $btnText = $msg['button']['text'] ?? '';
-            if (!empty($text)) {
-                $text = $text . "\n[" . $btnText . "]";
-            } else {
-                $text = $btnText;
-            }
+        // Log raw payload for debugging OTP/unknown message types
+        $logDir = APP_ROOT . '/logs';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+        file_put_contents(
+            $logDir . '/incoming_messages.log',
+            '[' . date('Y-m-d H:i:s') . '] TYPE: ' . $msgType . ' | FROM: ' . $from . ' | RAW: ' . json_encode($msg) . "\n",
+            FILE_APPEND
+        );
+
+        // Extract text content based on message type
+        $text = '';
+        switch ($msgType) {
+            case 'text':
+                $text = $msg['text']['body'] ?? '';
+                break;
+
+            case 'button':
+                // OTP quick-reply / template button tap
+                $bodyText = $msg['text']['body'] ?? '';
+                $btnText  = $msg['button']['text'] ?? $msg['button']['payload'] ?? '';
+                if (!empty($bodyText) && !empty($btnText) && $bodyText !== $btnText) {
+                    $text = $bodyText . "\n[" . $btnText . "]";
+                } else {
+                    $text = !empty($bodyText) ? $bodyText : $btnText;
+                }
+                break;
+
+            case 'interactive':
+                if (isset($msg['interactive']['button_reply'])) {
+                    $text = $msg['interactive']['button_reply']['title'] ?? '';
+                } elseif (isset($msg['interactive']['list_reply'])) {
+                    $text = $msg['interactive']['list_reply']['title'] ?? '';
+                }
+                break;
+
+            case 'image':
+                $text = $msg['image']['caption'] ?? '[Image]';
+                break;
+
+            case 'video':
+                $text = $msg['video']['caption'] ?? '[Video]';
+                break;
+
+            case 'document':
+                $text = $msg['document']['caption'] ?? $msg['document']['filename'] ?? '[Document]';
+                break;
+
+            case 'audio':
+                $text = '[Audio message]';
+                break;
+
+            case 'voice':
+                $text = '[Voice message]';
+                break;
+
+            case 'sticker':
+                $text = '[Sticker]';
+                break;
+
+            case 'location':
+                $lat  = $msg['location']['latitude']  ?? '';
+                $lng  = $msg['location']['longitude'] ?? '';
+                $name = $msg['location']['name']      ?? '';
+                $text = '[Location' . (!empty($name) ? ': ' . $name : '') . ']'
+                      . (!empty($lat) ? " ({$lat}, {$lng})" : '');
+                break;
+
+            case 'contacts':
+                $names = [];
+                foreach ($msg['contacts'] ?? [] as $c) {
+                    $names[] = $c['name']['formatted_name'] ?? '';
+                }
+                $text = '[Contact: ' . implode(', ', array_filter($names)) . ']';
+                break;
+
+            case 'reaction':
+                $emoji = $msg['reaction']['emoji'] ?? '';
+                $text  = "[Reaction: {$emoji}]";
+                break;
+
+            default:
+                // Fallback: try common sub-fields, then dump raw
+                $text = $msg[$msgType]['body']    ??
+                        $msg[$msgType]['caption']  ??
+                        $msg[$msgType]['text']     ??
+                        '[' . strtoupper($msgType) . ' message]';
+                break;
         }
 
-        // Find user by phone_number_id
+        // Find user by phone_number_id if not provided
         if (!$userId) {
-            $account = $this->db->fetch("SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'", [$phoneNumberId]);
+            $account = $this->db->fetch(
+                "SELECT user_id FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'",
+                [$phoneNumberId]
+            );
             if (!$account) return;
             $userId = $account['user_id'];
         }
 
-        // Log incoming message
+        // Save incoming message
         $this->db->insert('messages', [
-            'user_id' => $userId,
+            'user_id'    => $userId,
             'message_id' => $msg['id'] ?? null,
-            'to_number' => $from,
-            'type' => $msgType,
-            'content' => $text,
-            'status' => 'delivered',
-            'direction' => 'inbound'
+            'to_number'  => $from,
+            'type'       => $msgType,
+            'content'    => $text,
+            'status'     => 'delivered',
+            'direction'  => 'inbound'
         ]);
-
     }
 
 
