@@ -256,12 +256,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($nodes as $nId => $nData) {
                         if (($nData['name'] ?? '') !== 'start') continue;
 
-                        $keywords = strtolower(trim($nData['data']['keywords'] ?? ''));
+                        $rawKeywords = strtolower(trim($nData['data']['keywords'] ?? ''));
                         
-                        // Default keywords if none set
-                        $keywordArr = !empty($keywords) 
-                            ? array_map('strtolower', array_map('trim', explode(',', $keywords)))
-                            : ['hi', 'hello', 'start', 'menu', 'hey', 'demo', 'helo', 'hai'];
+                        // Build and sanitize keyword array
+                        // Strip leading/trailing non-word characters (e.g. semicolons, commas, dots)
+                        // from each individual keyword after splitting on comma
+                        if (!empty($rawKeywords)) {
+                            $keywordArr = array_values(array_filter(
+                                array_map(function($kw) {
+                                    // trim whitespace, then strip leading/trailing non-alphanumeric chars
+                                    return preg_replace('/^[^a-z0-9\x{0080}-\x{FFFF}]+|[^a-z0-9\x{0080}-\x{FFFF}]+$/u', '', strtolower(trim($kw)));
+                                }, explode(',', $rawKeywords)),
+                                function($kw) { return $kw !== ''; }
+                            ));
+                        } else {
+                            $keywordArr = ['hi', 'hello', 'start', 'menu', 'hey', 'demo', 'helo', 'hai'];
+                        }
 
                         $matchType = $nData['data']['match'] ?? 'exact';
                         $isMatch = false;
@@ -274,8 +284,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                             }
                         } else {
-                            if (in_array($textBody, $keywordArr)) {
-                                $isMatch = true;
+                            // Exact match: incoming text must equal one of the keywords exactly
+                            $isMatch = in_array($textBody, $keywordArr, true);
+                            if (!$isMatch) {
+                                file_put_contents(__DIR__ . '/../logs/webhook_root.log',
+                                    "[" . date('H:i:s') . "] EXACT MATCH MISS: textBody='{$textBody}' vs keywords=[" . implode(', ', $keywordArr) . "]\n",
+                                    FILE_APPEND
+                                );
                             }
                         }
 
