@@ -90,7 +90,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Direction</th><th>To / From</th><th>Type</th><th>Content</th><th>Status</th><th>Time</th></tr></thead>
+                    <thead><tr><th>Direction</th><th>To / From</th><th>Type</th><th>Content</th><th>Status</th><th>Time</th><th>Action</th></tr></thead>
                     <tbody>
                         <?php if (empty($messages)): ?>
                         <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-chat-dots" style="font-size: 2rem;"></i><br>No messages found</td></tr>
@@ -112,6 +112,20 @@ include __DIR__ . '/../includes/header.php';
                             <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem;"><?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?></td>
                             <td><span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span></td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap;"><?= timeAgo($msg['created_at']); ?></td>
+                            <td>
+                                <button class="btn btn-sm btn-light-primary" onclick="viewMessage(<?= htmlspecialchars(json_encode([
+                                    'id' => $msg['id'],
+                                    'direction' => $msg['direction'],
+                                    'to' => $msg['to_number'],
+                                    'name' => $msg['contact_name'] ?? $msg['to_number'],
+                                    'type' => ucfirst($msg['type']),
+                                    'status' => ucfirst($msg['status']),
+                                    'time' => date('d M Y, H:i:s', strtotime($msg['created_at'])),
+                                    'content' => $msg['content']
+                                ])); ?>)" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
                         </tr>
                         <?php endforeach; endif; ?>
                     </tbody>
@@ -121,5 +135,85 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </main>
 </div>
+
+<!-- Message Detail Modal -->
+<div class="modal fade" id="messageDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" style="color: var(--primary);">Message Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded-4 bg-light">
+                    <div id="modalIcon" class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 1.25rem;"></div>
+                    <div>
+                        <div id="modalTarget" class="fw-bold mb-0"></div>
+                        <div id="modalTime" class="text-muted small"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="text-muted small fw-bold text-uppercase mb-2 d-block" style="letter-spacing: 0.5px;">Message Content</label>
+                    <div id="modalContent" class="p-3 rounded-3 bg-white border" style="font-size: 0.95rem; white-space: pre-wrap; line-height: 1.6;"></div>
+                </div>
+
+                <div class="row g-3 mt-2">
+                    <div class="col-6">
+                        <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Type</label>
+                        <span id="modalType" class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"></span>
+                    </div>
+                    <div class="col-6">
+                        <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Status</label>
+                        <span id="modalStatus" class="status-badge"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light w-100" style="border-radius: 10px;" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-light-primary {
+        background: rgba(108, 99, 255, 0.1);
+        color: var(--primary);
+    }
+    .btn-light-primary:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+</style>
+
+<script>
+    function viewMessage(data) {
+        const modal = new bootstrap.Modal(document.getElementById('messageDetailModal'));
+        
+        // Populate modal data
+        document.getElementById('modalTarget').innerText = data.name;
+        document.getElementById('modalTime').innerText = data.time;
+        document.getElementById('modalContent').innerText = data.content;
+        document.getElementById('modalType').innerText = data.type;
+        
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.innerText = data.status;
+        statusEl.className = 'status-badge status-' + data.status.toLowerCase();
+        
+        const iconEl = document.getElementById('modalIcon');
+        if (data.direction === 'inbound') {
+            iconEl.innerHTML = '<i class="bi bi-arrow-down-left"></i>';
+            iconEl.style.background = 'rgba(16, 185, 129, 0.1)';
+            iconEl.style.color = 'var(--success)';
+        } else {
+            iconEl.innerHTML = '<i class="bi bi-arrow-up-right"></i>';
+            iconEl.style.background = 'rgba(59, 130, 246, 0.1)';
+            iconEl.style.color = 'var(--info)';
+        }
+
+        modal.show();
+    }
+</script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
