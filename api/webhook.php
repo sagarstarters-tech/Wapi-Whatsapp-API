@@ -168,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             //    Works for text messages; non-text types get empty string
             // -----------------------------------------------
             $textBody = '';
-            if ($type === 'text') {
+            if ($type === 'text' || $type === 'template') {
                 $textBody = strtolower(trim($msg['text']['body'] ?? ''));
             } elseif ($type === 'image') {
                 $textBody = strtolower(trim($msg['image']['caption'] ?? ''));
@@ -177,7 +177,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($type === 'document') {
                 $textBody = strtolower(trim($msg['document']['caption'] ?? ''));
             } elseif ($type === 'button') {
-                $textBody = strtolower(trim($msg['button']['text'] ?? ''));
+                $btnText = strtolower(trim($msg['button']['text'] ?? ''));
+                $bodyText = strtolower(trim($msg['text']['body'] ?? ''));
+                $textBody = !empty($bodyText) ? $bodyText . ' ' . $btnText : $btnText;
             } elseif ($type === 'interactive') {
                 if (isset($msg['interactive']['button_reply'])) {
                     $textBody = strtolower(trim($msg['interactive']['button_reply']['title'] ?? ''));

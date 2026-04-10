@@ -259,7 +259,12 @@ class WhatsApp {
                 $text = $msg['interactive']['list_reply']['title'] ?? '';
             }
         } elseif ($msgType === 'button') {
-            $text = $msg['button']['text'] ?? '';
+            $btnText = $msg['button']['text'] ?? '';
+            if (!empty($text)) {
+                $text = $text . "\n[" . $btnText . "]";
+            } else {
+                $text = $btnText;
+            }
         }
 
         // Find user by phone_number_id
