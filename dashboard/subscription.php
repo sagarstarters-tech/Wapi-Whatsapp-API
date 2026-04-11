@@ -60,17 +60,17 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <?php endif; ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
-            <h5 class="fw-bold mb-0"><?= $currentSub ? 'Upgrade Plan' : 'Choose a Plan'; ?></h5>
+        <div class="mb-4 text-center">
+            <h5 class="fw-bold mb-3"><?= $currentSub ? 'Upgrade Plan' : 'Choose a Plan'; ?></h5>
             
             <!-- Pricing Toggle -->
-            <div class="pricing-toggle" style="background: var(--bg-secondary); padding: 5px; border-radius: 50px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
-                <span class="active" id="monthlyLabel" style="font-size: 0.875rem; font-weight: 600; padding: 5px 15px; border-radius: 20px;">Monthly</span>
-                <div class="toggle-switch" id="pricingToggle" style="width: 40px; height: 20px; background: var(--primary); border-radius: 20px; position: relative;">
-                    <div class="dot" style="width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: all 0.3s ease;"></div>
+            <div class="pricing-toggle" style="background: var(--bg-secondary); padding: 8px; border-radius: 50px; display: inline-flex; align-items: center; gap: 15px; cursor: pointer; border: 1px solid rgba(0,0,0,0.05);">
+                <span class="active" id="monthlyLabel" style="font-size: 1rem; font-weight: 800; padding: 5px 20px; border-radius: 20px;">Monthly</span>
+                <div class="toggle-switch" id="pricingToggle" style="width: 50px; height: 26px; background: var(--primary); border-radius: 20px; position: relative;">
+                    <div class="dot" style="width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 4px; left: 4px; transition: all 0.3s ease;"></div>
                 </div>
-                <span id="yearlyLabel" style="font-size: 0.875rem; font-weight: 600; padding: 5px 15px; border-radius: 20px; color: var(--text-muted);">Yearly</span>
-                <span class="badge bg-success-soft text-success" style="font-size: 0.75rem; background: #e6f7ef;">Save 17%</span>
+                <span id="yearlyLabel" style="font-size: 1rem; font-weight: 800; padding: 5px 20px; border-radius: 20px; color: var(--text-muted);">Yearly</span>
+                <span class="badge bg-success-soft text-success" style="font-size: 0.8rem; background: #e6f7ef; padding: 6px 12px; border-radius: 10px; font-weight: 700;">Save 17%</span>
             </div>
         </div>
 
@@ -209,7 +209,7 @@ document.getElementById('pricingToggle').addEventListener('click', function() {
     
     if (billingCycle === 'monthly') {
         billingCycle = 'yearly';
-        dot.style.left = '23px';
+        dot.style.left = '28px';
         yearlyLabel.classList.add('active');
         yearlyLabel.style.color = 'var(--text-primary)';
         monthlyLabel.classList.remove('active');
@@ -217,7 +217,7 @@ document.getElementById('pricingToggle').addEventListener('click', function() {
         updatePrices('yearly');
     } else {
         billingCycle = 'monthly';
-        dot.style.left = '3px';
+        dot.style.left = '4px';
         monthlyLabel.classList.add('active');
         monthlyLabel.style.color = 'var(--text-primary)';
         yearlyLabel.classList.remove('active');
