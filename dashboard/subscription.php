@@ -60,8 +60,20 @@ include __DIR__ . '/../includes/header.php';
         </div>
         <?php endif; ?>
 
-        <!-- Available Plans -->
-        <h5 class="fw-bold mb-3"><?= $currentSub ? 'Upgrade Plan' : 'Choose a Plan'; ?></h5>
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+            <h5 class="fw-bold mb-0"><?= $currentSub ? 'Upgrade Plan' : 'Choose a Plan'; ?></h5>
+            
+            <!-- Pricing Toggle -->
+            <div class="pricing-toggle" style="background: var(--bg-secondary); padding: 5px; border-radius: 50px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
+                <span class="active" id="monthlyLabel" style="font-size: 0.875rem; font-weight: 600; padding: 5px 15px; border-radius: 20px;">Monthly</span>
+                <div class="toggle-switch" id="pricingToggle" style="width: 40px; height: 20px; background: var(--primary); border-radius: 20px; position: relative;">
+                    <div class="dot" style="width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: all 0.3s ease;"></div>
+                </div>
+                <span id="yearlyLabel" style="font-size: 0.875rem; font-weight: 600; padding: 5px 15px; border-radius: 20px; color: var(--text-muted);">Yearly</span>
+                <span class="badge bg-success-soft text-success" style="font-size: 0.75rem; background: #e6f7ef;">Save 17%</span>
+            </div>
+        </div>
+
         <div class="row g-4 mb-4">
             <?php foreach ($plans as $plan): 
                 $planFeatures = [];
@@ -82,9 +94,13 @@ include __DIR__ . '/../includes/header.php';
                     <div class="fw-bold mb-1" style="color: <?= e($plan['badge_color']); ?>; font-size: 1.125rem;"><?= e($plan['name']); ?></div>
                     <p class="text-muted mb-3" style="font-size: 0.8125rem;"><?= e($plan['description']); ?></p>
                     
-                    <div class="mb-3">
-                        <span class="fw-bold" style="font-size: 1.75rem;"><?= formatCurrency($plan['monthly_price']); ?></span>
-                        <span class="text-muted">/month</span>
+                    <div class="mb-3 pricing-amount">
+                        <span class="fw-bold price-value" style="font-size: 1.75rem;" 
+                              data-monthly="<?= e($plan['monthly_price']); ?>" 
+                              data-yearly="<?= e($plan['yearly_price']); ?>">
+                            <?= formatCurrency($plan['monthly_price']); ?>
+                        </span>
+                        <span class="text-muted period-label">/month</span>
                     </div>
 
                     <ul class="pricing-features" style="margin-bottom: 1.5rem;">
@@ -136,11 +152,15 @@ include __DIR__ . '/../includes/header.php';
                         <button class="btn btn-outline-primary w-100" onclick="activateFreePlan(<?= $plan['id']; ?>)">Activate</button>
                     <?php else: ?>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary w-100" onclick="initPayment(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= str_replace(',', '', (string)$plan['monthly_price']); ?>)">
+                            <button class="btn btn-primary w-100 btn-razorpay" 
+                                    data-plan-id="<?= $plan['id']; ?>" 
+                                    data-plan-name="<?= e($plan['name']); ?>">
                                 <i class="bi bi-credit-card"></i> Pay via Razorpay
                             </button>
                             <?php if ($settings->get('payment_method_manual_enabled') == '1'): ?>
-                            <button class="btn btn-outline-success w-100" onclick="initManualUPI(<?= $plan['id']; ?>, '<?= e($plan['name']); ?>', <?= str_replace(',', '', (string)$plan['monthly_price']); ?>)">
+                            <button class="btn btn-outline-success w-100 btn-manual-upi" 
+                                    data-plan-id="<?= $plan['id']; ?>" 
+                                    data-plan-name="<?= e($plan['name']); ?>">
                                 <i class="bi bi-phone"></i> Pay via UPI (PhonePe/GPay)
                             </button>
                             <?php endif; ?>
@@ -179,6 +199,68 @@ include __DIR__ . '/../includes/header.php';
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+// Pricing Toggle Logic
+let billingCycle = 'monthly';
+
+document.getElementById('pricingToggle').addEventListener('click', function() {
+    const dot = this.querySelector('.dot');
+    const monthlyLabel = document.getElementById('monthlyLabel');
+    const yearlyLabel = document.getElementById('yearlyLabel');
+    
+    if (billingCycle === 'monthly') {
+        billingCycle = 'yearly';
+        dot.style.left = '23px';
+        yearlyLabel.classList.add('active');
+        yearlyLabel.style.color = 'var(--text-primary)';
+        monthlyLabel.classList.remove('active');
+        monthlyLabel.style.color = 'var(--text-muted)';
+        updatePrices('yearly');
+    } else {
+        billingCycle = 'monthly';
+        dot.style.left = '3px';
+        monthlyLabel.classList.add('active');
+        monthlyLabel.style.color = 'var(--text-primary)';
+        yearlyLabel.classList.remove('active');
+        yearlyLabel.style.color = 'var(--text-muted)';
+        updatePrices('monthly');
+    }
+});
+
+function updatePrices(period) {
+    document.querySelectorAll('.price-value').forEach(el => {
+        const val = period === 'monthly' ? el.getAttribute('data-monthly') : el.getAttribute('data-yearly');
+        el.innerText = '₹' + parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    });
+    document.querySelectorAll('.period-label').forEach(el => {
+        el.innerText = period === 'monthly' ? '/month' : '/year';
+    });
+}
+
+// Payment Click Handlers
+document.querySelectorAll('.btn-razorpay').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const planId = this.getAttribute('data-plan-id');
+        const planName = this.getAttribute('data-plan-name');
+        const card = this.closest('.pricing-card');
+        const priceEl = card.querySelector('.price-value');
+        const amount = billingCycle === 'monthly' ? priceEl.getAttribute('data-monthly') : priceEl.getAttribute('data-yearly');
+        
+        initPayment(planId, planName, amount);
+    });
+});
+
+document.querySelectorAll('.btn-manual-upi').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const planId = this.getAttribute('data-plan-id');
+        const planName = this.getAttribute('data-plan-name');
+        const card = this.closest('.pricing-card');
+        const priceEl = card.querySelector('.price-value');
+        const amount = billingCycle === 'monthly' ? priceEl.getAttribute('data-monthly') : priceEl.getAttribute('data-yearly');
+        
+        initManualUPI(planId, planName, amount);
+    });
+});
+
 function initPayment(planId, planName, amount) {
     const razorpayKey = '<?= e($settings->get('razorpay_key_id', '')); ?>';
     if (!razorpayKey) {
@@ -188,13 +270,13 @@ function initPayment(planId, planName, amount) {
 
     const options = {
         key: razorpayKey,
-        amount: amount * 100, // Razorpay takes amount in paise
+        amount: Math.round(amount * 100), // Razorpay takes amount in paise
         currency: 'INR',
         name: '<?= e($settings->get('site_name', 'WAPI')); ?>',
-        description: planName + ' Plan Subscription',
+        description: planName + ' Plan (' + billingCycle + ') Subscription',
         handler: function(response) {
             // Verify payment on server
-            window.location.href = '<?= baseUrl('api/verify-payment.php'); ?>?payment_id=' + response.razorpay_payment_id + '&plan_id=' + planId;
+            window.location.href = '<?= baseUrl('api/verify-payment.php'); ?>?payment_id=' + response.razorpay_payment_id + '&plan_id=' + planId + '&cycle=' + billingCycle;
         },
         prefill: {
             name: '<?= e($_SESSION['user_name'] ?? ''); ?>',
@@ -216,7 +298,7 @@ function initManualUPI(planId, planName, amount) {
         return;
     }
 
-    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=Plan_${planName}`;
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=Plan_${planName}_${billingCycle}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
     
     // Set details in modal
@@ -225,6 +307,7 @@ function initManualUPI(planId, planName, amount) {
     document.getElementById('manualUpiAmount').innerText = '₹' + amount;
     document.getElementById('manualUpiQr').src = qrUrl;
     document.getElementById('manualUpiPlanId').value = planId;
+    document.getElementById('manualUpiCycle').value = billingCycle;
     
     // Deep link for mobile
     document.getElementById('upiDeepLink').href = upiLink;
@@ -269,6 +352,7 @@ function activateFreePlan(planId) {
                 <form action="<?= baseUrl('api/submit-utr.php'); ?>" method="POST">
                     <?= CSRF::tokenField(); ?>
                     <input type="hidden" name="plan_id" id="manualUpiPlanId">
+                    <input type="hidden" name="billing_cycle" id="manualUpiCycle" value="monthly">
                     <div class="text-start mb-3">
                         <label class="form-label fw-bold">Transaction ID (UTR/Reference No.)</label>
                         <input type="text" name="utr" class="form-control" placeholder="Enter 12-digit UTR No." required pattern="[0-9A-Za-z]{8,}">
