@@ -246,8 +246,8 @@ include __DIR__ . '/includes/header.php';
                                 $parts = explode('|||', $item);
                                 if (count($parts) === 2) {
                                     // Avoid duplicating features already added above
-                                    $ftLower = strtolower(trim($parts[0]));
-                                    if (!in_array($ftLower, ['chatbot', 'bulk messaging', 'webhook support'])) {
+                                    $ftLower = strtolower(trim(str_replace([' ', '-'], '', $parts[0])));
+                                    if (!in_array($ftLower, ['chatbot', 'bulkmessaging', 'webhooksupport'])) {
                                         $planFeatures[] = ['text' => $parts[0], 'included' => $parts[1]];
                                     }
                                 }

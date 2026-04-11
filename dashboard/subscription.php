@@ -98,13 +98,18 @@ include __DIR__ . '/../includes/header.php';
                             'priority_support' => 'Priority Support'
                         ];
 
-                        // Get normalized versions of existing features to prevent duplicates
-                        $existingFeatureTexts = array_map(function($f) { 
-                            return strtolower(trim($f['text'])); 
-                        }, $planFeatures);
+                        $coreLabelsLower = array_map(function($label) {
+                            return strtolower(trim(str_replace([' ', '-'], '', $label)));
+                        }, array_values($coreFeatures));
 
-                        // First show current plan features from DB (custom ones)
-                        foreach ($planFeatures as $pf): 
+                        // Filter out manual core features from the list to avoid conflicts with toggles
+                        $customFeatures = array_filter($planFeatures, function($pf) use ($coreLabelsLower) {
+                            $text = strtolower(trim(str_replace([' ', '-'], '', $pf['text'])));
+                            return !in_array($text, $coreLabelsLower);
+                        });
+
+                        // 1. Show non-core custom features first
+                        foreach ($customFeatures as $pf): 
                         ?>
                         <li class="<?= $pf['included'] == '0' ? 'disabled' : ''; ?>">
                             <i class="bi <?= $pf['included'] == '1' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'; ?>"></i>
@@ -113,9 +118,9 @@ include __DIR__ . '/../includes/header.php';
                         <?php endforeach; ?>
 
                         <?php 
-                        // Then show toggled features if they aren't already listed
+                        // 2. Show core toggled features from the plans table columns
                         foreach ($coreFeatures as $field => $label): 
-                            if (isset($plan[$field]) && !in_array(strtolower(trim($label)), $existingFeatureTexts)):
+                            if (isset($plan[$field])):
                                 $isIncluded = ($plan[$field] == '1');
                         ?>
                         <li class="<?= !$isIncluded ? 'disabled' : ''; ?>">
