@@ -88,12 +88,41 @@ include __DIR__ . '/../includes/header.php';
                     </div>
 
                     <ul class="pricing-features" style="margin-bottom: 1.5rem;">
-                        <?php foreach ($planFeatures as $pf): ?>
+                        <?php 
+                        // Core platform features mapping
+                        $coreFeatures = [
+                            'chatbot_enabled' => 'Chatbot',
+                            'bulk_messaging' => 'Bulk Messaging',
+                            'webhook_enabled' => 'Webhook Support',
+                            'analytics_enabled' => 'Advanced Analytics',
+                            'priority_support' => 'Priority Support'
+                        ];
+
+                        // Get normalized versions of existing features to prevent duplicates
+                        $existingFeatureTexts = array_map(function($f) { 
+                            return strtolower(trim($f['text'])); 
+                        }, $planFeatures);
+
+                        // First show current plan features from DB (custom ones)
+                        foreach ($planFeatures as $pf): 
+                        ?>
                         <li class="<?= $pf['included'] == '0' ? 'disabled' : ''; ?>">
                             <i class="bi <?= $pf['included'] == '1' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'; ?>"></i>
                             <?= e($pf['text']); ?>
                         </li>
                         <?php endforeach; ?>
+
+                        <?php 
+                        // Then show toggled features if they aren't already listed
+                        foreach ($coreFeatures as $field => $label): 
+                            if (isset($plan[$field]) && !in_array(strtolower(trim($label)), $existingFeatureTexts)):
+                                $isIncluded = ($plan[$field] == '1');
+                        ?>
+                        <li class="<?= !$isIncluded ? 'disabled' : ''; ?>">
+                            <i class="bi <?= $isIncluded ? 'bi-check-circle-fill' : 'bi-x-circle-fill'; ?>"></i>
+                            <?= e($label); ?>
+                        </li>
+                        <?php endif; endforeach; ?>
                     </ul>
 
                     <?php if ($isCurrentPlan): ?>
