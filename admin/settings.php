@@ -17,22 +17,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $group = sanitize($_POST['group'] ?? 'general');
     
     // Handle file uploads (logo, favicon)
+    $uploadErrors = [];
     foreach (['site_logo', 'site_favicon'] as $fileField) {
         if (isset($_FILES[$fileField]) && $_FILES[$fileField]['error'] === UPLOAD_ERR_OK) {
-            $result = uploadFile($_FILES[$fileField], 'settings', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+            $allowed = ($fileField === 'site_favicon') 
+                ? ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico'] 
+                : ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+                
+            $result = uploadFile($_FILES[$fileField], 'settings', $allowed);
             if ($result['success']) {
                 $settings->set($fileField, $result['path']);
+            } else {
+                $uploadErrors[] = $fileField . ": " . $result['message'];
             }
         }
     }
 
+    if (!empty($uploadErrors)) {
+        setFlash('danger', 'Some files failed to upload: ' . implode(', ', $uploadErrors));
+    } else {
+        setFlash('success', 'Settings saved successfully!');
+    }
+    
     // Save text settings
     $textFields = $_POST['settings'] ?? [];
     foreach ($textFields as $key => $value) {
         $settings->set(sanitize($key), $value);
     }
 
-    setFlash('success', 'Settings saved successfully!');
     redirect('admin/settings.php?tab=' . $group);
 }
 
@@ -112,12 +124,15 @@ include __DIR__ . '/../includes/header.php';
                             <label class="form-label">Site Logo</label>
                             <input type="file" name="site_logo" class="form-control" accept="image/*">
                             <?php if (!empty($allSettings['site_logo'])): ?>
-                            <small class="text-muted">Current: <?= e($allSettings['site_logo']); ?></small>
+                            <small class="text-muted d-block mt-1">Current: <?= e($allSettings['site_logo']); ?></small>
                             <?php endif; ?>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Favicon</label>
                             <input type="file" name="site_favicon" class="form-control" accept="image/*">
+                            <?php if (!empty($allSettings['site_favicon'])): ?>
+                            <small class="text-muted d-block mt-1">Current: <?= e($allSettings['site_favicon']); ?></small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Footer Text</label>

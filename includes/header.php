@@ -27,7 +27,12 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <title><?= e(($pageTitle ?? 'Home') . ' | ' . $siteName); ?></title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="<?= asset('assets/images/favicon.png'); ?>">
+    <?php 
+    $siteFavicon = $settings->get('site_favicon', 'assets/images/favicon.png');
+    $siteFaviconPath = str_replace('/wapi/', '', $siteFavicon);
+    $siteFaviconUrl = (strpos($siteFaviconPath, 'http') === 0) ? $siteFaviconPath : baseUrl($siteFaviconPath);
+    ?>
+    <link rel="icon" href="<?= e($siteFaviconUrl); ?>">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
