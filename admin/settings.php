@@ -84,6 +84,7 @@ include __DIR__ . '/../includes/header.php';
             <li><a class="nav-link <?= $activeTab === 'email' ? 'active' : ''; ?> btn-sm" href="?tab=email" style="border-radius: 8px;">Email / SMTP</a></li>
             <li><a class="nav-link <?= $activeTab === 'security' ? 'active' : ''; ?> btn-sm" href="?tab=security" style="border-radius: 8px;">Security</a></li>
             <li><a class="nav-link <?= $activeTab === 'widget' ? 'active' : ''; ?> btn-sm" href="?tab=widget" style="border-radius: 8px;">Chat Widget</a></li>
+            <li><a class="nav-link <?= $activeTab === 'social' ? 'active' : ''; ?> btn-sm" href="?tab=social" style="border-radius: 8px;">Social Links</a></li>
         </ul>
 
         <form method="POST" enctype="multipart/form-data">
@@ -256,6 +257,38 @@ include __DIR__ . '/../includes/header.php';
                     <div class="row g-4">
                         <div class="col-12"><label class="form-label">Meta Keywords</label><textarea name="settings[meta_keywords]" class="form-control" rows="3"><?= e($allSettings['meta_keywords'] ?? ''); ?></textarea></div>
                         <div class="col-12"><label class="form-label">Google Analytics ID</label><input type="text" name="settings[google_analytics_id]" class="form-control" value="<?= e($allSettings['google_analytics_id'] ?? ''); ?>" placeholder="G-XXXXXXXXXX"></div>
+                    </div>
+                <?php elseif ($activeTab === 'social'): ?>
+                    <h5 class="fw-bold mb-4">Social Media Links</h5>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-facebook me-2 text-primary"></i>Facebook URL</label>
+                            <input type="url" name="settings[social_facebook]" class="form-control" value="<?= e($allSettings['social_facebook'] ?? ''); ?>" placeholder="https://facebook.com/yourpage">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-twitter-x me-2 text-dark"></i>Twitter (X) URL</label>
+                            <input type="url" name="settings[social_twitter]" class="form-control" value="<?= e($allSettings['social_twitter'] ?? ''); ?>" placeholder="https://x.com/yourhandle">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-instagram me-2 text-danger"></i>Instagram URL</label>
+                            <input type="url" name="settings[social_instagram]" class="form-control" value="<?= e($allSettings['social_instagram'] ?? ''); ?>" placeholder="https://instagram.com/yourhandle">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-linkedin me-2 text-primary"></i>LinkedIn URL</label>
+                            <input type="url" name="settings[social_linkedin]" class="form-control" value="<?= e($allSettings['social_linkedin'] ?? ''); ?>" placeholder="https://linkedin.com/company/yourpage">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-github me-2 text-dark"></i>GitHub URL</label>
+                            <input type="url" name="settings[social_github]" class="form-control" value="<?= e($allSettings['social_github'] ?? ''); ?>" placeholder="https://github.com/yourhandle">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-youtube me-2 text-danger"></i>YouTube URL</label>
+                            <input type="url" name="settings[social_youtube]" class="form-control" value="<?= e($allSettings['social_youtube'] ?? ''); ?>" placeholder="https://youtube.com/@yourchannel">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-telegram me-2 text-info"></i>Telegram URL</label>
+                            <input type="url" name="settings[social_telegram]" class="form-control" value="<?= e($allSettings['social_telegram'] ?? ''); ?>" placeholder="https://t.me/yourchannel">
+                        </div>
                     </div>
                 <?php endif; ?>
 

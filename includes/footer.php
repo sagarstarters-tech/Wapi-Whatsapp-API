@@ -24,10 +24,27 @@ $contactPhone = $settings->get('contact_phone', '');
                         <?= e($settings->get('site_tagline', 'Powerful WhatsApp Business API for your business')); ?>
                     </p>
                     <div class="footer-social">
-                        <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
-                        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-                        <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
-                        <a href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+                        <?php if ($settings->get('social_facebook')): ?>
+                            <a href="<?= e($settings->get('social_facebook')); ?>" target="_blank" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                        <?php endif; ?>
+                        <?php if ($settings->get('social_twitter')): ?>
+                            <a href="<?= e($settings->get('social_twitter')); ?>" target="_blank" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                        <?php endif; ?>
+                        <?php if ($settings->get('social_instagram')): ?>
+                            <a href="<?= e($settings->get('social_instagram')); ?>" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                        <?php endif; ?>
+                        <?php if ($settings->get('social_linkedin')): ?>
+                            <a href="<?= e($settings->get('social_linkedin')); ?>" target="_blank" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <?php endif; ?>
+                        <?php if ($settings->get('social_github')): ?>
+                            <a href="<?= e($settings->get('social_github')); ?>" target="_blank" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                        <?php endif; ?>
+                        <?php if ($settings->get('social_youtube')): ?>
+                            <a href="<?= e($settings->get('social_youtube')); ?>" target="_blank" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+                        <?php endif; ?>
+                        <?php if ($settings->get('social_telegram')): ?>
+                            <a href="<?= e($settings->get('social_telegram')); ?>" target="_blank" aria-label="Telegram"><i class="bi bi-telegram"></i></a>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="col-lg-2 col-md-6">
