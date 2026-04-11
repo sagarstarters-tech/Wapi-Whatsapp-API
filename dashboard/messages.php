@@ -38,6 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $content = $_POST['content'] ?? '';
     $mediaUrl = sanitize($_POST['media_url'] ?? '');
 
+    // Safely handle image upload if provided
+    if ($type === 'image' && isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
+        $upload = uploadFile($_FILES['image_file'], 'messages', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+        if ($upload['success']) {
+            $mediaUrl = baseUrl($upload['path']);
+        } else {
+            if (isAjax()) jsonResponse(['success' => false, 'message' => 'Image upload failed: ' . $upload['message']]);
+            setFlash('danger', 'Image upload failed: ' . $upload['message']);
+            redirect('dashboard/messages.php');
+        }
+    }
+
     if (isAjax()) {
         try {
             $wa = new WhatsApp();
@@ -48,6 +60,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 case 'image': $result = $wa->sendImage($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, $content); break;
                 case 'video': $result = $wa->sendVideo($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, $content); break;
                 case 'document': $result = $wa->sendDocument($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $mediaUrl, sanitize($_POST['filename'] ?? ''), $content); break;
+                case 'template':
+                    $templateId = sanitizeInt($_POST['template_id'] ?? 0);
+                    $tpl = $db->fetch("SELECT name, language FROM templates WHERE id = ? AND user_id = ?", [$templateId, $userId]);
+                    if ($tpl) {
+                        $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $tpl['name'], $tpl['language']);
+                    } else {
+                        $result = ['success' => false, 'message' => 'Invalid template selected.'];
+                    }
+                    break;
             }
 
             jsonResponse($result);
@@ -59,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get contacts for autocomplete
 $contacts = $db->fetchAll("SELECT id, name, phone FROM contacts WHERE user_id = ? AND is_active = 1 ORDER BY name ASC LIMIT 100", [$userId]);
+$templates = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
 
 $pageTitle = 'Send Message';
 $extraCss = [asset('assets/css/dashboard.css')];
@@ -87,7 +109,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="card-body p-4">
                         <div id="alertContainer"></div>
                         
-                        <form id="sendMessageForm" method="POST">
+                        <form id="sendMessageForm" method="POST" enctype="multipart/form-data">
                             <?= CSRF::tokenField(); ?>
                             
                             <div class="form-group">
@@ -110,12 +132,27 @@ include __DIR__ . '/../includes/header.php';
                                     <option value="image">🖼️ Image</option>
                                     <option value="video">🎬 Video</option>
                                     <option value="document">📄 Document</option>
+                                    <option value="template">📋 Template Message</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="templateGroup" style="display: none;">
+                                <label class="form-label">Select Template</label>
+                                <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
+                                    <option value="">-- Choose Template --</option>
+                                    <?php foreach ($templates as $tpl): ?>
+                                    <option value="<?= $tpl['id']; ?>" data-body="<?= e($tpl['body']); ?>"><?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)</option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
 
                             <div class="form-group" id="mediaUrlGroup" style="display: none;">
                                 <label class="form-label">Media URL</label>
                                 <input type="url" name="media_url" id="mediaUrl" class="form-control" placeholder="https://example.com/image.jpg">
+                                <div id="imageUploadGroup" style="display: none; margin-top: 10px;">
+                                    <label class="form-label small text-muted">Or Upload Image Instead</label>
+                                    <input type="file" name="image_file" id="imageFile" class="form-control" accept="image/*">
+                                </div>
                             </div>
 
                             <div class="form-group" id="filenameGroup" style="display: none;">
@@ -123,7 +160,7 @@ include __DIR__ . '/../includes/header.php';
                                 <input type="text" name="filename" class="form-control" placeholder="document.pdf">
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group" id="contentGroup">
                                 <label class="form-label">Message / Caption</label>
                                 <textarea name="content" id="msgContent" class="form-control" rows="5" placeholder="Type your message here..." required></textarea>
                                 <small class="text-muted"><span id="charCount">0</span>/4096 characters</small>
@@ -166,7 +203,25 @@ include __DIR__ . '/../includes/header.php';
 function toggleMediaField() {
     const type = document.getElementById('msgType').value;
     document.getElementById('mediaUrlGroup').style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
+    document.getElementById('imageUploadGroup').style.display = type === 'image' ? 'block' : 'none';
     document.getElementById('filenameGroup').style.display = type === 'document' ? 'block' : 'none';
+    document.getElementById('templateGroup').style.display = type === 'template' ? 'block' : 'none';
+    document.getElementById('contentGroup').style.display = type === 'template' ? 'none' : 'block';
+    
+    // Auto-update preview visibility
+    document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
+    document.getElementById('templateId').toggleAttribute('required', type === 'template');
+    updatePreview();
+}
+
+function updateTemplatePreview() {
+    const select = document.getElementById('templateId');
+    const option = select.options[select.selectedIndex];
+    if (option && option.value) {
+        const body = option.getAttribute('data-body');
+        document.getElementById('msgContent').value = body;
+        updatePreview();
+    }
 }
 
 // Character counter
