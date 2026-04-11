@@ -38,7 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             'email' => sanitizeEmail($_POST['email'] ?? ''),
             'company' => sanitize($_POST['company'] ?? ''),
             'tags' => sanitize($_POST['tags'] ?? ''),
-            'notes' => sanitize($_POST['notes'] ?? '')
+            'notes' => sanitize($_POST['notes'] ?? ''),
+            'status' => sanitize($_POST['status'] ?? 'Lead'),
+            'source' => sanitize($_POST['source'] ?? 'Direct'),
+            'estimated_value' => sanitizeFloat($_POST['estimated_value'] ?? 0)
         ];
 
         if ($action === 'edit' && !empty($_POST['contact_id'])) {
@@ -181,6 +184,19 @@ include __DIR__ . '/../includes/header.php';
                         <div class="col-md-6"><label class="form-label">Phone *</label><input type="text" name="phone" id="contactPhone" class="form-control" placeholder="+919876543210" required></div>
                         <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" id="contactEmail" class="form-control"></div>
                         <div class="col-md-6"><label class="form-label">Company</label><input type="text" name="company" id="contactCompany" class="form-control"></div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select name="status" id="contactStatus" class="form-control">
+                                <option value="Lead">Lead</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Qualified">Qualified</option>
+                                <option value="Proposal">Proposal</option>
+                                <option value="Won">Won</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6"><label class="form-label">Source</label><input type="text" name="source" id="contactSource" class="form-control" placeholder="Website, Ads, etc."></div>
+                        <div class="col-md-6"><label class="form-label">Est. Value (₹)</label><input type="number" name="estimated_value" id="contactValue" class="form-control" value="0"></div>
                         <div class="col-12"><label class="form-label">Tags</label><input type="text" name="tags" id="contactTags" class="form-control" placeholder="vip, customer, lead"></div>
                         <div class="col-12"><label class="form-label">Notes</label><textarea name="notes" id="contactNotes" class="form-control" rows="2"></textarea></div>
                     </div>
@@ -235,6 +251,9 @@ function editContact(c) {
     document.getElementById('contactCompany').value = c.company || '';
     document.getElementById('contactTags').value = c.tags || '';
     document.getElementById('contactNotes').value = c.notes || '';
+    document.getElementById('contactStatus').value = c.status || 'Lead';
+    document.getElementById('contactSource').value = c.source || 'Direct';
+    document.getElementById('contactValue').value = c.estimated_value || 0;
     new bootstrap.Modal(document.getElementById('contactModal')).show();
 }
 </script>

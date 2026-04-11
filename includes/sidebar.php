@@ -80,9 +80,14 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
             </a>
         </div>
 
-        <!-- Contacts -->
+        <!-- CRM & Contacts -->
         <div class="sidebar-section">
-            <div class="sidebar-section-title">Contacts</div>
+            <div class="sidebar-section-title">CRM & Contacts</div>
+            <a href="<?= baseUrl('dashboard/crm.php'); ?>" class="sidebar-link <?= $currentPage === 'crm' ? 'active' : ''; ?>">
+                <i class="bi bi-kanban-fill"></i>
+                <span>WhatsApp CRM</span>
+                <span class="badge rounded-pill bg-success ms-auto" style="font-size: 0.6rem;">PRO</span>
+            </a>
             <a href="<?= baseUrl('dashboard/contacts.php'); ?>" class="sidebar-link <?= $currentPage === 'contacts' ? 'active' : ''; ?>">
                 <i class="bi bi-people-fill"></i>
                 <span>Contacts</span>
