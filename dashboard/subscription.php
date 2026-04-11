@@ -100,7 +100,7 @@ include __DIR__ . '/../includes/header.php';
                               data-yearly="<?= e($plan['yearly_price']); ?>">
                             <?= formatCurrency($plan['monthly_price']); ?>
                         </span>
-                        <span class="text-muted period-label">/month</span>
+                        <span class="text-muted period-label" style="font-size: 1.75rem;">/month</span>
                     </div>
 
                     <ul class="pricing-features" style="margin-bottom: 1.5rem;">
