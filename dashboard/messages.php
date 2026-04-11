@@ -106,7 +106,12 @@ include __DIR__ . '/../includes/header.php';
                 <h1 class="dash-title">Send Message</h1>
                 <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Send Message</span></div>
             </div>
-            <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+                <button type="button" class="btn btn-outline-success btn-sm" id="syncTemplatesBtn" onclick="syncTemplates()">
+                    <i class="bi bi-arrow-repeat"></i> Sync from Meta
+                </button>
+            </div>
         </div>
 
         <?php if (!$waAccount): ?>
@@ -147,12 +152,7 @@ include __DIR__ . '/../includes/header.php';
                             </div>
 
                             <div class="form-group" id="templateGroup" style="display: none;">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="form-label mb-0">Select Template</label>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="syncTemplatesBtn" onclick="syncTemplates()">
-                                        <i class="bi bi-arrow-repeat"></i> Sync from Meta
-                                    </button>
-                                </div>
+                                <label class="form-label">Select Template</label>
                                 <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
                                     <option value="">-- Choose Template --</option>
                                     <?php foreach ($templates as $tpl): ?>
@@ -334,6 +334,10 @@ document.getElementById('sendMessageForm').addEventListener('submit', async func
     }
     btn.innerHTML = '<i class="bi bi-send-fill"></i> Send Message';
     btn.disabled = false;
+});
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    toggleMediaField();
 });
 </script>
 
