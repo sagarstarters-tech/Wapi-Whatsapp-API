@@ -56,6 +56,13 @@ class Database {
     }
 
     /**
+     * Alias for query()
+     */
+    public function run($sql, $params = []) {
+        return $this->query($sql, $params);
+    }
+
+    /**
      * Fetch single row
      */
     public function fetch($sql, $params = []) {

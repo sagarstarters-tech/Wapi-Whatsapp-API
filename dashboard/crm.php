@@ -2,55 +2,56 @@
 /**
  * WAPI SaaS - WhatsApp CRM (Sales Pipeline)
  */
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/session.php';
-Auth::requireLogin();
+try {
+    require_once __DIR__ . '/../config/config.php';
+    require_once __DIR__ . '/../config/session.php';
+    Auth::requireLogin();
 
-$db = Database::getInstance();
-$userId = $_SESSION['user_id'];
+    $db = Database::getInstance();
+    $userId = $_SESSION['user_id'];
 
-$hideNav = true;
+    $hideNav = true;
 
-// Define CRM Stages
-$stages = [
-    'Lead' => ['color' => '#64748b', 'icon' => 'bi-person-plus'],
-    'Contacted' => ['color' => '#3b82f6', 'icon' => 'bi-chat-left-dots'],
-    'Qualified' => ['color' => '#8b5cf6', 'icon' => 'bi-check-circle'],
-    'Proposal' => ['color' => '#f59e0b', 'icon' => 'bi-file-earmark-text'],
-    'Won' => ['color' => '#10b981', 'icon' => 'bi-trophy']
-];
+    // Define CRM Stages
+    $stages = [
+        'Lead' => ['color' => '#64748b', 'icon' => 'bi-person-plus'],
+        'Contacted' => ['color' => '#3b82f6', 'icon' => 'bi-chat-left-dots'],
+        'Qualified' => ['color' => '#8b5cf6', 'icon' => 'bi-check-circle'],
+        'Proposal' => ['color' => '#f59e0b', 'icon' => 'bi-file-earmark-text'],
+        'Won' => ['color' => '#10b981', 'icon' => 'bi-trophy']
+    ];
 
-// Handle status update (move card)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
-    $action = $_POST['action'] ?? '';
-    if ($action === 'update_status' && !empty($_POST['contact_id']) && !empty($_POST['status'])) {
-        $db->update('contacts', [
-            'status' => sanitize($_POST['status'])
-        ], 'id = ? AND user_id = ?', [sanitizeInt($_POST['contact_id']), $userId]);
-        setFlash('success', 'Status updated.');
+    // Handle status update (move card)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
+        $action = $_POST['action'] ?? '';
+        if ($action === 'update_status' && !empty($_POST['contact_id']) && !empty($_POST['status'])) {
+            $db->update('contacts', [
+                'status' => sanitize($_POST['status'])
+            ], 'id = ? AND user_id = ?', [sanitizeInt($_POST['contact_id']), $userId]);
+            setFlash('success', 'Status updated.');
+        }
+        redirect('dashboard/crm.php');
     }
-    redirect('dashboard/crm.php');
-}
 
-// Get contacts grouped by status
-$allContacts = $db->fetchAll("SELECT id, name, phone, company, status, estimated_value, tags FROM contacts WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC", [$userId]);
+    // Get contacts grouped by status
+    $allContacts = $db->fetchAll("SELECT id, name, phone, company, status, estimated_value, tags FROM contacts WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC", [$userId]);
 
-$pipeline = [];
-foreach ($stages as $stage => $config) {
-    $pipeline[$stage] = [];
-}
-foreach ($allContacts as $c) {
-    $status = $c['status'] ?: 'Lead';
-    if (isset($pipeline[$status])) {
-        $pipeline[$status][] = $c;
-    } else {
-        $pipeline['Lead'][] = $c; // Fallback
+    $pipeline = [];
+    foreach ($stages as $stage => $config) {
+        $pipeline[$stage] = [];
     }
-}
+    foreach ($allContacts as $c) {
+        $status = $c['status'] ?: 'Lead';
+        if (isset($pipeline[$status])) {
+            $pipeline[$status][] = $c;
+        } else {
+            $pipeline['Lead'][] = $c; // Fallback
+        }
+    }
 
-$pageTitle = 'WhatsApp CRM';
-$extraCss = [asset('assets/css/dashboard.css')];
-include __DIR__ . '/../includes/header.php';
+    $pageTitle = 'WhatsApp CRM';
+    $extraCss = [asset('assets/css/dashboard.css')];
+    include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
@@ -211,13 +212,13 @@ include __DIR__ . '/../includes/header.php';
                     <?php else: ?>
                         <?php foreach ($contacts as $contact): ?>
                         <div class="kanban-card">
-                            <div class="kanban-card-title"><?= e($contact['name']); ?></div>
+                            <div class="kanban-card-title"><?= e($contact['name'] ?? 'Unknown'); ?></div>
                             <div class="kanban-card-subtitle">
-                                <i class="bi bi-building"></i> <?= e($contact['company'] ?: 'No Company'); ?><br>
-                                <i class="bi bi-whatsapp"></i> <?= e($contact['phone']); ?>
+                                <i class="bi bi-building"></i> <?= e(($contact['company'] ?? '') ?: 'No Company'); ?><br>
+                                <i class="bi bi-whatsapp"></i> <?= e($contact['phone'] ?? ''); ?>
                             </div>
                             
-                            <?php if ($contact['tags']): ?>
+                            <?php if (!empty($contact['tags'])): ?>
                             <div class="kanban-card-tags">
                                 <?php foreach (explode(',', $contact['tags']) as $tag): ?>
                                     <span class="kanban-card-tag"><?= e(trim($tag)); ?></span>
@@ -227,7 +228,7 @@ include __DIR__ . '/../includes/header.php';
 
                             <div class="kanban-card-footer">
                                 <div class="kanban-card-value">
-                                    ₹<?= number_format($contact['estimated_value'], 0); ?>
+                                    ₹<?= number_format((float)($contact['estimated_value'] ?? 0), 0); ?>
                                 </div>
                                 <div class="dropdown">
                                     <button class="btn btn-icon btn-sm dropdown-toggle" data-bs-toggle="dropdown">
@@ -263,4 +264,11 @@ include __DIR__ . '/../includes/header.php';
     </main>
 </div>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php 
+    include __DIR__ . '/../includes/footer.php'; 
+} catch (Throwable $e) {
+    error_log("CRM FATAL ERROR: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+    die("<h1>System Error</h1><p>Something went wrong. Please contact support.</p><!-- ERROR: " . e($e->getMessage()) . " -->");
+}
+?>
+
