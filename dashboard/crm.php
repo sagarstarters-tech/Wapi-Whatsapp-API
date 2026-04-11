@@ -268,7 +268,7 @@ try {
     include __DIR__ . '/../includes/footer.php'; 
 } catch (Throwable $e) {
     error_log("CRM FATAL ERROR: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
-    die("<h1>System Error</h1><p>Something went wrong. Please contact support.</p><!-- ERROR: " . e($e->getMessage()) . " -->");
+    die("<h1>System Error</h1><p>Error: " . htmlspecialchars($e->getMessage()) . "</p><p>File: " . htmlspecialchars($e->getFile()) . " on line " . $e->getLine() . "</p>");
 }
 ?>
 
