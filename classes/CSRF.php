@@ -35,12 +35,6 @@ class CSRF {
         }
 
         $valid = hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
-
-        // Regenerate token after validation
-        if ($valid) {
-            unset($_SESSION[CSRF_TOKEN_NAME]);
-        }
-
         return $valid;
     }
 

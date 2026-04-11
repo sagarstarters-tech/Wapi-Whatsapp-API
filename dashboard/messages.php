@@ -248,7 +248,7 @@ async function syncTemplates() {
 
     const formData = new FormData();
     formData.append('action', 'sync_templates');
-    formData.append('_csrf_token', '<?= CSRF::getToken(); ?>');
+    formData.append('_csrf_token', '<?= CSRF::generateToken(); ?>');
 
     try {
         const res = await fetch('', { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'} });
