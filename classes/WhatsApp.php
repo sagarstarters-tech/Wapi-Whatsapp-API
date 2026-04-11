@@ -102,16 +102,20 @@ class WhatsApp {
         $url = "{$this->apiUrl}/{$phoneNumberId}/messages";
 
         if (!$skipChecks) {
-            // Check subscription
-            $sub = $this->db->fetch("SELECT id FROM subscriptions WHERE user_id = ? AND status = 'active' AND expires_at > NOW() LIMIT 1", [$userId]);
-            if (!$sub) {
-                return ['success' => false, 'message' => 'Subscription expired or inactive. Please renew your plan.'];
-            }
+            // SUPER ADMIN BYPASS: Admins get free unlimited access
+            $userRole = $this->db->fetchColumn("SELECT role FROM users WHERE id = ?", [$userId]);
+            if ($userRole !== 'admin') {
+                // Check subscription
+                $sub = $this->db->fetch("SELECT id FROM subscriptions WHERE user_id = ? AND status = 'active' AND expires_at > NOW() LIMIT 1", [$userId]);
+                if (!$sub) {
+                    return ['success' => false, 'message' => 'Subscription expired or inactive. Please renew your plan.'];
+                }
 
-            // Check credits
-            $credits = $this->db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$userId]);
-            if ($credits && ($credits['total_credits'] - $credits['used_credits']) <= 0) {
-                return ['success' => false, 'message' => 'Insufficient credits. Please upgrade your plan.'];
+                // Check credits
+                $credits = $this->db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$userId]);
+                if ($credits && ($credits['total_credits'] - $credits['used_credits']) <= 0) {
+                    return ['success' => false, 'message' => 'Insufficient credits. Please upgrade your plan.'];
+                }
             }
         }
 
@@ -368,6 +372,10 @@ class WhatsApp {
      * Deduct credit for a message
      */
     private function deductCredit($userId, $messageId) {
+        // SUPER ADMIN BYPASS: Don't deduct from admin
+        $userRole = $this->db->fetchColumn("SELECT role FROM users WHERE id = ?", [$userId]);
+        if ($userRole === 'admin') return;
+
         $this->db->query("UPDATE credits SET used_credits = used_credits + 1 WHERE user_id = ?", [$userId]);
 
         $credits = $this->db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$userId]);

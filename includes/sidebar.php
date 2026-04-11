@@ -6,6 +6,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 $db = Database::getInstance();
 
 // Get user credit balance
+$isAdmin = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin');
 $credits = $db->fetch("SELECT total_credits, used_credits FROM credits WHERE user_id = ?", [$_SESSION['user_id']]);
 $creditBalance = $credits ? ($credits['total_credits'] - $credits['used_credits']) : 0;
 $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0", [$_SESSION['user_id']]);
@@ -24,7 +25,7 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
             <div>
                 <div class="fw-bold" style="font-size: 0.8125rem; line-height: 1.2;"><?= e($_SESSION['user_name'] ?? 'User'); ?></div>
                 <div style="font-size: 0.6875rem; color: var(--text-muted);">
-                    Credits: <span class="fw-bold text-primary"><?= number_format($creditBalance); ?></span>
+                    Credits: <span class="fw-bold text-primary"><?= $isAdmin ? 'Unlimited' : number_format($creditBalance); ?></span>
                 </div>
             </div>
         </div>

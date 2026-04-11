@@ -627,8 +627,11 @@ function logChatbotMessage($userId, $to, $type, $content, $apiResponse, $mediaUr
             'direction' => 'outbound'
         ]);
         
-        // Deduct from credits table
-        $db->query("UPDATE credits SET used_credits = used_credits + 1 WHERE user_id = ?", [$userId]);
+        // SUPER ADMIN BYPASS: Don't deduct from admin
+        $userRole = $db->fetchColumn("SELECT role FROM users WHERE id = ?", [$userId]);
+        if ($userRole !== 'admin') {
+            $db->query("UPDATE credits SET used_credits = used_credits + 1 WHERE user_id = ?", [$userId]);
+        }
         
         // Activity log
         $db->insert('activity_logs', [
