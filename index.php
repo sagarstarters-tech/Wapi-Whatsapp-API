@@ -233,12 +233,23 @@ include __DIR__ . '/includes/header.php';
 
                         <?php 
                         $planFeatures = [];
+                        
+                        // Add functional feature flags
+                        $planFeatures[] = ['text' => 'Chatbot', 'included' => $plan['chatbot_enabled']];
+                        $planFeatures[] = ['text' => 'Bulk Messaging', 'included' => $plan['bulk_messaging']];
+                        $planFeatures[] = ['text' => 'Webhook Support', 'included' => $plan['webhook_enabled']];
+
+                        // Add custom features from features_list
                         if (!empty($plan['features_list'])) {
                             $featureItems = explode(';;;', $plan['features_list']);
                             foreach ($featureItems as $item) {
                                 $parts = explode('|||', $item);
                                 if (count($parts) === 2) {
-                                    $planFeatures[] = ['text' => $parts[0], 'included' => $parts[1]];
+                                    // Avoid duplicating features already added above
+                                    $ftLower = strtolower(trim($parts[0]));
+                                    if (!in_array($ftLower, ['chatbot', 'bulk messaging', 'webhook support'])) {
+                                        $planFeatures[] = ['text' => $parts[0], 'included' => $parts[1]];
+                                    }
                                 }
                             }
                         }
