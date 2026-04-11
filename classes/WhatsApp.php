@@ -403,6 +403,90 @@ class WhatsApp {
     }
 
     /**
+     * Sync templates from Meta
+     */
+    public function syncTemplates($userId) {
+        $waAccount = $this->db->fetch("SELECT waba_id, access_token FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
+        if (!$waAccount || empty($waAccount['waba_id']) || empty($waAccount['access_token'])) {
+            return ['success' => false, 'message' => 'WhatsApp API is not connected or WABA ID is missing. Setup your API credentials first.'];
+        }
+
+        $wabaId = $waAccount['waba_id'];
+        $accessToken = $waAccount['access_token'];
+        $url = "{$this->apiUrl}/{$wabaId}/message_templates?limit=200";
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$accessToken}"]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200 && $response) {
+            $data = json_decode($response, true);
+            if (isset($data['data']) && is_array($data['data'])) {
+                $syncedCount = 0;
+                foreach ($data['data'] as $tpl) {
+                    $name = $tpl['name'];
+                    $language = $tpl['language'];
+                    $category = strtolower($tpl['category'] ?? '');
+                    $status = strtolower($tpl['status'] ?? 'pending');
+                    
+                    $headerContent = '';
+                    $headerType = 'none';
+                    $bodyContent = '';
+                    $footerContent = '';
+                    $buttonsContent = null;
+                    
+                    if (!empty($tpl['components'])) {
+                        foreach ($tpl['components'] as $comp) {
+                            if ($comp['type'] === 'HEADER') {
+                                $headerType = strtolower($comp['format'] ?? 'text');
+                                $headerContent = $comp['text'] ?? '';
+                            } elseif ($comp['type'] === 'BODY') {
+                                $bodyContent = $comp['text'] ?? '';
+                            } elseif ($comp['type'] === 'FOOTER') {
+                                $footerContent = $comp['text'] ?? '';
+                            } elseif ($comp['type'] === 'BUTTONS') {
+                                $buttonsContent = json_encode($comp['buttons'] ?? []);
+                            }
+                        }
+                    }
+                    
+                    $existing = $this->db->fetch("SELECT id FROM templates WHERE user_id = ? AND name = ? AND language = ?", [$userId, $name, $language]);
+                    
+                    $tplData = [
+                        'user_id' => $userId,
+                        'name' => $name,
+                        'category' => $category,
+                        'language' => $language,
+                        'header_type' => $headerType,
+                        'header_content' => $headerContent,
+                        'body' => $bodyContent,
+                        'footer' => $footerContent,
+                        'buttons' => $buttonsContent,
+                        'status' => $status
+                    ];
+                    
+                    if ($existing) {
+                        $this->db->update('templates', $tplData, 'id = ?', [$existing['id']]);
+                    } else {
+                        $this->db->insert('templates', $tplData);
+                    }
+                    $syncedCount++;
+                }
+                return ['success' => true, 'message' => "Successfully synced $syncedCount templates from Meta.", 'count' => $syncedCount];
+            }
+        }
+        
+        $errorData = json_decode($response, true);
+        $errorMsg = $errorData['error']['message'] ?? 'Unknown Meta API error';
+        return ['success' => false, 'message' => "Failed to sync templates: $errorMsg"];
+    }
+
+    /**
      * Format phone number (remove spaces, dashes, add country code)
      */
     private function formatPhone($phone) {

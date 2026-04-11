@@ -51,6 +51,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isAjax()) {
+        // Handle Sync Templates
+        if (($_POST['action'] ?? '') === 'sync_templates') {
+            try {
+                $wa = new WhatsApp();
+                jsonResponse($wa->syncTemplates($userId));
+            } catch (\Exception $e) {
+                jsonResponse(['success' => false, 'message' => 'Sync error: ' . $e->getMessage()]);
+            }
+        }
+
         try {
             $wa = new WhatsApp();
             $result = null;
@@ -137,7 +147,12 @@ include __DIR__ . '/../includes/header.php';
                             </div>
 
                             <div class="form-group" id="templateGroup" style="display: none;">
-                                <label class="form-label">Select Template</label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">Select Template</label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="syncTemplatesBtn" onclick="syncTemplates()">
+                                        <i class="bi bi-arrow-repeat"></i> Sync from Meta
+                                    </button>
+                                </div>
                                 <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
                                     <option value="">-- Choose Template --</option>
                                     <?php foreach ($templates as $tpl): ?>
@@ -222,6 +237,35 @@ function updateTemplatePreview() {
         document.getElementById('msgContent').value = body;
         updatePreview();
     }
+}
+
+// Sync Templates via AJAX
+async function syncTemplates() {
+    const btn = document.getElementById('syncTemplatesBtn');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('action', 'sync_templates');
+    formData.append('_csrf_token', '<?= CSRF::getToken(); ?>');
+
+    try {
+        const res = await fetch('', { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'} });
+        const result = await res.json();
+        
+        if (result.success) {
+            showAlert('#alertContainer', 'success', result.message);
+            // Refresh the page to show new templates or ideally update dropdown via JS
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert('#alertContainer', 'danger', result.message);
+        }
+    } catch(err) {
+        showAlert('#alertContainer', 'danger', 'Network error during sync.');
+    }
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
 }
 
 // Character counter

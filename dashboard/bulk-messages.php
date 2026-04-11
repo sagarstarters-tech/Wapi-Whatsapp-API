@@ -15,6 +15,16 @@ $hideNav = true; // Prevents landing page nav from appearing in dashboard
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
+    // Handle AJAX Sync Templates
+    if (isAjax() && ($_POST['action'] ?? '') === 'sync_templates') {
+        try {
+            $wa = new WhatsApp();
+            jsonResponse($wa->syncTemplates($userId));
+        } catch (\Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Sync error: ' . $e->getMessage()]);
+        }
+    }
+
     if (!$waAccount) {
         setFlash('danger', 'Configure your WhatsApp API first.');
         redirect('dashboard/whatsapp.php');
@@ -23,6 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $type = sanitize($_POST['message_type'] ?? 'text');
     $content = $_POST['content'] ?? '';
     $mediaUrl = sanitize($_POST['media_url'] ?? '');
+    
+    if ($type === 'template') {
+        $templateId = sanitizeInt($_POST['template_id'] ?? 0);
+        $tpl = $db->fetch("SELECT name FROM templates WHERE id = ? AND user_id = ?", [$templateId, $userId]);
+        if ($tpl) {
+            $content = $tpl['name']; // WhatsApp::sendBulk expects template name in content for template type
+        }
+    }
     $target = sanitize($_POST['target'] ?? 'all');
 
     // Get contacts
@@ -52,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 }
 
 $totalContacts = $db->count('contacts', 'user_id = ? AND is_active = 1', [$userId]);
+$templates = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
 $tags = $db->fetchAll("SELECT DISTINCT tags FROM contacts WHERE user_id = ? AND tags != ''", [$userId]);
 $allTags = [];
 foreach ($tags as $t) {
@@ -75,7 +94,12 @@ include __DIR__ . '/../includes/header.php';
                 <h1 class="dash-title">Bulk Messages</h1>
                 <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>Bulk Messages</span></div>
             </div>
-            <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+                <button type="button" class="btn btn-outline-success btn-sm" id="syncTemplatesBtn" onclick="syncTemplates()">
+                    <i class="bi bi-arrow-repeat"></i> Sync from Meta
+                </button>
+            </div>
         </div>
 
         <?php $flash = getFlash(); if ($flash): ?>
@@ -119,7 +143,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Message Type</label>
-                            <select name="message_type" class="form-control" onchange="document.getElementById('mediaGroup').style.display = this.value !== 'text' ? 'block' : 'none'">
+                            <select name="message_type" id="msgType" class="form-control" onchange="toggleMessageType()">
                                 <option value="text">📝 Text</option>
                                 <option value="image">🖼️ Image</option>
                                 <option value="template">📋 Template</option>
@@ -128,6 +152,15 @@ include __DIR__ . '/../includes/header.php';
                         <div class="col-md-6" id="mediaGroup" style="display:none;">
                             <label class="form-label fw-bold">Media URL</label>
                             <input type="url" name="media_url" class="form-control" placeholder="https://...">
+                        </div>
+                        <div class="col-md-6" id="templateGroup" style="display:none;">
+                            <label class="form-label fw-bold">Select Template</label>
+                            <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
+                                <option value="">-- Choose Template --</option>
+                                <?php foreach ($templates as $tpl): ?>
+                                <option value="<?= $tpl['id']; ?>" data-body="<?= e($tpl['body']); ?>"><?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-bold">Message Content</label>
@@ -149,6 +182,47 @@ function toggleBulkTarget() {
     const target = document.getElementById('bulkTarget').value;
     document.getElementById('tagGroup').style.display = target === 'tag' ? 'block' : 'none';
     document.getElementById('numbersGroup').style.display = target === 'custom' ? 'block' : 'none';
+}
+
+function toggleMessageType() {
+    const type = document.getElementById('msgType').value;
+    document.getElementById('mediaGroup').style.display = (type === 'image') ? 'block' : 'none';
+    document.getElementById('templateGroup').style.display = (type === 'template') ? 'block' : 'none';
+    document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
+}
+
+function updateTemplatePreview() {
+    const select = document.getElementById('templateId');
+    const option = select.options[select.selectedIndex];
+    if (option && option.value) {
+        document.getElementById('msgContent').value = option.getAttribute('data-body');
+    }
+}
+
+async function syncTemplates() {
+    const btn = document.getElementById('syncTemplatesBtn');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('action', 'sync_templates');
+    formData.append('_csrf_token', '<?= CSRF::getToken(); ?>');
+
+    try {
+        const res = await fetch('', { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'} });
+        const result = await res.json();
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert(result.message);
+        }
+    } catch(err) {
+        alert('Network error during sync.');
+    }
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
 }
 </script>
 
