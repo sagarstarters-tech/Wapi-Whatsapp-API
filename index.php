@@ -32,7 +32,7 @@ include __DIR__ . '/includes/header.php';
                     <p class="hero-subtitle">
                         <?= e($settings->get('hero_subtitle', 'Send bulk messages, manage contacts and grow your business with our powerful WhatsApp API.')); ?>
                     </p>
-                    <div class="d-flex gap-3 flex-wrap <?php if (empty($settings->get('hero_button_text'))): ?>d-none<?php endif; ?>">
+                    <div class="d-flex gap-3 flex-wrap justify-content-center justify-content-lg-start <?php if (empty($settings->get('hero_button_text'))): ?>d-none<?php endif; ?>">
                         <a href="<?= baseUrl($settings->get('hero_button_link', 'auth/register.php')); ?>" class="btn btn-primary btn-lg">
                             <?= e($settings->get('hero_button_text', 'Get Started Free')); ?>
                             <i class="bi bi-arrow-right"></i>

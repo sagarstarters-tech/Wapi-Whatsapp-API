@@ -268,7 +268,7 @@ h5 { font-size: 1.125rem; }
 
 /* ===== Navbar ===== */
 .navbar {
-    height: var(--header-height);
+    min-height: var(--header-height);
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -292,7 +292,7 @@ h5 { font-size: 1.125rem; }
 
 .navbar-brand {
     font-family: var(--font-heading);
-    font-size: 1.5rem;
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
     font-weight: 800;
     background: linear-gradient(135deg, var(--primary), var(--accent));
     -webkit-background-clip: text;
@@ -301,6 +301,10 @@ h5 { font-size: 1.125rem; }
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    max-width: 75%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .navbar-brand img {
@@ -1244,10 +1248,10 @@ h5 { font-size: 1.125rem; }
 }
 
 @media (max-width: 767.98px) {
-    .hero-section { padding: 7rem 0 4rem; text-align: center; }
-    .hero-title { font-size: 2rem; }
+    .hero-section { padding: 8rem 0 4rem; text-align: center; }
+    .hero-title { font-size: 2rem; margin-bottom: 1rem; }
     .hero-subtitle { font-size: 1.0625rem; margin: 0 auto 2rem; }
-    .hero-stats { justify-content: center; flex-wrap: wrap; }
+    .hero-stats { justify-content: center; flex-wrap: wrap; gap: 1.5rem; }
     .hero-image { margin-top: 2rem; }
     .section-title { font-size: 1.75rem; }
     .pricing-card { padding: 1.5rem; }
@@ -1255,7 +1259,7 @@ h5 { font-size: 1.125rem; }
     h1 { font-size: 2rem; }
     h2 { font-size: 1.75rem; }
     .nav-link { padding: 0.75rem 1rem !important; }
-    .navbar { padding: 0 1rem; }
+    .navbar { padding: 1rem; min-height: auto; }
 }
 
 @media (max-width: 575.98px) {
