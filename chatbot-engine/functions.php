@@ -118,7 +118,7 @@ function sendDocument($phone, $docUrl, $filename = '', $caption = '', $phoneId =
     return sendRequest($payload, $phoneId, $token);
 }
 
-function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $token = null) {
+function sendButtons($phone, $text, $buttonsData, $nodeId, $flowId, $phoneId = null, $token = null) {
     if (empty(trim($text)) || empty($buttonsData)) return false;
     $buttons = [];
     $btnCounter = 0;
@@ -134,10 +134,10 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
         
         $btnCounter++;
         
-        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
+        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$flowId}_{$nodeId}_{$portIndex}'");
         $buttons[] = [
             'type' => 'reply',
-            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
+            'reply' => ['id' => "flow_btn_{$flowId}_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
         ];
     }
 
@@ -152,7 +152,7 @@ function sendButtons($phone, $text, $buttonsData, $nodeId, $phoneId = null, $tok
     return sendRequest($payload, $phoneId, $token);
 }
 
-function sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $phoneId = null, $token = null) {
+function sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $flowId, $phoneId = null, $token = null) {
     if (empty(trim($bodyText)) || empty($buttonsData)) return false;
     $buttons = [];
     $btnCounter = 0;
@@ -169,10 +169,10 @@ function sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $butt
         
         $btnCounter++;
         
-        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$nodeId}_{$portIndex}'");
+        error_log("[ENGINE] Assigning Button: title='$label', id='flow_btn_{$flowId}_{$nodeId}_{$portIndex}'");
         $buttons[] = [
             'type' => 'reply',
-            'reply' => ['id' => "flow_btn_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
+            'reply' => ['id' => "flow_btn_{$flowId}_{$nodeId}_{$portIndex}", 'title' => mb_substr(trim($label), 0, 20)]
         ];
     }
 
@@ -448,7 +448,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             }
             ksort($buttonsData);
             $prompt = replaceDynamicVariables($nodeData['text'] ?? 'Select an option:', $phone, $userId, $senderName);
-            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
+            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $flowId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
             $isInteractive = true;
             break;
@@ -473,7 +473,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             $footerText = replaceDynamicVariables($nodeData['footer_text'] ?? '', $phone, $userId, $senderName);
             $imageUrl = $nodeData['image'] ?? '';
             
-            $res = sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $phoneId, $token);
+            $res = sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $buttonsData, $nodeId, $flowId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $bodyText, $res);
             $isInteractive = true;
             break;
@@ -491,7 +491,7 @@ function runFlow($phone, $userId, $flowId, $nodeId = null, $phoneId = null, $tok
             if ($btnNo !== '') $buttonsData['btn-1'] = $btnNo;
             
             $prompt = replaceDynamicVariables($nodeData['body_text'] ?? 'Are you sure?', $phone, $userId, $senderName);
-            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $phoneId, $token);
+            $res = sendButtons($phone, $prompt, $buttonsData, $nodeId, $flowId, $phoneId, $token);
             logChatbotMessage($userId, $phone, 'interactive', $prompt, $res);
             $isInteractive = true;
             break;

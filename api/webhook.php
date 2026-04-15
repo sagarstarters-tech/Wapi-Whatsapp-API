@@ -127,17 +127,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('Y-m-d H:i:s') . "] RAW BUTTON CLICK: '$replyId' (type: $type)\n", FILE_APPEND);
 
                 if (strpos($replyId, 'flow_btn_') === 0) {
-                    $lastUnderscore = strrpos($replyId, '_');
-                    $portIndex = (int)substr($replyId, $lastUnderscore + 1);
-                    $flowNodeId = substr($replyId, strlen('flow_btn_'), $lastUnderscore - strlen('flow_btn_'));
-                    $outputName  = 'output_' . ($portIndex + 1);
+                    $parts = explode('_', $replyId); // ['flow', 'btn', flowId, nodeId, portIndex]
+                    
+                    if (count($parts) >= 5) {
+                        $flowId     = $parts[2];
+                        $flowNodeId = $parts[3];
+                        $portIndex  = (int)$parts[4];
+                    } else {
+                        // Backward compatibility or legacy format: flow_btn_{nodeId}_{portIndex}
+                        $lastUnderscore = strrpos($replyId, '_');
+                        $portIndex = (int)substr($replyId, $lastUnderscore + 1);
+                        $flowNodeId = substr($replyId, strlen('flow_btn_'), $lastUnderscore - strlen('flow_btn_'));
+                        $flowId = null; // Will fallback to latest active flow
+                    }
 
-                    file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('Y-m-d H:i:s') . "] PARSED: nodeId='$flowNodeId', portIndex=$portIndex -> $outputName\n", FILE_APPEND);
+                    $outputName = 'output_' . ($portIndex + 1);
+                    file_put_contents(__DIR__ . '/webhook_debug.txt', "[" . date('Y-m-d H:i:s') . "] PARSED: flowId='$flowId', nodeId='$flowNodeId', portIndex=$portIndex -> $outputName\n", FILE_APPEND);
 
-                    $flow = $db->fetch(
-                        "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1",
-                        [$userId]
-                    );
+                    if ($flowId) {
+                        $flow = $db->fetch(
+                            "SELECT id, flow_json FROM chatbot_flows WHERE id = ? AND is_active = 1 LIMIT 1",
+                            [$flowId]
+                        );
+                    } else {
+                        $flow = $db->fetch(
+                            "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1",
+                            [$userId]
+                        );
+                    }
 
                     if ($flow && $flowNodeId) {
                         $nodes       = $getNodes($flow['flow_json']);
