@@ -274,19 +274,37 @@ class WhatsApp {
                 // OTP quick-reply / template button tap
                 $bodyText = $msg['text']['body'] ?? '';
                 $btnText  = $msg['button']['text'] ?? $msg['button']['payload'] ?? '';
-                if (!empty($bodyText) && !empty($btnText) && $bodyText !== $btnText) {
-                    $text = $bodyText . "\n[" . $btnText . "]";
+                if (!empty($bodyText)) {
+                    $text = $bodyText . ($btnText ? "\n[" . $btnText . "]" : "");
                 } else {
-                    $text = !empty($bodyText) ? $bodyText : $btnText;
+                    $text = $btnText ?: "[Button message]";
                 }
                 break;
 
             case 'interactive':
-                if (isset($msg['interactive']['button_reply'])) {
-                    $text = $msg['interactive']['button_reply']['title'] ?? '';
-                } elseif (isset($msg['interactive']['list_reply'])) {
-                    $text = $msg['interactive']['list_reply']['title'] ?? '';
+                $interactive = $msg['interactive'] ?? [];
+                $header = $interactive['header']['text'] ?? '';
+                $body   = $interactive['body']['text']   ?? '';
+                $footer = $interactive['footer']['text'] ?? '';
+                
+                $reply  = '';
+                if (isset($interactive['button_reply'])) {
+                    $reply = $interactive['button_reply']['title'] ?? '';
+                } elseif (isset($interactive['list_reply'])) {
+                    $reply = $interactive['list_reply']['title'] ?? '';
                 }
+                
+                $parts = array_filter([$header, $body, $footer, $reply ? "[$reply]" : '']);
+                $text = implode("\n", $parts);
+                if (empty($text)) $text = '[Interactive message]';
+                break;
+
+            case 'system':
+                $text = $msg['system']['body'] ?? '[System message]';
+                break;
+
+            case 'identity':
+                $text = '[Identity changed: ' . ($msg['identity']['customer_identity_changed'] ?? 'true') . ']';
                 break;
 
             case 'image':
@@ -346,12 +364,13 @@ class WhatsApp {
         // Find user by phone_number_id if not provided
         if (!$userId) {
             $account = $this->db->fetch(
-                "SELECT user_id FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active'",
+                "SELECT user_id FROM whatsapp_accounts WHERE phone_number_id = ? AND status IN ('active', 'pending')",
                 [$phoneNumberId]
             );
             if (!$account) return;
             $userId = $account['user_id'];
         }
+
 
         // Save incoming message
         $this->db->insert('messages', [

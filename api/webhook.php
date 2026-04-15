@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 3. Find the user account for this phone number ID
         $db      = Database::getInstance();
         $account = $db->fetch(
-            "SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status = 'active' LIMIT 1",
+            "SELECT user_id, access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status IN ('active', 'pending') LIMIT 1",
             [$phoneNumberId]
         );
 
@@ -177,15 +177,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($type === 'document') {
                 $textBody = strtolower(trim($msg['document']['caption'] ?? ''));
             } elseif ($type === 'button') {
-                $btnText = strtolower(trim($msg['button']['text'] ?? ''));
-                $bodyText = strtolower(trim($msg['text']['body'] ?? ''));
-                $textBody = !empty($bodyText) ? $bodyText . ' ' . $btnText : $btnText;
+                $btnText  = $msg['button']['text'] ?? $msg['button']['payload'] ?? '';
+                $bodyText = $msg['text']['body'] ?? '';
+                $textBody = strtolower(trim(!empty($bodyText) ? $bodyText . ' ' . $btnText : $btnText));
             } elseif ($type === 'interactive') {
-                if (isset($msg['interactive']['button_reply'])) {
-                    $textBody = strtolower(trim($msg['interactive']['button_reply']['title'] ?? ''));
-                } elseif (isset($msg['interactive']['list_reply'])) {
-                    $textBody = strtolower(trim($msg['interactive']['list_reply']['title'] ?? ''));
+                $interactive = $msg['interactive'] ?? [];
+                $bodyText    = $interactive['body']['text'] ?? '';
+                $replyText   = '';
+                if (isset($interactive['button_reply'])) {
+                    $replyText = $interactive['button_reply']['title'] ?? '';
+                } elseif (isset($interactive['list_reply'])) {
+                    $replyText = $interactive['list_reply']['title'] ?? '';
                 }
+                $textBody = strtolower(trim(!empty($bodyText) ? $bodyText . ' ' . $replyText : $replyText));
             }
             // For sticker, audio, location, contacts etc. — textBody stays empty
 

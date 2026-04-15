@@ -256,7 +256,7 @@ CREATE TABLE `messages` (
     `contact_id` INT DEFAULT NULL,
     `message_id` VARCHAR(100) DEFAULT NULL,
     `to_number` VARCHAR(20) NOT NULL,
-    `type` ENUM('text', 'image', 'video', 'document', 'template', 'audio') DEFAULT 'text',
+    `type` ENUM('text', 'image', 'video', 'document', 'audio', 'voice', 'sticker', 'location', 'contacts', 'interactive', 'button', 'template', 'reaction', 'system', 'identity') DEFAULT 'text',
     `content` TEXT DEFAULT NULL,
     `media_url` VARCHAR(500) DEFAULT NULL,
     `template_name` VARCHAR(100) DEFAULT NULL,
