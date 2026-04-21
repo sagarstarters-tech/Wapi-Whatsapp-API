@@ -12,18 +12,47 @@ $userId = $_SESSION['user_id'];
 
 $hideNav = true; // Prevents landing page nav from appearing in dashboard
 
-// Handle Export (CSV)
+// Handle Export (CSV & VCF)
 if (!empty($_GET['export'])) {
+    $exportFormat = $_GET['export'];
     $allContacts = $db->fetchAll("SELECT name, phone, email, company, tags, notes FROM contacts WHERE user_id = ? ORDER BY id DESC", [$userId]);
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=wapi_contacts_' . date('Ymd_His') . '.csv');
-    $output = fopen('php://output', 'w');
-    fputcsv($output, ['Name', 'Phone', 'Email', 'Company', 'Tags', 'Notes']);
-    foreach ($allContacts as $c) {
-        fputcsv($output, [$c['name'], $c['phone'], $c['email'], $c['company'], $c['tags'], $c['notes']]);
+    
+    if ($exportFormat === 'vcf') {
+        header('Content-Type: text/vcard; charset=utf-8');
+        header('Content-Disposition: attachment; filename=wapi_contacts_' . date('Ymd_His') . '.vcf');
+        $output = "";
+        foreach ($allContacts as $c) {
+            $output .= "BEGIN:VCARD\r\n";
+            $output .= "VERSION:3.0\r\n";
+            $output .= "FN:" . $c['name'] . "\r\n";
+            if (!empty($c['phone'])) {
+                $output .= "TEL;TYPE=CELL:" . $c['phone'] . "\r\n";
+            }
+            if (!empty($c['email'])) {
+                $output .= "EMAIL;TYPE=WORK:" . $c['email'] . "\r\n";
+            }
+            if (!empty($c['company'])) {
+                $output .= "ORG:" . $c['company'] . "\r\n";
+            }
+            if (!empty($c['notes'])) {
+                $cleanNotes = str_replace(["\r\n", "\n", "\r"], "\\n", $c['notes']);
+                $output .= "NOTE:" . $cleanNotes . "\r\n";
+            }
+            $output .= "END:VCARD\r\n";
+        }
+        echo $output;
+        exit;
+    } else {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=wapi_contacts_' . date('Ymd_His') . '.csv');
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Name', 'Phone', 'Email', 'Company', 'Tags', 'Notes']);
+        foreach ($allContacts as $c) {
+            fputcsv($output, [$c['name'], $c['phone'], $c['email'], $c['company'], $c['tags'], $c['notes']]);
+        }
+        fclose($output);
+        exit;
     }
-    fclose($output);
-    exit;
 }
 
 // Handle actions
@@ -81,6 +110,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         } else {
             setFlash('danger', 'Failed to read the imported file.');
         }
+    } elseif ($action === 'import_vcf' && isset($_FILES['import_file'])) {
+        $file = $_FILES['import_file']['tmp_name'];
+        if (is_uploaded_file($file)) {
+            $vcardContent = file_get_contents($file);
+            $lines = preg_split('/\r\n|\r|\n/', $vcardContent);
+            $contact = null;
+            $imported = 0;
+            
+            $logicalLines = [];
+            $currentLine = '';
+            foreach ($lines as $line) {
+                if (preg_match('/^[ \t]+/', $line)) {
+                    $currentLine .= ltrim($line);
+                } else {
+                    if ($currentLine !== '') $logicalLines[] = $currentLine;
+                    $currentLine = $line;
+                }
+            }
+            if ($currentLine !== '') $logicalLines[] = $currentLine;
+
+            foreach ($logicalLines as $line) {
+                $line = trim($line);
+                if (empty($line)) continue;
+                
+                list($rawKey, $val) = array_pad(explode(':', $line, 2), 2, '');
+                $keyParts = explode(';', strtoupper($rawKey));
+                $keyGrouping = explode('.', $keyParts[0]);
+                $keyMain = end($keyGrouping); 
+
+                if ($keyMain === 'BEGIN' && strtoupper($val) === 'VCARD') {
+                    $contact = ['name' => '', 'phone' => '', 'email' => '', 'company' => ''];
+                } elseif ($keyMain === 'END' && strtoupper($val) === 'VCARD' && $contact !== null) {
+                    if (empty($contact['name']) && !empty($contact['n_name'])) {
+                         $contact['name'] = $contact['n_name'];
+                    }
+                    if (!empty($contact['name']) && !empty($contact['phone'])) {
+                         $db->insert('contacts', [
+                            'user_id' => $userId,
+                            'name' => sanitize(trim($contact['name'])),
+                            'phone' => preg_replace('/[^0-9+]/', '', $contact['phone']),
+                            'email' => sanitizeEmail($contact['email']),
+                            'company' => sanitize(trim($contact['company'])),
+                            'tags' => '',
+                            'notes' => ''
+                        ]);
+                        $imported++;
+                    }
+                    $contact = null;
+                } elseif ($contact !== null) {
+                    if ($keyMain === 'FN') {
+                        $contact['name'] = str_replace('\;', ';', str_replace('\,', ',', $val));
+                    } elseif ($keyMain === 'N' && empty($contact['name'])) {
+                        $nameParts = explode(';', str_replace('\;', ';', $val));
+                        $contact['n_name'] = trim(($nameParts[1] ?? '') . ' ' . ($nameParts[0] ?? ''));
+                    } elseif ($keyMain === 'TEL' && empty($contact['phone'])) { 
+                        $contact['phone'] = str_replace('tel:', '', strtolower($val));
+                    } elseif ($keyMain === 'EMAIL' && empty($contact['email'])) {
+                        $contact['email'] = $val;
+                    } elseif ($keyMain === 'ORG') {
+                        $company = str_replace('\;', ';', str_replace('\,', ',', $val));
+                        $compParts = explode(';', $company);
+                        $contact['company'] = $compParts[0] ?? '';
+                    }
+                }
+            }
+            setFlash('success', "$imported contacts imported successfully from VCF.");
+        } else {
+            setFlash('danger', 'Failed to read the imported VCF file.');
+        }
     }
     redirect('dashboard/contacts.php');
 }
@@ -116,8 +214,27 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <a href="?export=1" class="btn btn-outline-secondary btn-sm" title="Export CSV"><i class="bi bi-download"></i></a>
-                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal" title="Import CSV"><i class="bi bi-upload"></i></button>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Export Contacts">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 14.5px;">
+                        <li><a class="dropdown-item py-2" href="?export=csv"><i class="bi bi-filetype-csv me-2 text-primary"></i> Export CSV</a></li>
+                        <li><a class="dropdown-item py-2" href="?export=vcf"><i class="bi bi-person-lines-fill me-2 text-success"></i> Export VCF</a></li>
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Import Contacts">
+                        <i class="bi bi-upload"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 14.5px;">
+                        <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-filetype-csv me-2 text-primary"></i> Import CSV</a></li>
+                        <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#importVcfModal"><i class="bi bi-person-lines-fill me-2 text-success"></i> Import VCF</a></li>
+                    </ul>
+                </div>
+
                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#contactModal" onclick="resetContactForm()"><i class="bi bi-plus-lg"></i> Add Contact</button>
             </div>
         </div>
@@ -228,6 +345,30 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Import</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import VCF Modal -->
+<div class="modal fade" id="importVcfModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data">
+                <?= CSRF::tokenField(); ?>
+                <input type="hidden" name="action" value="import_vcf">
+                <div class="modal-header"><h5 class="modal-title">Import Contacts (VCF)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Upload VCF File</label>
+                        <input type="file" name="import_file" class="form-control" accept=".vcf,text/vcard" required>
+                        <div class="form-text mt-2">
+                            <strong>Supported Format:</strong><br>
+                            Standard vCard (.vcf) format. Needs Name (FN/N) and Phone number (TEL) to be correctly imported.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Import VCF</button></div>
             </form>
         </div>
     </div>
