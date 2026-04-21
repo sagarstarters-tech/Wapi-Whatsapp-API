@@ -226,24 +226,6 @@ include __DIR__ . '/../includes/header.php';
     .table tbody tr.row-selected td:first-child {
         border-left: 3px solid var(--primary, #6c63ff);
     }
-    .form-check-input.contact-checkbox, #selectAll {
-        cursor: pointer;
-        width: 1.35em;
-        height: 1.35em;
-        border: 2px solid #8c98a4 !important; /* Darker, thicker border for visibility */
-        border-radius: 4px;
-        transition: all 0.2s ease;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Slight shadow */
-    }
-    .form-check-input.contact-checkbox:checked, #selectAll:checked {
-        box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
-        border-color: var(--primary, #6c63ff) !important;
-        background-color: var(--primary, #6c63ff) !important;
-        transform: scale(1.05);
-    }
-    .form-check-input.contact-checkbox:hover, #selectAll:hover {
-        border-color: #6c63ff !important; /* Highlight border on hover */
-    }
 </style>
 
 <div class="dashboard-wrapper">
