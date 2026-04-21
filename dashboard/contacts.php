@@ -92,17 +92,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             while (($row = fgetcsv($handle)) !== false) {
                 $name = sanitize($row[0] ?? '');
                 $phone = sanitize($row[1] ?? '');
-                if (!empty($name) && !empty($phone)) {
-                    $db->insert('contacts', [
-                        'user_id' => $userId,
-                        'name' => $name,
-                        'phone' => preg_replace('/[^0-9+]/', '', $phone), // allow + for international
-                        'email' => sanitizeEmail($row[2] ?? ''),
-                        'company' => sanitize($row[3] ?? ''),
-                        'tags' => sanitize($row[4] ?? ''),
-                        'notes' => sanitize($row[5] ?? '')
-                    ]);
-                    $imported++;
+                $cleanPhone = preg_replace('/[^0-9+]/', '', $phone);
+                
+                if (!empty($name) && !empty($cleanPhone)) {
+                    if (!$db->exists('contacts', 'user_id = ? AND phone = ?', [$userId, $cleanPhone])) {
+                        $db->insert('contacts', [
+                            'user_id' => $userId,
+                            'name' => $name,
+                            'phone' => $cleanPhone,
+                            'email' => sanitizeEmail($row[2] ?? ''),
+                            'company' => sanitize($row[3] ?? ''),
+                            'tags' => sanitize($row[4] ?? ''),
+                            'notes' => sanitize($row[5] ?? '')
+                        ]);
+                        $imported++;
+                    }
                 }
             }
             fclose($handle);
@@ -146,16 +150,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                          $contact['name'] = $contact['n_name'];
                     }
                     if (!empty($contact['name']) && !empty($contact['phone'])) {
-                         $db->insert('contacts', [
-                            'user_id' => $userId,
-                            'name' => sanitize(trim($contact['name'])),
-                            'phone' => preg_replace('/[^0-9+]/', '', $contact['phone']),
-                            'email' => sanitizeEmail($contact['email']),
-                            'company' => sanitize(trim($contact['company'])),
-                            'tags' => '',
-                            'notes' => ''
-                        ]);
-                        $imported++;
+                         $cleanPhone = preg_replace('/[^0-9+]/', '', $contact['phone']);
+                         if (!$db->exists('contacts', 'user_id = ? AND phone = ?', [$userId, $cleanPhone])) {
+                             $db->insert('contacts', [
+                                'user_id' => $userId,
+                                'name' => sanitize(trim($contact['name'])),
+                                'phone' => $cleanPhone,
+                                'email' => sanitizeEmail($contact['email']),
+                                'company' => sanitize(trim($contact['company'])),
+                                'tags' => '',
+                                'notes' => ''
+                            ]);
+                            $imported++;
+                         }
                     }
                     $contact = null;
                 } elseif ($contact !== null) {
