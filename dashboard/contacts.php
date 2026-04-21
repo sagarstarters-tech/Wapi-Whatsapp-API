@@ -295,9 +295,10 @@ include __DIR__ . '/../includes/header.php';
                 </form>
             </div>
             
-            <form method="POST" id="bulkDeleteForm">
+            <form method="POST" id="bulkDeleteForm" class="d-none">
                 <?= CSRF::tokenField(); ?>
                 <input type="hidden" name="action" value="bulk_delete">
+            </form>
             <div class="table-responsive">
                 <table class="table">
                     <thead><tr><th style="width: 40px;"><input class="form-check-input" type="checkbox" id="selectAll"></th><th>Name</th><th>Phone</th><th>Email</th><th>Tags</th><th>Added</th><th>Actions</th></tr></thead>
@@ -307,7 +308,7 @@ include __DIR__ . '/../includes/header.php';
                         <?php else: ?>
                         <?php foreach ($contacts as $contact): ?>
                         <tr>
-                            <td><input class="form-check-input contact-checkbox" type="checkbox" name="contact_ids[]" value="<?= $contact['id']; ?>"></td>
+                            <td><input class="form-check-input contact-checkbox" type="checkbox" name="contact_ids[]" value="<?= $contact['id']; ?>" form="bulkDeleteForm"></td>
                             <td><div class="user-info"><div class="user-avatar"><?= strtoupper(substr($contact['name'], 0, 1)); ?></div><div class="fw-bold"><?= e($contact['name']); ?></div></div></td>
                             <td><?= e($contact['phone']); ?></td>
                             <td style="font-size: 0.875rem;"><?= e($contact['email'] ?: '-'); ?></td>
@@ -330,7 +331,6 @@ include __DIR__ . '/../includes/header.php';
                     </tbody>
                 </table>
             </div>
-            </form>
             <div class="p-3"><?= renderPagination($pagination, '?search=' . urlencode($search) . '&page=%d'); ?></div>
         </div>
     </main>
