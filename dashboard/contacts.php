@@ -83,6 +83,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     } elseif ($action === 'delete') {
         $db->delete('contacts', 'id = ? AND user_id = ?', [sanitizeInt($_POST['contact_id']), $userId]);
         setFlash('success', 'Contact deleted.');
+    } elseif ($action === 'bulk_delete' && !empty($_POST['contact_ids'])) {
+        $ids = array_map('intval', $_POST['contact_ids']);
+        if (!empty($ids)) {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $params = array_merge($ids, [$userId]);
+            $db->run("DELETE FROM contacts WHERE id IN ($placeholders) AND user_id = ?", $params);
+            setFlash('success', count($ids) . ' contacts deleted.');
+        }
     } elseif ($action === 'import' && isset($_FILES['import_file'])) {
         $file = $_FILES['import_file']['tmp_name'];
         if (is_uploaded_file($file)) {
@@ -252,20 +260,28 @@ include __DIR__ . '/../includes/header.php';
 
         <div class="data-table">
             <div class="data-table-header">
-                <h5 class="data-table-title mb-0">All Contacts (<?= $totalContacts; ?>)</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <h5 class="data-table-title mb-0">All Contacts (<?= $totalContacts; ?>)</h5>
+                    <button type="button" id="bulkDeleteBtn" class="btn btn-sm btn-outline-danger d-none" onclick="submitBulkDelete()"><i class="bi bi-trash3"></i> Delete Selected</button>
+                </div>
                 <form method="GET" class="d-flex gap-2">
                     <div class="search-box"><i class="bi bi-search"></i><input type="text" name="search" class="form-control" placeholder="Search contacts..." value="<?= e($search); ?>"></div>
                 </form>
             </div>
+            
+            <form method="POST" id="bulkDeleteForm">
+                <?= CSRF::tokenField(); ?>
+                <input type="hidden" name="action" value="bulk_delete">
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Tags</th><th>Added</th><th>Actions</th></tr></thead>
+                    <thead><tr><th style="width: 40px;"><input class="form-check-input" type="checkbox" id="selectAll"></th><th>Name</th><th>Phone</th><th>Email</th><th>Tags</th><th>Added</th><th>Actions</th></tr></thead>
                     <tbody>
                         <?php if (empty($contacts)): ?>
-                        <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-people" style="font-size: 2rem;"></i><br>No contacts yet</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-people" style="font-size: 2rem;"></i><br>No contacts yet</td></tr>
                         <?php else: ?>
                         <?php foreach ($contacts as $contact): ?>
                         <tr>
+                            <td><input class="form-check-input contact-checkbox" type="checkbox" name="contact_ids[]" value="<?= $contact['id']; ?>"></td>
                             <td><div class="user-info"><div class="user-avatar"><?= strtoupper(substr($contact['name'], 0, 1)); ?></div><div class="fw-bold"><?= e($contact['name']); ?></div></div></td>
                             <td><?= e($contact['phone']); ?></td>
                             <td style="font-size: 0.875rem;"><?= e($contact['email'] ?: '-'); ?></td>
@@ -288,6 +304,7 @@ include __DIR__ . '/../includes/header.php';
                     </tbody>
                 </table>
             </div>
+            </form>
             <div class="p-3"><?= renderPagination($pagination, '?search=' . urlencode($search) . '&page=%d'); ?></div>
         </div>
     </main>
@@ -403,6 +420,45 @@ function editContact(c) {
     document.getElementById('contactSource').value = c.source || 'Direct';
     document.getElementById('contactValue').value = c.estimated_value || 0;
     new bootstrap.Modal(document.getElementById('contactModal')).show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.contact-checkbox');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+    function toggleBulkBtn() {
+        const checkedCount = document.querySelectorAll('.contact-checkbox:checked').length;
+        if (checkedCount > 0) {
+            bulkDeleteBtn.classList.remove('d-none');
+            bulkDeleteBtn.innerHTML = '<i class="bi bi-trash3"></i> Delete Selected (' + checkedCount + ')';
+        } else {
+            bulkDeleteBtn.classList.add('d-none');
+        }
+    }
+
+    if(selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            toggleBulkBtn();
+        });
+        
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                if (!this.checked) selectAll.checked = false;
+                if (document.querySelectorAll('.contact-checkbox:checked').length === checkboxes.length) {
+                    selectAll.checked = true;
+                }
+                toggleBulkBtn();
+            });
+        });
+    }
+});
+
+function submitBulkDelete() {
+    if (confirm('Are you sure you want to delete these selected contacts?')) {
+        document.getElementById('bulkDeleteForm').submit();
+    }
 }
 </script>
 
