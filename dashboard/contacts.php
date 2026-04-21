@@ -219,6 +219,32 @@ $extraJs = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
+<style>
+    .table tbody tr.row-selected td {
+        background-color: rgba(108, 99, 255, 0.08) !important;
+    }
+    .table tbody tr.row-selected td:first-child {
+        border-left: 3px solid var(--primary, #6c63ff);
+    }
+    .form-check-input.contact-checkbox {
+        cursor: pointer;
+        width: 1.25em;
+        height: 1.25em;
+        transition: all 0.2s ease;
+    }
+    .form-check-input.contact-checkbox:checked {
+        box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
+        border-color: var(--primary, #6c63ff);
+        background-color: var(--primary, #6c63ff);
+        transform: scale(1.1);
+    }
+    #selectAll {
+        cursor: pointer;
+        width: 1.25em;
+        height: 1.25em;
+    }
+</style>
+
 <div class="dashboard-wrapper">
     <?php include __DIR__ . '/../includes/sidebar.php'; ?>
     <main class="main-content">
@@ -439,7 +465,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if(selectAll) {
         selectAll.addEventListener('change', function() {
-            checkboxes.forEach(cb => cb.checked = this.checked);
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+                if (this.checked) {
+                    cb.closest('tr').classList.add('row-selected');
+                } else {
+                    cb.closest('tr').classList.remove('row-selected');
+                }
+            });
             toggleBulkBtn();
         });
         
@@ -449,6 +482,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (document.querySelectorAll('.contact-checkbox:checked').length === checkboxes.length) {
                     selectAll.checked = true;
                 }
+                
+                if (this.checked) {
+                    this.closest('tr').classList.add('row-selected');
+                } else {
+                    this.closest('tr').classList.remove('row-selected');
+                }
+                
                 toggleBulkBtn();
             });
         });
