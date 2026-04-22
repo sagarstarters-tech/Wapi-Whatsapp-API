@@ -36,6 +36,13 @@ function sanitizeInt($value) {
 }
 
 /**
+ * Sanitize float / decimal number
+ */
+function sanitizeFloat($value) {
+    return (float) filter_var($value, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+}
+
+/**
  * Sanitize URL
  */
 function sanitizeUrl($url) {
