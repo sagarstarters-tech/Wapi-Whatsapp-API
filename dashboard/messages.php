@@ -161,6 +161,24 @@ include __DIR__ . '/../includes/header.php';
                                 </select>
                             </div>
 
+                            <div class="form-group" id="templatePreviewGroup" style="display: none;">
+                                <label class="form-label">Template Content</label>
+                                <div id="templatePreviewBox" style="
+                                    background: #f0fdf4;
+                                    border: 1px solid #86efac;
+                                    border-left: 4px solid #22c55e;
+                                    border-radius: 8px;
+                                    padding: 12px 16px;
+                                    font-size: 0.9rem;
+                                    color: #166534;
+                                    min-height: 60px;
+                                    white-space: pre-wrap;
+                                    line-height: 1.6;
+                                ">
+                                    <span class="text-muted fst-italic">Select a template to see its content...</span>
+                                </div>
+                            </div>
+
                             <div class="form-group" id="mediaUrlGroup" style="display: none;">
                                 <label class="form-label">Media URL</label>
                                 <input type="url" name="media_url" id="mediaUrl" class="form-control" placeholder="https://example.com/image.jpg">
@@ -221,6 +239,7 @@ function toggleMediaField() {
     document.getElementById('imageUploadGroup').style.display = type === 'image' ? 'block' : 'none';
     document.getElementById('filenameGroup').style.display = type === 'document' ? 'block' : 'none';
     document.getElementById('templateGroup').style.display = type === 'template' ? 'block' : 'none';
+    document.getElementById('templatePreviewGroup').style.display = type === 'template' ? 'block' : 'none';
     document.getElementById('contentGroup').style.display = type === 'template' ? 'none' : 'block';
     
     // Auto-update preview visibility
@@ -232,10 +251,14 @@ function toggleMediaField() {
 function updateTemplatePreview() {
     const select = document.getElementById('templateId');
     const option = select.options[select.selectedIndex];
+    const previewBox = document.getElementById('templatePreviewBox');
     if (option && option.value) {
         const body = option.getAttribute('data-body');
         document.getElementById('msgContent').value = body;
+        previewBox.textContent = body || 'No content available for this template.';
         updatePreview();
+    } else {
+        previewBox.innerHTML = '<span class="text-muted fst-italic">Select a template to see its content...</span>';
     }
 }
 

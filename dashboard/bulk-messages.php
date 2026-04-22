@@ -162,6 +162,23 @@ include __DIR__ . '/../includes/header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="col-12" id="templatePreviewGroup" style="display:none;">
+                            <label class="form-label fw-bold">Template Content</label>
+                            <div id="templatePreviewBox" style="
+                                background: #f0fdf4;
+                                border: 1px solid #86efac;
+                                border-left: 4px solid #22c55e;
+                                border-radius: 8px;
+                                padding: 12px 16px;
+                                font-size: 0.9rem;
+                                color: #166534;
+                                min-height: 60px;
+                                white-space: pre-wrap;
+                                line-height: 1.6;
+                            ">
+                                <span class="text-muted fst-italic">Select a template to see its content...</span>
+                            </div>
+                        </div>
                         <div class="col-12" id="contentGroup">
                             <label class="form-label fw-bold">Message Content</label>
                             <textarea name="content" id="msgContent" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
@@ -188,6 +205,7 @@ function toggleMessageType() {
     const type = document.getElementById('msgType').value;
     document.getElementById('mediaGroup').style.display = (type === 'image') ? 'block' : 'none';
     document.getElementById('templateGroup').style.display = (type === 'template') ? 'block' : 'none';
+    document.getElementById('templatePreviewGroup').style.display = (type === 'template') ? 'block' : 'none';
     document.getElementById('contentGroup').style.display = (type === 'template') ? 'none' : 'block';
     document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
 }
@@ -200,8 +218,13 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateTemplatePreview() {
     const select = document.getElementById('templateId');
     const option = select.options[select.selectedIndex];
+    const previewBox = document.getElementById('templatePreviewBox');
     if (option && option.value) {
-        document.getElementById('msgContent').value = option.getAttribute('data-body');
+        const body = option.getAttribute('data-body');
+        document.getElementById('msgContent').value = body;
+        previewBox.textContent = body || 'No content available for this template.';
+    } else {
+        previewBox.innerHTML = '<span class="text-muted fst-italic">Select a template to see its content...</span>';
     }
 }
 
