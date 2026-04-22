@@ -162,9 +162,9 @@ include __DIR__ . '/../includes/header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-12">
+                        <div class="col-12" id="contentGroup">
                             <label class="form-label fw-bold">Message Content</label>
-                            <textarea name="content" class="form-control" rows="5" required placeholder="Type your message here..."></textarea>
+                            <textarea name="content" id="msgContent" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
                         </div>
                     </div>
 
@@ -188,8 +188,14 @@ function toggleMessageType() {
     const type = document.getElementById('msgType').value;
     document.getElementById('mediaGroup').style.display = (type === 'image') ? 'block' : 'none';
     document.getElementById('templateGroup').style.display = (type === 'template') ? 'block' : 'none';
+    document.getElementById('contentGroup').style.display = (type === 'template') ? 'none' : 'block';
     document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleMessageType();
+});
 
 function updateTemplatePreview() {
     const select = document.getElementById('templateId');
