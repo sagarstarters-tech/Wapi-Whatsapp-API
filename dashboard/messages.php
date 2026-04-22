@@ -38,14 +38,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $content = $_POST['content'] ?? '';
     $mediaUrl = sanitize($_POST['media_url'] ?? '');
 
-    // Safely handle image upload if provided
-    if ($type === 'image' && isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
-        $upload = uploadFile($_FILES['image_file'], 'messages', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    // Handle media file upload (image / video / document)
+    $mediaFileKey = match($type) {
+        'image'    => 'image_file',
+        'video'    => 'video_file',
+        'document' => 'document_file',
+        default    => null
+    };
+    $allowedExts = match($type) {
+        'image'    => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        'video'    => ['mp4', 'mov', 'avi', 'mkv', '3gp'],
+        'document' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip'],
+        default    => []
+    };
+    if ($mediaFileKey && isset($_FILES[$mediaFileKey]) && $_FILES[$mediaFileKey]['error'] === UPLOAD_ERR_OK) {
+        $upload = uploadFile($_FILES[$mediaFileKey], 'messages', $allowedExts);
         if ($upload['success']) {
             $mediaUrl = baseUrl($upload['path']);
         } else {
-            if (isAjax()) jsonResponse(['success' => false, 'message' => 'Image upload failed: ' . $upload['message']]);
-            setFlash('danger', 'Image upload failed: ' . $upload['message']);
+            if (isAjax()) jsonResponse(['success' => false, 'message' => 'File upload failed: ' . $upload['message']]);
+            setFlash('danger', 'File upload failed: ' . $upload['message']);
             redirect('dashboard/messages.php');
         }
     }
@@ -182,9 +194,10 @@ include __DIR__ . '/../includes/header.php';
                             <div class="form-group" id="mediaUrlGroup" style="display: none;">
                                 <label class="form-label">Media URL</label>
                                 <input type="url" name="media_url" id="mediaUrl" class="form-control" placeholder="https://example.com/image.jpg">
-                                <div id="imageUploadGroup" style="display: none; margin-top: 10px;">
-                                    <label class="form-label small text-muted">Or Upload Image Instead</label>
-                                    <input type="file" name="image_file" id="imageFile" class="form-control" accept="image/*">
+                                <div class="mt-3 p-3 bg-light rounded-3" id="mediaUploadWrapper" style="display:none;">
+                                    <label class="form-label small fw-semibold text-muted mb-1" id="mediaUploadLabel">Or Upload File Instead</label>
+                                    <input type="file" name="image_file" id="mediaFileInput" class="form-control">
+                                    <small class="text-muted d-block mt-1" id="mediaUploadHint">Supported: JPG, PNG, GIF, WEBP</small>
                                 </div>
                             </div>
 
@@ -235,14 +248,39 @@ include __DIR__ . '/../includes/header.php';
 // Toggle media field based on message type
 function toggleMediaField() {
     const type = document.getElementById('msgType').value;
-    document.getElementById('mediaUrlGroup').style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
-    document.getElementById('imageUploadGroup').style.display = type === 'image' ? 'block' : 'none';
+    const mediaUrlGroup  = document.getElementById('mediaUrlGroup');
+    const uploadWrapper  = document.getElementById('mediaUploadWrapper');
+    const fileInput      = document.getElementById('mediaFileInput');
+    const uploadLabel    = document.getElementById('mediaUploadLabel');
+    const uploadHint     = document.getElementById('mediaUploadHint');
+    const mediaUrl       = document.getElementById('mediaUrl');
+
+    mediaUrlGroup.style.display = ['image','video','document'].includes(type) ? 'block' : 'none';
     document.getElementById('filenameGroup').style.display = type === 'document' ? 'block' : 'none';
     document.getElementById('templateGroup').style.display = type === 'template' ? 'block' : 'none';
     document.getElementById('templatePreviewGroup').style.display = type === 'template' ? 'block' : 'none';
     document.getElementById('contentGroup').style.display = type === 'template' ? 'none' : 'block';
-    
-    // Auto-update preview visibility
+
+    // Configure upload per media type
+    const uploadConfig = {
+        image:    { name: 'image_file',    accept: 'image/*',  label: 'Or Upload Image Instead', hint: 'Supported: JPG, PNG, GIF, WEBP', placeholder: 'https://example.com/image.jpg' },
+        video:    { name: 'video_file',    accept: 'video/*',  label: 'Or Upload Video Instead', hint: 'Supported: MP4, MOV, AVI, MKV', placeholder: 'https://example.com/video.mp4' },
+        document: { name: 'document_file', accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip', label: 'Or Upload Document Instead', hint: 'Supported: PDF, DOC, XLS, PPT, TXT, ZIP', placeholder: 'https://example.com/file.pdf' },
+    };
+
+    if (uploadConfig[type]) {
+        const cfg = uploadConfig[type];
+        fileInput.name    = cfg.name;
+        fileInput.accept  = cfg.accept;
+        uploadLabel.textContent = cfg.label;
+        uploadHint.textContent  = cfg.hint;
+        mediaUrl.placeholder    = cfg.placeholder;
+        uploadWrapper.style.display = 'block';
+    } else {
+        uploadWrapper.style.display = 'none';
+    }
+
+    // Required attribute toggling
     document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
     document.getElementById('templateId').toggleAttribute('required', type === 'template');
     updatePreview();

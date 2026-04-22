@@ -33,6 +33,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $type = sanitize($_POST['message_type'] ?? 'text');
     $content = $_POST['content'] ?? '';
     $mediaUrl = sanitize($_POST['media_url'] ?? '');
+
+    // Handle media file upload for bulk
+    $mediaFileKey = match($type) {
+        'image'    => 'image_file',
+        'video'    => 'video_file',
+        'document' => 'document_file',
+        default    => null
+    };
+    $allowedExts = match($type) {
+        'image'    => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        'video'    => ['mp4', 'mov', 'avi', 'mkv', '3gp'],
+        'document' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip'],
+        default    => []
+    };
+    if ($mediaFileKey && isset($_FILES[$mediaFileKey]) && $_FILES[$mediaFileKey]['error'] === UPLOAD_ERR_OK) {
+        $upload = uploadFile($_FILES[$mediaFileKey], 'messages', $allowedExts);
+        if ($upload['success']) {
+            $mediaUrl = baseUrl($upload['path']);
+        } else {
+            setFlash('danger', 'File upload failed: ' . $upload['message']);
+            redirect('dashboard/bulk-messages.php');
+        }
+    }
     
     if ($type === 'template') {
         $templateId = sanitizeInt($_POST['template_id'] ?? 0);
@@ -112,7 +135,7 @@ include __DIR__ . '/../includes/header.php';
 
         <div class="card" style="border-radius: var(--border-radius);">
             <div class="card-body p-4">
-                <form method="POST" onsubmit="return confirm('Send messages to all selected contacts?')">
+                <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Send messages to all selected contacts?')">
                     <?= CSRF::tokenField(); ?>
 
                     <div class="row g-4">
@@ -151,7 +174,12 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6" id="mediaGroup" style="display:none;">
                             <label class="form-label fw-bold">Media URL</label>
-                            <input type="url" name="media_url" class="form-control" placeholder="https://...">
+                            <input type="url" name="media_url" class="form-control" id="bulkMediaUrl" placeholder="https://...">
+                            <div class="mt-3 p-3 bg-light rounded-3" id="bulkUploadWrapper" style="display:none;">
+                                <label class="form-label small fw-semibold text-muted mb-1" id="bulkUploadLabel">Or Upload File Instead</label>
+                                <input type="file" name="image_file" id="bulkFileInput" class="form-control">
+                                <small class="text-muted d-block mt-1" id="bulkUploadHint">Supported: JPG, PNG, GIF, WEBP</small>
+                            </div>
                         </div>
                         <div class="col-md-6" id="templateGroup" style="display:none;">
                             <label class="form-label fw-bold">Select Template</label>
@@ -203,11 +231,36 @@ function toggleBulkTarget() {
 
 function toggleMessageType() {
     const type = document.getElementById('msgType').value;
+    const uploadWrapper = document.getElementById('bulkUploadWrapper');
+    const fileInput     = document.getElementById('bulkFileInput');
+    const uploadLabel   = document.getElementById('bulkUploadLabel');
+    const uploadHint    = document.getElementById('bulkUploadHint');
+    const mediaUrl      = document.getElementById('bulkMediaUrl');
+
     document.getElementById('mediaGroup').style.display = (type === 'image') ? 'block' : 'none';
     document.getElementById('templateGroup').style.display = (type === 'template') ? 'block' : 'none';
     document.getElementById('templatePreviewGroup').style.display = (type === 'template') ? 'block' : 'none';
     document.getElementById('contentGroup').style.display = (type === 'template') ? 'none' : 'block';
     document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
+
+    // Configure upload per media type
+    const uploadConfig = {
+        image:    { name: 'image_file',    accept: 'image/*',  label: 'Or Upload Image Instead', hint: 'Supported: JPG, PNG, GIF, WEBP', placeholder: 'https://example.com/image.jpg' },
+        video:    { name: 'video_file',    accept: 'video/*',  label: 'Or Upload Video Instead', hint: 'Supported: MP4, MOV, AVI, MKV', placeholder: 'https://example.com/video.mp4' },
+        document: { name: 'document_file', accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip', label: 'Or Upload Document Instead', hint: 'Supported: PDF, DOC, XLS, PPT, TXT, ZIP', placeholder: 'https://example.com/file.pdf' },
+    };
+
+    if (uploadConfig[type] && uploadWrapper) {
+        const cfg = uploadConfig[type];
+        fileInput.name    = cfg.name;
+        fileInput.accept  = cfg.accept;
+        uploadLabel.textContent = cfg.label;
+        uploadHint.textContent  = cfg.hint;
+        if (mediaUrl) mediaUrl.placeholder = cfg.placeholder;
+        uploadWrapper.style.display = 'block';
+    } else if (uploadWrapper) {
+        uploadWrapper.style.display = 'none';
+    }
 }
 
 // Initialize on page load
