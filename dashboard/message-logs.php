@@ -114,14 +114,16 @@ include __DIR__ . '/../includes/header.php';
                             <td style="font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap;"><?= timeAgo($msg['created_at']); ?></td>
                             <td>
                                 <button class="btn btn-sm btn-light-primary" onclick="viewMessage(<?= htmlspecialchars(json_encode([
-                                    'id' => $msg['id'],
-                                    'direction' => $msg['direction'],
-                                    'to' => $msg['to_number'],
-                                    'name' => $msg['contact_name'] ?? $msg['to_number'],
-                                    'type' => ucfirst($msg['type']),
-                                    'status' => ucfirst($msg['status']),
-                                    'time' => date('d M Y, H:i:s', strtotime($msg['created_at'])),
-                                    'content' => $msg['content']
+                                    'id'          => $msg['id'],
+                                    'direction'   => $msg['direction'],
+                                    'to'          => $msg['to_number'],
+                                    'name'        => $msg['contact_name'] ?? $msg['to_number'],
+                                    'type'        => ucfirst($msg['type']),
+                                    'status'      => ucfirst($msg['status']),
+                                    'time'        => date('d M Y, H:i:s', strtotime($msg['created_at'])),
+                                    'content'     => $msg['content'],
+                                    'error'       => $msg['error_message'] ?? '',
+                                    'media_url'   => $msg['media_url'] ?? ''
                                 ])); ?>)" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </button>
@@ -158,6 +160,16 @@ include __DIR__ . '/../includes/header.php';
                     <div id="modalContent" class="p-3 rounded-3 bg-white border" style="font-size: 0.95rem; white-space: pre-wrap; line-height: 1.6;"></div>
                 </div>
 
+                <div class="mb-3" id="modalMediaSection" style="display:none;">
+                    <label class="text-muted small fw-bold text-uppercase mb-2 d-block" style="letter-spacing: 0.5px;">Media URL</label>
+                    <a id="modalMediaUrl" href="#" target="_blank" class="d-block text-break small p-2 bg-light rounded border" style="word-break: break-all;"></a>
+                </div>
+
+                <div class="mb-3" id="modalErrorSection" style="display:none;">
+                    <label class="text-muted small fw-bold text-uppercase mb-2 d-block" style="letter-spacing: 0.5px; color: var(--danger);">❌ Failure Reason (Meta API Error)</label>
+                    <div id="modalError" class="p-3 rounded-3 border" style="font-size: 0.85rem; white-space: pre-wrap; line-height: 1.6; background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.3) !important; color: #b91c1c;"></div>
+                </div>
+
                 <div class="row g-3 mt-2">
                     <div class="col-6">
                         <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Type</label>
@@ -192,14 +204,35 @@ include __DIR__ . '/../includes/header.php';
         const modal = new bootstrap.Modal(document.getElementById('messageDetailModal'));
         
         // Populate modal data
-        document.getElementById('modalTarget').innerText = data.name;
-        document.getElementById('modalTime').innerText = data.time;
-        document.getElementById('modalContent').innerText = data.content;
-        document.getElementById('modalType').innerText = data.type;
+        document.getElementById('modalTarget').innerText  = data.name;
+        document.getElementById('modalTime').innerText    = data.time;
+        document.getElementById('modalContent').innerText = data.content || '-';
+        document.getElementById('modalType').innerText    = data.type;
         
         const statusEl = document.getElementById('modalStatus');
-        statusEl.innerText = data.status;
-        statusEl.className = 'status-badge status-' + data.status.toLowerCase();
+        statusEl.innerText  = data.status;
+        statusEl.className  = 'status-badge status-' + data.status.toLowerCase();
+        
+        // Media URL
+        const mediaSection = document.getElementById('modalMediaSection');
+        const mediaLink    = document.getElementById('modalMediaUrl');
+        if (data.media_url) {
+            mediaLink.href        = data.media_url;
+            mediaLink.innerText   = data.media_url;
+            mediaSection.style.display = 'block';
+        } else {
+            mediaSection.style.display = 'none';
+        }
+
+        // Error message (only for failed)
+        const errorSection = document.getElementById('modalErrorSection');
+        const errorBox     = document.getElementById('modalError');
+        if (data.error && data.status.toLowerCase() === 'failed') {
+            errorBox.innerText = data.error;
+            errorSection.style.display = 'block';
+        } else {
+            errorSection.style.display = 'none';
+        }
         
         const iconEl = document.getElementById('modalIcon');
         if (data.direction === 'inbound') {
