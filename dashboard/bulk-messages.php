@@ -57,11 +57,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         }
     }
     
+    $templateComponents = [];
     if ($type === 'template') {
         $templateId = sanitizeInt($_POST['template_id'] ?? 0);
-        $tpl = $db->fetch("SELECT name FROM templates WHERE id = ? AND user_id = ?", [$templateId, $userId]);
+        $tpl = $db->fetch("SELECT name, body, language FROM templates WHERE id = ? AND user_id = ?", [$templateId, $userId]);
         if ($tpl) {
-            $content = $tpl['name']; // WhatsApp::sendBulk expects template name in content for template type
+            $content = $tpl['name'];
+            // Build body components from user-supplied variable values
+            $varValues = $_POST['tpl_vars'] ?? [];
+            if (!empty($varValues)) {
+                $bodyParams = [];
+                foreach ($varValues as $val) {
+                    $bodyParams[] = ['type' => 'text', 'text' => sanitize($val)];
+                }
+                $templateComponents = [['type' => 'body', 'parameters' => $bodyParams]];
+            }
         }
     }
     $target = sanitize($_POST['target'] ?? 'all');
@@ -86,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     }
 
     $wa = new WhatsApp();
-    $result = $wa->sendBulk($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $contacts, $type, $content, $mediaUrl);
+    $result = $wa->sendBulk($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $contacts, $type, $content, $mediaUrl, $templateComponents);
 
     setFlash('success', "Bulk send complete: {$result['success']} sent, {$result['failed']} failed.");
     redirect('dashboard/bulk-messages.php');
@@ -94,6 +104,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 
 $totalContacts = $db->count('contacts', 'user_id = ? AND is_active = 1', [$userId]);
 $templates = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+// Pre-process variable counts for each template
+$templateVarCounts = [];
+foreach ($templates as $tpl) {
+    preg_match_all('/\{\{(\d+)\}\}/', $tpl['body'], $matches);
+    $maxVar = !empty($matches[1]) ? max(array_map('intval', $matches[1])) : 0;
+    $templateVarCounts[$tpl['id']] = $maxVar;
+}
 $tags = $db->fetchAll("SELECT DISTINCT tags FROM contacts WHERE user_id = ? AND tags != ''", [$userId]);
 $allTags = [];
 foreach ($tags as $t) {
@@ -186,9 +203,14 @@ include __DIR__ . '/../includes/header.php';
                             <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
                                 <option value="">-- Choose Template --</option>
                                 <?php foreach ($templates as $tpl): ?>
-                                <option value="<?= $tpl['id']; ?>" data-body="<?= e($tpl['body']); ?>"><?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)</option>
+                                <option value="<?= $tpl['id']; ?>" data-body="<?= e($tpl['body']); ?>" data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"><?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)</option>
                                 <?php endforeach; ?>
                             </select>
+                        </div>
+                        <div class="col-12" id="templateVarsGroup" style="display:none;">
+                            <label class="form-label fw-bold">Template Variables</label>
+                            <div id="templateVarsContainer"></div>
+                            <small class="text-muted">Fill in the values for each <code>{{1}}</code>, <code>{{2}}</code>, etc. placeholder in the template.</small>
                         </div>
                         <div class="col-12" id="templatePreviewGroup" style="display:none;">
                             <label class="form-label fw-bold">Template Content</label>
@@ -272,12 +294,35 @@ function updateTemplatePreview() {
     const select = document.getElementById('templateId');
     const option = select.options[select.selectedIndex];
     const previewBox = document.getElementById('templatePreviewBox');
+    const varsGroup = document.getElementById('templateVarsGroup');
+    const varsContainer = document.getElementById('templateVarsContainer');
+
     if (option && option.value) {
         const body = option.getAttribute('data-body');
+        const varCount = parseInt(option.getAttribute('data-vars')) || 0;
         document.getElementById('msgContent').value = body;
         previewBox.textContent = body || 'No content available for this template.';
+
+        // Build variable input fields dynamically
+        varsContainer.innerHTML = '';
+        if (varCount > 0) {
+            varsGroup.style.display = 'block';
+            for (let i = 1; i <= varCount; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mb-2';
+                wrapper.innerHTML = `
+                    <label class="form-label small fw-semibold text-muted mb-1">Variable {{${i}}}</label>
+                    <input type="text" name="tpl_vars[]" class="form-control" placeholder="Value for {{${i}}}" required>
+                `;
+                varsContainer.appendChild(wrapper);
+            }
+        } else {
+            varsGroup.style.display = 'none';
+        }
     } else {
         previewBox.innerHTML = '<span class="text-muted fst-italic">Select a template to see its content...</span>';
+        varsGroup.style.display = 'none';
+        varsContainer.innerHTML = '';
     }
 }
 

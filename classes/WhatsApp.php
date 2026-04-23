@@ -165,7 +165,7 @@ class WhatsApp {
     /**
      * Send bulk messages
      */
-    public function sendBulk($userId, $phoneNumberId, $accessToken, $contacts, $type, $content, $mediaUrl = null) {
+    public function sendBulk($userId, $phoneNumberId, $accessToken, $contacts, $type, $content, $mediaUrl = null, $templateComponents = []) {
         $results = ['success' => 0, 'failed' => 0, 'errors' => []];
 
         foreach ($contacts as $contact) {
@@ -176,7 +176,7 @@ class WhatsApp {
             } elseif ($type === 'image') {
                 $result = $this->sendImage($userId, $phoneNumberId, $accessToken, $phone, $mediaUrl, $content);
             } elseif ($type === 'template') {
-                $result = $this->sendTemplate($userId, $phoneNumberId, $accessToken, $phone, $content);
+                $result = $this->sendTemplate($userId, $phoneNumberId, $accessToken, $phone, $content, 'en', $templateComponents);
             } else {
                 $result = $this->sendText($userId, $phoneNumberId, $accessToken, $phone, $content);
             }
