@@ -15,7 +15,8 @@ $hideNav = true; // Prevents landing page nav from appearing in dashboard
 $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
-    // Handle AJAX Sync Templates
+
+    // ── AJAX: Sync Templates ──────────────────────────────────────────
     if (isAjax() && ($_POST['action'] ?? '') === 'sync_templates') {
         try {
             $wa = new WhatsApp();
@@ -25,85 +26,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         }
     }
 
-    if (!$waAccount) {
-        setFlash('danger', 'Configure your WhatsApp API first.');
-        redirect('dashboard/whatsapp.php');
-    }
+    // ── AJAX: Get Contacts List ───────────────────────────────────────
+    if (isAjax() && ($_POST['action'] ?? '') === 'get_contacts') {
+        $target  = sanitize($_POST['target'] ?? 'all');
+        $phones  = [];
 
-    $type = sanitize($_POST['message_type'] ?? 'text');
-    $content = $_POST['content'] ?? '';
-    $mediaUrl = sanitize($_POST['media_url'] ?? '');
-
-    // Handle media file upload for bulk
-    $mediaFileKey = match($type) {
-        'image'    => 'image_file',
-        'video'    => 'video_file',
-        'document' => 'document_file',
-        default    => null
-    };
-    $allowedExts = match($type) {
-        'image'    => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-        'video'    => ['mp4', 'mov', 'avi', 'mkv', '3gp'],
-        'document' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip'],
-        default    => []
-    };
-    if ($mediaFileKey && isset($_FILES[$mediaFileKey]) && $_FILES[$mediaFileKey]['error'] === UPLOAD_ERR_OK) {
-        $upload = uploadFile($_FILES[$mediaFileKey], 'messages', $allowedExts);
-        if ($upload['success']) {
-            $mediaUrl = baseUrl($upload['path']);
-        } else {
-            setFlash('danger', 'File upload failed: ' . $upload['message']);
-            redirect('dashboard/bulk-messages.php');
+        if ($target === 'all') {
+            $rows = $db->fetchAll("SELECT phone FROM contacts WHERE user_id = ? AND is_active = 1", [$userId]);
+            foreach ($rows as $r) $phones[] = $r['phone'];
+        } elseif ($target === 'tag') {
+            $tag  = sanitize($_POST['tag'] ?? '');
+            $rows = $db->fetchAll("SELECT phone FROM contacts WHERE user_id = ? AND is_active = 1 AND tags LIKE ?", [$userId, "%{$tag}%"]);
+            foreach ($rows as $r) $phones[] = $r['phone'];
+        } elseif ($target === 'custom') {
+            $numbers = array_filter(array_map('trim', explode("\n", $_POST['numbers'] ?? '')));
+            $phones  = array_values($numbers);
         }
-    }
-    
-    $templateComponents = [];
-    if ($type === 'template') {
-        $templateId = sanitizeInt($_POST['template_id'] ?? 0);
-        $tpl = $db->fetch("SELECT name, body, language FROM templates WHERE id = ? AND user_id = ?", [$templateId, $userId]);
-        if ($tpl) {
-            $content = $tpl['name'];
-            // Build body components from user-supplied variable values
-            $varValues = $_POST['tpl_vars'] ?? [];
-            if (!empty($varValues)) {
-                $bodyParams = [];
-                foreach ($varValues as $val) {
-                    $bodyParams[] = ['type' => 'text', 'text' => sanitize($val)];
-                }
-                $templateComponents = [['type' => 'body', 'parameters' => $bodyParams]];
-            }
+
+        // For templates, also return the template name from DB
+        $templateName = '';
+        if (!empty($_POST['template_id'])) {
+            $tpl = $db->fetch("SELECT name FROM templates WHERE id = ? AND user_id = ?",
+                [sanitizeInt($_POST['template_id']), $userId]);
+            if ($tpl) $templateName = $tpl['name'];
         }
+
+        jsonResponse(['success' => true, 'phones' => $phones, 'total' => count($phones), 'template_name' => $templateName]);
     }
-    $target = sanitize($_POST['target'] ?? 'all');
-
-    // Get contacts
-    $contacts = [];
-    if ($target === 'all') {
-        $contacts = $db->fetchAll("SELECT phone FROM contacts WHERE user_id = ? AND is_active = 1", [$userId]);
-    } elseif ($target === 'tag') {
-        $tag = sanitize($_POST['tag'] ?? '');
-        $contacts = $db->fetchAll("SELECT phone FROM contacts WHERE user_id = ? AND is_active = 1 AND tags LIKE ?", [$userId, "%{$tag}%"]);
-    } elseif ($target === 'custom') {
-        $numbers = array_filter(array_map('trim', explode("\n", $_POST['numbers'] ?? '')));
-        foreach ($numbers as $num) {
-            $contacts[] = ['phone' => $num];
-        }
-    }
-
-    if (empty($contacts)) {
-        setFlash('danger', 'No contacts found for the selected target.');
-        redirect('dashboard/bulk-messages.php');
-    }
-
-    $wa = new WhatsApp();
-    $result = $wa->sendBulk($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $contacts, $type, $content, $mediaUrl, $templateComponents);
-
-    setFlash('success', "Bulk send complete: {$result['success']} sent, {$result['failed']} failed.");
-    redirect('dashboard/bulk-messages.php');
 }
 
 $totalContacts = $db->count('contacts', 'user_id = ? AND is_active = 1', [$userId]);
-$templates = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+$templates     = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+
 // Pre-process variable counts for each template
 $templateVarCounts = [];
 foreach ($templates as $tpl) {
@@ -111,7 +65,8 @@ foreach ($templates as $tpl) {
     $maxVar = !empty($matches[1]) ? max(array_map('intval', $matches[1])) : 0;
     $templateVarCounts[$tpl['id']] = $maxVar;
 }
-$tags = $db->fetchAll("SELECT DISTINCT tags FROM contacts WHERE user_id = ? AND tags != ''", [$userId]);
+
+$tags    = $db->fetchAll("SELECT DISTINCT tags FROM contacts WHERE user_id = ? AND tags != ''", [$userId]);
 $allTags = [];
 foreach ($tags as $t) {
     foreach (explode(',', $t['tags']) as $tag) {
@@ -120,9 +75,11 @@ foreach ($tags as $t) {
     }
 }
 
+$csrfToken = CSRF::generateToken();
+
 $pageTitle = 'Bulk Messages';
-$extraCss = [asset('assets/css/dashboard.css')];
-$extraJs = [asset('assets/js/admin.js')];
+$extraCss  = [asset('assets/css/dashboard.css')];
+$extraJs   = [asset('assets/js/admin.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -150,10 +107,37 @@ include __DIR__ . '/../includes/header.php';
         <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>" class="fw-bold">Configure WhatsApp API</a> first.</div>
         <?php endif; ?>
 
-        <div class="card" style="border-radius: var(--border-radius);">
+        <!-- Progress Card (hidden until send starts) -->
+        <div class="card mb-4" id="progressCard" style="display:none; border-radius: var(--border-radius);">
             <div class="card-body p-4">
-                <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Send messages to all selected contacts?')">
-                    <?= CSRF::tokenField(); ?>
+                <h6 class="fw-bold mb-3"><i class="bi bi-send-fill text-primary"></i> Sending Bulk Messages...</h6>
+                <div class="d-flex justify-content-between mb-1">
+                    <span id="progressLabel" class="small text-muted">Preparing...</span>
+                    <span id="progressCount" class="small fw-bold">0 / 0</span>
+                </div>
+                <div class="progress mb-3" style="height: 10px; border-radius: 8px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" id="progressBar" style="width: 0%;" role="progressbar"></div>
+                </div>
+                <div id="progressStats" class="d-flex gap-3 small">
+                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> Sent: <strong id="statSent">0</strong></span>
+                    <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Failed: <strong id="statFailed">0</strong></span>
+                </div>
+                <div id="progressErrors" class="mt-3" style="display:none;">
+                    <details>
+                        <summary class="text-danger small fw-bold">View Errors</summary>
+                        <ul id="errorList" class="small text-danger mt-2"></ul>
+                    </details>
+                </div>
+                <div id="progressDone" class="alert alert-success mt-3" style="display:none;">
+                    <i class="bi bi-check-circle-fill"></i> <strong>Done!</strong> Bulk send complete.
+                    <a href="" class="ms-2 fw-bold">Refresh</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border-radius: var(--border-radius);" id="bulkFormCard">
+            <div class="card-body p-4">
+                <form id="bulkForm" enctype="multipart/form-data">
 
                     <div class="row g-4">
                         <div class="col-md-6">
@@ -174,7 +158,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-12" id="numbersGroup" style="display:none;">
                             <label class="form-label fw-bold">Phone Numbers (one per line)</label>
-                            <textarea name="numbers" class="form-control" rows="5" placeholder="+919876543210&#10;+919876543211&#10;+919876543212"></textarea>
+                            <textarea name="numbers" id="customNumbers" class="form-control" rows="5" placeholder="+919876543210&#10;+919876543211&#10;+919876543212"></textarea>
                         </div>
                     </div>
 
@@ -192,40 +176,33 @@ include __DIR__ . '/../includes/header.php';
                         <div class="col-md-6" id="mediaGroup" style="display:none;">
                             <label class="form-label fw-bold">Media URL</label>
                             <input type="url" name="media_url" class="form-control" id="bulkMediaUrl" placeholder="https://...">
-                            <div class="mt-3 p-3 bg-light rounded-3" id="bulkUploadWrapper" style="display:none;">
-                                <label class="form-label small fw-semibold text-muted mb-1" id="bulkUploadLabel">Or Upload File Instead</label>
-                                <input type="file" name="image_file" id="bulkFileInput" class="form-control">
-                                <small class="text-muted d-block mt-1" id="bulkUploadHint">Supported: JPG, PNG, GIF, WEBP</small>
-                            </div>
                         </div>
                         <div class="col-md-6" id="templateGroup" style="display:none;">
                             <label class="form-label fw-bold">Select Template</label>
                             <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
                                 <option value="">-- Choose Template --</option>
                                 <?php foreach ($templates as $tpl): ?>
-                                <option value="<?= $tpl['id']; ?>" data-body="<?= e($tpl['body']); ?>" data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"><?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)</option>
+                                <option value="<?= $tpl['id']; ?>"
+                                        data-body="<?= e($tpl['body']); ?>"
+                                        data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"
+                                        data-name="<?= e($tpl['name']); ?>">
+                                    <?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)
+                                </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-12" id="templateVarsGroup" style="display:none;">
                             <label class="form-label fw-bold">Template Variables</label>
                             <div id="templateVarsContainer"></div>
-                            <small class="text-muted">Fill in the values for each <code>{{1}}</code>, <code>{{2}}</code>, etc. placeholder in the template.</small>
+                            <small class="text-muted">Fill in the values for each <code>{{1}}</code>, <code>{{2}}</code>, etc. placeholder.</small>
                         </div>
                         <div class="col-12" id="templatePreviewGroup" style="display:none;">
-                            <label class="form-label fw-bold">Template Content</label>
+                            <label class="form-label fw-bold">Template Preview</label>
                             <div id="templatePreviewBox" style="
-                                background: #f0fdf4;
-                                border: 1px solid #86efac;
-                                border-left: 4px solid #22c55e;
-                                border-radius: 8px;
-                                padding: 12px 16px;
-                                font-size: 0.9rem;
-                                color: #166534;
-                                min-height: 60px;
-                                white-space: pre-wrap;
-                                line-height: 1.6;
-                            ">
+                                background: #f0fdf4; border: 1px solid #86efac;
+                                border-left: 4px solid #22c55e; border-radius: 8px;
+                                padding: 12px 16px; font-size: 0.9rem; color: #166534;
+                                min-height: 60px; white-space: pre-wrap; line-height: 1.6;">
                                 <span class="text-muted fst-italic">Select a template to see its content...</span>
                             </div>
                         </div>
@@ -235,7 +212,9 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success btn-lg mt-4" <?= !$waAccount ? 'disabled' : ''; ?>>
+                    <button type="button" class="btn btn-success btn-lg mt-4" id="sendBulkBtn"
+                        <?= !$waAccount ? 'disabled' : ''; ?>
+                        onclick="startBulkSend()">
                         <i class="bi bi-megaphone-fill"></i> Send Bulk Messages
                     </button>
                 </form>
@@ -245,76 +224,52 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
+const CSRF_TOKEN   = '<?= $csrfToken; ?>';
+const BATCH_SIZE   = 10; // contacts per request
+const BATCH_URL    = '<?= baseUrl('api/bulk-send-batch.php'); ?>';
+const PAGE_URL     = '<?= baseUrl('dashboard/bulk-messages.php'); ?>';
+
+// ── UI toggles ──────────────────────────────────────────────────────────────
 function toggleBulkTarget() {
     const target = document.getElementById('bulkTarget').value;
-    document.getElementById('tagGroup').style.display = target === 'tag' ? 'block' : 'none';
+    document.getElementById('tagGroup').style.display    = target === 'tag'    ? 'block' : 'none';
     document.getElementById('numbersGroup').style.display = target === 'custom' ? 'block' : 'none';
 }
 
 function toggleMessageType() {
     const type = document.getElementById('msgType').value;
-    const uploadWrapper = document.getElementById('bulkUploadWrapper');
-    const fileInput     = document.getElementById('bulkFileInput');
-    const uploadLabel   = document.getElementById('bulkUploadLabel');
-    const uploadHint    = document.getElementById('bulkUploadHint');
-    const mediaUrl      = document.getElementById('bulkMediaUrl');
-
-    document.getElementById('mediaGroup').style.display = (type === 'image') ? 'block' : 'none';
-    document.getElementById('templateGroup').style.display = (type === 'template') ? 'block' : 'none';
-    document.getElementById('templatePreviewGroup').style.display = (type === 'template') ? 'block' : 'none';
-    document.getElementById('contentGroup').style.display = (type === 'template') ? 'none' : 'block';
+    document.getElementById('mediaGroup').style.display          = (type === 'image')    ? 'block' : 'none';
+    document.getElementById('templateGroup').style.display       = (type === 'template') ? 'block' : 'none';
+    document.getElementById('templatePreviewGroup').style.display= (type === 'template') ? 'block' : 'none';
+    document.getElementById('templateVarsGroup').style.display   = 'none';
+    document.getElementById('contentGroup').style.display        = (type === 'template') ? 'none'  : 'block';
     document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
-
-    // Configure upload per media type
-    const uploadConfig = {
-        image:    { name: 'image_file',    accept: 'image/*',  label: 'Or Upload Image Instead', hint: 'Supported: JPG, PNG, GIF, WEBP', placeholder: 'https://example.com/image.jpg' },
-        video:    { name: 'video_file',    accept: 'video/*',  label: 'Or Upload Video Instead', hint: 'Supported: MP4, MOV, AVI, MKV', placeholder: 'https://example.com/video.mp4' },
-        document: { name: 'document_file', accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip', label: 'Or Upload Document Instead', hint: 'Supported: PDF, DOC, XLS, PPT, TXT, ZIP', placeholder: 'https://example.com/file.pdf' },
-    };
-
-    if (uploadConfig[type] && uploadWrapper) {
-        const cfg = uploadConfig[type];
-        fileInput.name    = cfg.name;
-        fileInput.accept  = cfg.accept;
-        uploadLabel.textContent = cfg.label;
-        uploadHint.textContent  = cfg.hint;
-        if (mediaUrl) mediaUrl.placeholder = cfg.placeholder;
-        uploadWrapper.style.display = 'block';
-    } else if (uploadWrapper) {
-        uploadWrapper.style.display = 'none';
-    }
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    toggleMessageType();
-});
+document.addEventListener('DOMContentLoaded', toggleMessageType);
 
 function updateTemplatePreview() {
-    const select = document.getElementById('templateId');
-    const option = select.options[select.selectedIndex];
-    const previewBox = document.getElementById('templatePreviewBox');
-    const varsGroup = document.getElementById('templateVarsGroup');
-    const varsContainer = document.getElementById('templateVarsContainer');
+    const select       = document.getElementById('templateId');
+    const option       = select.options[select.selectedIndex];
+    const previewBox   = document.getElementById('templatePreviewBox');
+    const varsGroup    = document.getElementById('templateVarsGroup');
+    const varsContainer= document.getElementById('templateVarsContainer');
 
     if (option && option.value) {
-        const body = option.getAttribute('data-body');
+        const body     = option.getAttribute('data-body');
         const varCount = parseInt(option.getAttribute('data-vars')) || 0;
         document.getElementById('msgContent').value = body;
-        previewBox.textContent = body || 'No content available for this template.';
+        previewBox.textContent = body || 'No content.';
 
-        // Build variable input fields dynamically
         varsContainer.innerHTML = '';
         if (varCount > 0) {
             varsGroup.style.display = 'block';
             for (let i = 1; i <= varCount; i++) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'mb-2';
-                wrapper.innerHTML = `
-                    <label class="form-label small fw-semibold text-muted mb-1">Variable {{${i}}}</label>
-                    <input type="text" name="tpl_vars[]" class="form-control" placeholder="Value for {{${i}}}" required>
-                `;
-                varsContainer.appendChild(wrapper);
+                const d = document.createElement('div');
+                d.className = 'mb-2';
+                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Variable {{${i}}}</label>
+                    <input type="text" name="tpl_vars[]" class="form-control" placeholder="Value for {{${i}}}" required>`;
+                varsContainer.appendChild(d);
             }
         } else {
             varsGroup.style.display = 'none';
@@ -326,30 +281,135 @@ function updateTemplatePreview() {
     }
 }
 
+// ── Sync Templates ───────────────────────────────────────────────────────────
 async function syncTemplates() {
     const btn = document.getElementById('syncTemplatesBtn');
-    const originalHtml = btn.innerHTML;
+    const orig = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
-    btn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('action', 'sync_templates');
-    formData.append('_csrf_token', '<?= CSRF::generateToken(); ?>');
-
+    btn.disabled  = true;
+    const fd = new FormData();
+    fd.append('action', 'sync_templates');
+    fd.append('_csrf_token', CSRF_TOKEN);
     try {
-        const res = await fetch('', { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'} });
-        const result = await res.json();
-        if (result.success) {
-            alert(result.message);
-            location.reload();
-        } else {
-            alert(result.message);
-        }
-    } catch(err) {
-        alert('Network error during sync.');
+        const r = await fetch('', { method: 'POST', body: fd, headers: {'X-Requested-With': 'XMLHttpRequest'} });
+        const d = await r.json();
+        alert(d.message);
+        if (d.success) location.reload();
+    } catch(e) { alert('Network error during sync.'); }
+    btn.innerHTML = orig;
+    btn.disabled  = false;
+}
+
+// ── Bulk Send Engine ─────────────────────────────────────────────────────────
+async function startBulkSend() {
+    const form    = document.getElementById('bulkForm');
+    const type    = document.getElementById('msgType').value;
+    const content = document.getElementById('msgContent').value;
+    const target  = document.getElementById('bulkTarget').value;
+
+    // Validation
+    if (type !== 'template' && !content.trim()) {
+        alert('Please enter a message.');
+        return;
     }
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
+    if (type === 'template' && !document.getElementById('templateId').value) {
+        alert('Please select a template.');
+        return;
+    }
+    if (!confirm('Send messages to all selected contacts?')) return;
+
+    // Collect template components
+    let templateComponents = [];
+    if (type === 'template') {
+        const varInputs = form.querySelectorAll('input[name="tpl_vars[]"]');
+        if (varInputs.length > 0) {
+            const params = Array.from(varInputs).map(i => ({ type: 'text', text: i.value }));
+            templateComponents = [{ type: 'body', parameters: params }];
+        }
+    }
+
+    // Step 1: Fetch contact list from server
+    const fd1 = new FormData();
+    fd1.append('action',      'get_contacts');
+    fd1.append('_csrf_token', CSRF_TOKEN);
+    fd1.append('target',      target);
+    fd1.append('tag',         document.querySelector('[name="tag"]')?.value || '');
+    fd1.append('numbers',     document.getElementById('customNumbers')?.value || '');
+    fd1.append('template_id', document.getElementById('templateId')?.value || '');
+
+    let phones = [], templateName = '';
+    try {
+        const r   = await fetch('', { method: 'POST', body: fd1, headers: {'X-Requested-With': 'XMLHttpRequest'} });
+        const d   = await r.json();
+        if (!d.success || d.total === 0) { alert('No contacts found.'); return; }
+        phones       = d.phones;
+        templateName = d.template_name || content;
+    } catch(e) { alert('Error fetching contacts: ' + e.message); return; }
+
+    // Step 2: Show progress UI
+    document.getElementById('bulkFormCard').style.display = 'none';
+    const progressCard = document.getElementById('progressCard');
+    progressCard.style.display = 'block';
+    progressCard.scrollIntoView({ behavior: 'smooth' });
+
+    const total  = phones.length;
+    let sent = 0, failed = 0, allErrors = [];
+
+    const setProgress = (done) => {
+        const pct = Math.round((done / total) * 100);
+        document.getElementById('progressBar').style.width  = pct + '%';
+        document.getElementById('progressCount').textContent = `${done} / ${total}`;
+        document.getElementById('progressLabel').textContent = `Sending batch... (${pct}%)`;
+        document.getElementById('statSent').textContent   = sent;
+        document.getElementById('statFailed').textContent = failed;
+    };
+
+    setProgress(0);
+
+    // Step 3: Send in batches
+    const mediaUrl = document.getElementById('bulkMediaUrl')?.value || '';
+
+    for (let i = 0; i < phones.length; i += BATCH_SIZE) {
+        const batch = phones.slice(i, i + BATCH_SIZE);
+        const fd2   = new FormData();
+        fd2.append('_csrf_token',         CSRF_TOKEN);
+        fd2.append('type',                type);
+        fd2.append('content',             type === 'template' ? templateName : content);
+        fd2.append('media_url',           mediaUrl);
+        fd2.append('phones',              JSON.stringify(batch));
+        fd2.append('template_components', JSON.stringify(templateComponents));
+
+        try {
+            const r = await fetch(BATCH_URL, { method: 'POST', body: fd2 });
+            const d = await r.json();
+            sent   += d.sent   || 0;
+            failed += d.failed || 0;
+            if (d.errors && d.errors.length) allErrors.push(...d.errors);
+        } catch(e) {
+            failed += batch.length;
+            allErrors.push('Batch error: ' + e.message);
+        }
+
+        setProgress(Math.min(i + BATCH_SIZE, total));
+        // Small pause between batches to be kind to the server
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Step 4: Done
+    document.getElementById('progressLabel').textContent = 'Complete!';
+    document.getElementById('progressBar').classList.remove('progress-bar-animated', 'progress-bar-striped');
+    document.getElementById('progressDone').style.display = 'block';
+
+    if (allErrors.length) {
+        const errDiv  = document.getElementById('progressErrors');
+        const errList = document.getElementById('errorList');
+        errDiv.style.display = 'block';
+        allErrors.forEach(e => {
+            const li = document.createElement('li');
+            li.textContent = e;
+            errList.appendChild(li);
+        });
+    }
 }
 </script>
 
