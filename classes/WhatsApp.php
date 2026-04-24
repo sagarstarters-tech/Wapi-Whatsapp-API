@@ -92,6 +92,15 @@ class WhatsApp {
             'template' => $template
         ];
 
+        // Log template payload for debugging
+        $logDir = APP_ROOT . '/logs';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+        file_put_contents(
+            $logDir . '/api_payload.log',
+            '[' . date('Y-m-d H:i:s') . '] TO: ' . $to . ' | PAYLOAD: ' . json_encode($payload) . "\n",
+            FILE_APPEND
+        );
+
         return $this->sendMessage($userId, $phoneNumberId, $accessToken, $to, 'template', $templateName, $payload);
     }
 
