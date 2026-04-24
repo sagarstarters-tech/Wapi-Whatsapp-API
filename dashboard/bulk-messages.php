@@ -43,24 +43,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             $phones  = array_values($numbers);
         }
 
-        // For templates, also return the template name and language from DB
+        // For templates, also return the template name, language and header info from DB
         $templateName = '';
         $templateLanguage = 'en';
+        $templateHeaderType = 'none';
         if (!empty($_POST['template_id'])) {
-            $tpl = $db->fetch("SELECT name, language FROM templates WHERE id = ? AND user_id = ?",
+            $tpl = $db->fetch("SELECT name, language, header_type FROM templates WHERE id = ? AND user_id = ?",
                 [sanitizeInt($_POST['template_id']), $userId]);
             if ($tpl) {
                 $templateName = $tpl['name'];
                 $templateLanguage = $tpl['language'];
+                $templateHeaderType = $tpl['header_type'] ?? 'none';
             }
         }
 
-        jsonResponse(['success' => true, 'phones' => $phones, 'total' => count($phones), 'template_name' => $templateName, 'template_language' => $templateLanguage]);
+        jsonResponse(['success' => true, 'phones' => $phones, 'total' => count($phones), 'template_name' => $templateName, 'template_language' => $templateLanguage, 'template_header_type' => $templateHeaderType]);
     }
 }
 
 $totalContacts = $db->count('contacts', 'user_id = ? AND is_active = 1', [$userId]);
-$templates     = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+$templates     = $db->fetchAll("SELECT id, name, language, body, header_type, header_content FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
 
 // Pre-process variable counts for each template
 $templateVarCounts = [];
@@ -190,11 +192,17 @@ include __DIR__ . '/../includes/header.php';
                                         data-body="<?= e($tpl['body']); ?>"
                                         data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"
                                         data-name="<?= e($tpl['name']); ?>"
-                                        data-language="<?= e($tpl['language']); ?>">
+                                        data-language="<?= e($tpl['language']); ?>"
+                                        data-header-type="<?= e($tpl['header_type'] ?? 'none'); ?>">
                                     <?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)
                                 </option>
                                 <?php endforeach; ?>
                             </select>
+                        </div>
+                        <div class="col-12" id="templateHeaderGroup" style="display:none;">
+                            <label class="form-label fw-bold">📷 Template Header Media URL</label>
+                            <input type="url" class="form-control" id="templateHeaderUrl" placeholder="https://example.com/image.jpg">
+                            <small class="text-muted" id="templateHeaderHint">This template requires a header image. Provide the image URL.</small>
                         </div>
                         <div class="col-12" id="templateVarsGroup" style="display:none;">
                             <label class="form-label fw-bold">Template Variables</label>
@@ -259,13 +267,26 @@ function updateTemplatePreview() {
     const previewBox   = document.getElementById('templatePreviewBox');
     const varsGroup    = document.getElementById('templateVarsGroup');
     const varsContainer= document.getElementById('templateVarsContainer');
+    const headerGroup  = document.getElementById('templateHeaderGroup');
+    const headerHint   = document.getElementById('templateHeaderHint');
 
     if (option && option.value) {
-        const body     = option.getAttribute('data-body');
-        const varCount = parseInt(option.getAttribute('data-vars')) || 0;
+        const body       = option.getAttribute('data-body');
+        const varCount   = parseInt(option.getAttribute('data-vars')) || 0;
+        const headerType = option.getAttribute('data-header-type') || 'none';
         document.getElementById('msgContent').value = body;
         previewBox.textContent = body || 'No content.';
 
+        // Handle header media (image/video/document)
+        if (['image', 'video', 'document'].includes(headerType)) {
+            headerGroup.style.display = 'block';
+            const labels = { image: '📷 This template requires a header image.', video: '🎬 This template requires a header video.', document: '📄 This template requires a header document.' };
+            headerHint.textContent = labels[headerType] || 'Provide the media URL.';
+        } else {
+            headerGroup.style.display = 'none';
+        }
+
+        // Handle body variables
         varsContainer.innerHTML = '';
         if (varCount > 0) {
             varsGroup.style.display = 'block';
@@ -282,6 +303,7 @@ function updateTemplatePreview() {
     } else {
         previewBox.innerHTML = '<span class="text-muted fst-italic">Select a template to see its content...</span>';
         varsGroup.style.display = 'none';
+        headerGroup.style.display = 'none';
         varsContainer.innerHTML = '';
     }
 }
@@ -323,13 +345,25 @@ async function startBulkSend() {
     }
     if (!confirm('Send messages to all selected contacts?')) return;
 
-    // Collect template components
+    // Collect template components (header + body)
     let templateComponents = [];
     if (type === 'template') {
+        const selectedOpt = document.getElementById('templateId').selectedOptions[0];
+        const headerType  = selectedOpt?.getAttribute('data-header-type') || 'none';
+        const headerUrl   = document.getElementById('templateHeaderUrl')?.value || '';
+
+        // Header component (image/video/document)
+        if (['image', 'video', 'document'].includes(headerType) && headerUrl) {
+            const headerParam = { type: headerType };
+            headerParam[headerType] = { link: headerUrl };
+            templateComponents.push({ type: 'header', parameters: [headerParam] });
+        }
+
+        // Body variables
         const varInputs = form.querySelectorAll('input[name="tpl_vars[]"]');
         if (varInputs.length > 0) {
             const params = Array.from(varInputs).map(i => ({ type: 'text', text: i.value }));
-            templateComponents = [{ type: 'body', parameters: params }];
+            templateComponents.push({ type: 'body', parameters: params });
         }
     }
 

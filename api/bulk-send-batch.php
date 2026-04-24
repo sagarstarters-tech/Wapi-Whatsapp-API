@@ -41,15 +41,35 @@ if ($rawComponents) {
         $templateComponents = $decoded;
     }
 }
-
-// If template language not passed, look it up from DB by template name
-if ($type === 'template' && empty($templateLanguage) && !empty($content)) {
-    $tplRow = $db->fetch("SELECT language FROM templates WHERE user_id = ? AND name = ? LIMIT 1", [$userId, $content]);
+// If template, look up full template details from DB
+$templateHeaderType = 'none';
+if ($type === 'template' && !empty($content)) {
+    $tplRow = $db->fetch("SELECT language, header_type FROM templates WHERE user_id = ? AND name = ? LIMIT 1", [$userId, $content]);
     if ($tplRow) {
-        $templateLanguage = $tplRow['language'];
+        // Use DB language if not passed from frontend
+        if (empty($templateLanguage)) {
+            $templateLanguage = $tplRow['language'];
+        }
+        $templateHeaderType = $tplRow['header_type'] ?? 'none';
+        
+        // If template has image/video/document header but no header component was passed, 
+        // try to build it from media_url
+        if (in_array($templateHeaderType, ['image', 'video', 'document']) && !empty($mediaUrl)) {
+            $hasHeaderComponent = false;
+            foreach ($templateComponents as $comp) {
+                if (($comp['type'] ?? '') === 'header') {
+                    $hasHeaderComponent = true;
+                    break;
+                }
+            }
+            if (!$hasHeaderComponent) {
+                $headerParam = ['type' => $templateHeaderType, $templateHeaderType => ['link' => $mediaUrl]];
+                array_unshift($templateComponents, ['type' => 'header', 'parameters' => [$headerParam]]);
+            }
+        }
     }
 }
-// Final fallback
+// Final fallback for language
 if (empty($templateLanguage)) {
     $templateLanguage = 'en';
 }
