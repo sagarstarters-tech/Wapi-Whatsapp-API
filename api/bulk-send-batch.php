@@ -63,7 +63,8 @@ foreach ($phones as $phone) {
             $result = $wa->sendImage($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $mediaUrl, $content);
             break;
         case 'template':
-            $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content, 'en', $templateComponents);
+            $templateLanguage = sanitize($_POST['template_language'] ?? 'en');
+            $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content, $templateLanguage, $templateComponents);
             break;
         default:
             $result = $wa->sendText($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content);

@@ -45,13 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 
         // For templates, also return the template name from DB
         $templateName = '';
+        $templateLanguage = 'en';
         if (!empty($_POST['template_id'])) {
-            $tpl = $db->fetch("SELECT name FROM templates WHERE id = ? AND user_id = ?",
+            $tpl = $db->fetch("SELECT name, language FROM templates WHERE id = ? AND user_id = ?",
                 [sanitizeInt($_POST['template_id']), $userId]);
-            if ($tpl) $templateName = $tpl['name'];
+            if ($tpl) {
+                $templateName = $tpl['name'];
+                $templateLanguage = $tpl['language'];
+            }
         }
 
-        jsonResponse(['success' => true, 'phones' => $phones, 'total' => count($phones), 'template_name' => $templateName]);
+        jsonResponse(['success' => true, 'phones' => $phones, 'total' => count($phones), 'template_name' => $templateName, 'template_language' => $templateLanguage]);
     }
 }
 
@@ -337,13 +341,14 @@ async function startBulkSend() {
     fd1.append('numbers',     document.getElementById('customNumbers')?.value || '');
     fd1.append('template_id', document.getElementById('templateId')?.value || '');
 
-    let phones = [], templateName = '';
+    let phones = [], templateName = '', templateLanguage = 'en';
     try {
         const r   = await fetch('', { method: 'POST', body: fd1, headers: {'X-Requested-With': 'XMLHttpRequest'} });
         const d   = await r.json();
         if (!d.success || d.total === 0) { alert('No contacts found.'); return; }
         phones       = d.phones;
         templateName = d.template_name || content;
+        templateLanguage = d.template_language || 'en';
     } catch(e) { alert('Error fetching contacts: ' + e.message); return; }
 
     // Step 2: Show progress UI
@@ -378,6 +383,7 @@ async function startBulkSend() {
         fd2.append('media_url',           mediaUrl);
         fd2.append('phones',              JSON.stringify(batch));
         fd2.append('template_components', JSON.stringify(templateComponents));
+        fd2.append('template_language',   templateLanguage);
 
         try {
             const r = await fetch(BATCH_URL, { method: 'POST', body: fd2 });
