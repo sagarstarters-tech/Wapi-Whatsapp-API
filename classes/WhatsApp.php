@@ -165,7 +165,7 @@ class WhatsApp {
     /**
      * Send bulk messages
      */
-    public function sendBulk($userId, $phoneNumberId, $accessToken, $contacts, $type, $content, $mediaUrl = null, $templateComponents = []) {
+    public function sendBulk($userId, $phoneNumberId, $accessToken, $contacts, $type, $content, $mediaUrl = null, $templateComponents = [], $templateLanguage = 'en') {
         $results = ['success' => 0, 'failed' => 0, 'errors' => []];
 
         foreach ($contacts as $contact) {
@@ -176,7 +176,7 @@ class WhatsApp {
             } elseif ($type === 'image') {
                 $result = $this->sendImage($userId, $phoneNumberId, $accessToken, $phone, $mediaUrl, $content);
             } elseif ($type === 'template') {
-                $result = $this->sendTemplate($userId, $phoneNumberId, $accessToken, $phone, $content, 'en', $templateComponents);
+                $result = $this->sendTemplate($userId, $phoneNumberId, $accessToken, $phone, $content, $templateLanguage, $templateComponents);
             } else {
                 $result = $this->sendText($userId, $phoneNumberId, $accessToken, $phone, $content);
             }
@@ -541,6 +541,7 @@ class WhatsApp {
         curl_close($ch);
 
         if ($error) {
+            $this->logApiError('CURL_ERROR', $url, $data, $error);
             return ['success' => false, 'message' => 'API connection error: ' . $error, 'data' => null];
         }
 
@@ -550,7 +551,26 @@ class WhatsApp {
             return ['success' => true, 'message' => 'Success', 'data' => $result];
         } else {
             $errorMsg = $result['error']['message'] ?? 'Unknown API error (HTTP ' . $httpCode . ')';
+            $errorCode = $result['error']['code'] ?? 0;
+            $errorSubcode = $result['error']['error_subcode'] ?? 0;
+            $fullError = "HTTP {$httpCode} | Code: {$errorCode} | Subcode: {$errorSubcode} | {$errorMsg}";
+            $this->logApiError('API_ERROR', $url, $data, $fullError);
             return ['success' => false, 'message' => $errorMsg, 'data' => $result];
         }
+    }
+
+    /**
+     * Log API errors for debugging
+     */
+    private function logApiError($type, $url, $requestData, $error) {
+        $logDir = APP_ROOT . '/logs';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+        $to = $requestData['to'] ?? 'unknown';
+        $templateName = $requestData['template']['name'] ?? ($requestData['type'] ?? 'N/A');
+        file_put_contents(
+            $logDir . '/whatsapp_api.log',
+            '[' . date('Y-m-d H:i:s') . '] ' . $type . ' | TO: ' . $to . ' | TEMPLATE: ' . $templateName . ' | ERROR: ' . $error . "\n",
+            FILE_APPEND
+        );
     }
 }

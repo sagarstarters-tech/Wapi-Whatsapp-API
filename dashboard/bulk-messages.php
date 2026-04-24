@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
             $phones  = array_values($numbers);
         }
 
-        // For templates, also return the template name from DB
+        // For templates, also return the template name and language from DB
         $templateName = '';
         $templateLanguage = 'en';
         if (!empty($_POST['template_id'])) {
@@ -189,7 +189,8 @@ include __DIR__ . '/../includes/header.php';
                                 <option value="<?= $tpl['id']; ?>"
                                         data-body="<?= e($tpl['body']); ?>"
                                         data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"
-                                        data-name="<?= e($tpl['name']); ?>">
+                                        data-name="<?= e($tpl['name']); ?>"
+                                        data-language="<?= e($tpl['language']); ?>">
                                     <?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)
                                 </option>
                                 <?php endforeach; ?>
@@ -346,8 +347,8 @@ async function startBulkSend() {
         const r   = await fetch('', { method: 'POST', body: fd1, headers: {'X-Requested-With': 'XMLHttpRequest'} });
         const d   = await r.json();
         if (!d.success || d.total === 0) { alert('No contacts found.'); return; }
-        phones       = d.phones;
-        templateName = d.template_name || content;
+        phones           = d.phones;
+        templateName     = d.template_name || content;
         templateLanguage = d.template_language || 'en';
     } catch(e) { alert('Error fetching contacts: ' + e.message); return; }
 

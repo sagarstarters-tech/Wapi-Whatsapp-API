@@ -26,10 +26,11 @@ if (!$waAccount) {
     exit;
 }
 
-$type       = sanitize($_POST['type'] ?? 'text');
-$content    = $_POST['content'] ?? '';
-$mediaUrl   = sanitize($_POST['media_url'] ?? '');
-$phones     = json_decode($_POST['phones'] ?? '[]', true);
+$type             = sanitize($_POST['type'] ?? 'text');
+$content          = $_POST['content'] ?? '';
+$mediaUrl         = sanitize($_POST['media_url'] ?? '');
+$phones           = json_decode($_POST['phones'] ?? '[]', true);
+$templateLanguage = sanitize($_POST['template_language'] ?? '');
 
 // Rebuild template components if any
 $templateComponents = [];
@@ -41,10 +42,31 @@ if ($rawComponents) {
     }
 }
 
+// If template language not passed, look it up from DB by template name
+if ($type === 'template' && empty($templateLanguage) && !empty($content)) {
+    $tplRow = $db->fetch("SELECT language FROM templates WHERE user_id = ? AND name = ? LIMIT 1", [$userId, $content]);
+    if ($tplRow) {
+        $templateLanguage = $tplRow['language'];
+    }
+}
+// Final fallback
+if (empty($templateLanguage)) {
+    $templateLanguage = 'en';
+}
+
 if (empty($phones) || !is_array($phones)) {
     echo json_encode(['success' => false, 'message' => 'No phone numbers in batch.']);
     exit;
 }
+
+// Log bulk-send details for debugging
+$logDir = APP_ROOT . '/logs';
+if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+file_put_contents(
+    $logDir . '/bulk_send.log',
+    '[' . date('Y-m-d H:i:s') . '] TYPE: ' . $type . ' | TEMPLATE: ' . $content . ' | LANG: ' . $templateLanguage . ' | PHONES: ' . count($phones) . ' | COMPONENTS: ' . json_encode($templateComponents) . "\n",
+    FILE_APPEND
+);
 
 $wa = new WhatsApp();
 $sent   = 0;
@@ -63,7 +85,6 @@ foreach ($phones as $phone) {
             $result = $wa->sendImage($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $mediaUrl, $content);
             break;
         case 'template':
-            $templateLanguage = sanitize($_POST['template_language'] ?? 'en');
             $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content, $templateLanguage, $templateComponents);
             break;
         default:
