@@ -86,7 +86,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $templateId = sanitizeInt($_POST['template_id'] ?? 0);
                     $tpl = $db->fetch("SELECT name, language FROM templates WHERE id = ? AND user_id = ?", [$templateId, $userId]);
                     if ($tpl) {
-                        $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $tpl['name'], $tpl['language']);
+                        $templateLanguage = sanitize($_POST['template_language'] ?? $tpl['language']);
+                        $templateComponents = [];
+                        if (!empty($_POST['template_components'])) {
+                            $decoded = json_decode($_POST['template_components'], true);
+                            if (is_array($decoded)) $templateComponents = $decoded;
+                        }
+                        $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, $tpl['name'], $templateLanguage, $templateComponents);
                     } else {
                         $result = ['success' => false, 'message' => 'Invalid template selected.'];
                     }
@@ -102,7 +108,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get contacts for autocomplete
 $contacts = $db->fetchAll("SELECT id, name, phone FROM contacts WHERE user_id = ? AND is_active = 1 ORDER BY name ASC LIMIT 100", [$userId]);
-$templates = $db->fetchAll("SELECT id, name, language, body FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+$templates = $db->fetchAll("SELECT id, name, language, body, header_type, buttons FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+
+$templateVarCounts = [];
+$templateButtonVars = [];
+foreach ($templates as $tpl) {
+    preg_match_all('/\{\{(\d+)\}\}/', $tpl['body'], $matches);
+    $maxVar = !empty($matches[1]) ? max(array_map('intval', $matches[1])) : 0;
+    $templateVarCounts[$tpl['id']] = $maxVar;
+
+    $btnVarCount = 0;
+    if (!empty($tpl['buttons'])) {
+        $btns = json_decode($tpl['buttons'], true);
+        if (is_array($btns)) {
+            foreach ($btns as $btn) {
+                if (($btn['type'] ?? '') === 'URL' && strpos($btn['url'] ?? '', '{{1}}') !== false) {
+                    $btnVarCount++;
+                }
+            }
+        }
+    }
+    $templateButtonVars[$tpl['id']] = $btnVarCount;
+}
 
 $pageTitle = 'Send Message';
 $extraCss = [asset('assets/css/dashboard.css')];
@@ -168,9 +195,30 @@ include __DIR__ . '/../includes/header.php';
                                 <select name="template_id" id="templateId" class="form-control" onchange="updateTemplatePreview()">
                                     <option value="">-- Choose Template --</option>
                                     <?php foreach ($templates as $tpl): ?>
-                                    <option value="<?= $tpl['id']; ?>" data-body="<?= e($tpl['body']); ?>"><?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)</option>
+                                    <option value="<?= $tpl['id']; ?>"
+                                            data-body="<?= e($tpl['body']); ?>"
+                                            data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"
+                                            data-btn-vars="<?= $templateButtonVars[$tpl['id']] ?? 0; ?>"
+                                            data-name="<?= e($tpl['name']); ?>"
+                                            data-language="<?= e($tpl['language']); ?>"
+                                            data-header-type="<?= e($tpl['header_type'] ?? 'none'); ?>">
+                                        <?= e($tpl['name']); ?> (<?= e($tpl['language']); ?>)
+                                    </option>
                                     <?php endforeach; ?>
                                 </select>
+                            </div>
+
+                            <div class="form-group" id="templateHeaderGroup" style="display:none;">
+                                <label class="form-label">📷 Template Header Media</label>
+                                <input type="file" class="form-control" id="templateHeaderFile" accept="image/*,video/*,application/pdf" onchange="uploadGeneralMedia(this, 'templateHeaderUrl')">
+                                <input type="hidden" id="templateHeaderUrl" name="templateHeaderUrl">
+                                <small class="text-muted" id="templateHeaderHint" style="display:block; margin-top: 5px;">This template requires a header media. Please select a file to upload.</small>
+                            </div>
+
+                            <div class="form-group" id="templateVarsGroup" style="display:none;">
+                                <label class="form-label">Template Variables</label>
+                                <div id="templateVarsContainer"></div>
+                                <small class="text-muted">Fill in the values for each <code>{{1}}</code>, <code>{{2}}</code>, etc. placeholder.</small>
                             </div>
 
                             <div class="form-group" id="templatePreviewGroup" style="display: none;">
@@ -259,6 +307,15 @@ function toggleMediaField() {
     document.getElementById('filenameGroup').style.display = type === 'document' ? 'block' : 'none';
     document.getElementById('templateGroup').style.display = type === 'template' ? 'block' : 'none';
     document.getElementById('templatePreviewGroup').style.display = type === 'template' ? 'block' : 'none';
+    
+    // Hide header and vars initially when switching to non-template
+    if (type !== 'template') {
+        document.getElementById('templateHeaderGroup').style.display = 'none';
+        document.getElementById('templateVarsGroup').style.display = 'none';
+    } else {
+        updateTemplatePreview();
+    }
+
     document.getElementById('contentGroup').style.display = type === 'template' ? 'none' : 'block';
 
     // Configure upload per media type
@@ -290,14 +347,99 @@ function updateTemplatePreview() {
     const select = document.getElementById('templateId');
     const option = select.options[select.selectedIndex];
     const previewBox = document.getElementById('templatePreviewBox');
+    const varsGroup = document.getElementById('templateVarsGroup');
+    const varsContainer = document.getElementById('templateVarsContainer');
+    const headerGroup = document.getElementById('templateHeaderGroup');
+    const headerHint = document.getElementById('templateHeaderHint');
+
     if (option && option.value) {
         const body = option.getAttribute('data-body');
+        const varCount = parseInt(option.getAttribute('data-vars')) || 0;
+        const btnVarCount = parseInt(option.getAttribute('data-btn-vars')) || 0;
+        const headerType = option.getAttribute('data-header-type') || 'none';
+
         document.getElementById('msgContent').value = body;
         previewBox.textContent = body || 'No content available for this template.';
+
+        // Handle header media (image/video/document)
+        if (['image', 'video', 'document'].includes(headerType)) {
+            headerGroup.style.display = 'block';
+            const labels = { image: '📷 This template requires a header image.', video: '🎬 This template requires a header video.', document: '📄 This template requires a header document.' };
+            headerHint.textContent = labels[headerType] || 'Please select a file to upload.';
+        } else {
+            headerGroup.style.display = 'none';
+        }
+
+        // Handle body and button variables
+        varsContainer.innerHTML = '';
+        if (varCount > 0 || btnVarCount > 0) {
+            varsGroup.style.display = 'block';
+            for (let i = 1; i <= varCount; i++) {
+                const d = document.createElement('div');
+                d.className = 'mb-2';
+                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Body Variable {{${i}}}</label>
+                    <input type="text" name="tpl_vars[]" class="form-control" placeholder="Value for {{${i}}}" required>`;
+                varsContainer.appendChild(d);
+            }
+            for (let i = 1; i <= btnVarCount; i++) {
+                const d = document.createElement('div');
+                d.className = 'mb-2';
+                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Button Dynamic Link Variable</label>
+                    <input type="text" name="btn_vars[]" class="form-control" placeholder="e.g. your-promo-code" required>`;
+                varsContainer.appendChild(d);
+            }
+        } else {
+            varsGroup.style.display = 'none';
+        }
+
         updatePreview();
     } else {
         previewBox.innerHTML = '<span class="text-muted fst-italic">Select a template to see its content...</span>';
+        varsGroup.style.display = 'none';
+        headerGroup.style.display = 'none';
+        varsContainer.innerHTML = '';
+        if (document.getElementById('msgType').value === 'template') {
+            document.getElementById('msgContent').value = '';
+            updatePreview();
+        }
     }
+}
+
+// ── Media Upload ─────────────────────────────────────────────────────────────
+async function uploadGeneralMedia(input, targetHiddenId) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    const hintLabel = input.nextElementSibling.nextElementSibling; // the <small> tag
+    const originalHint = hintLabel.textContent;
+    
+    hintLabel.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span> Uploading file to server... please wait.';
+    input.disabled = true;
+    document.getElementById('sendBtn').disabled = true;
+    
+    const fd = new FormData();
+    fd.append('media', file);
+    fd.append('_csrf_token', '<?= CSRF::generateToken(); ?>');
+    
+    try {
+        const r = await fetch('<?= baseUrl('api/upload-media.php') ?>', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.success) {
+            document.getElementById(targetHiddenId).value = d.url;
+            hintLabel.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> File uploaded successfully! Ready to send.</span>';
+        } else {
+            hintLabel.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Upload failed: ' + d.message + '</span>';
+            document.getElementById(targetHiddenId).value = '';
+            input.value = '';
+        }
+    } catch (e) {
+        hintLabel.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Upload error. Please try again.</span>';
+        document.getElementById(targetHiddenId).value = '';
+        input.value = '';
+    }
+    
+    input.disabled = false;
+    document.getElementById('sendBtn').disabled = false;
 }
 
 // Sync Templates via AJAX
@@ -369,6 +511,55 @@ document.getElementById('sendMessageForm').addEventListener('submit', async func
     btn.disabled = true;
 
     const formData = new FormData(this);
+    
+    // Build template components if template type
+    const type = document.getElementById('msgType').value;
+    if (type === 'template') {
+        const selectedOpt = document.getElementById('templateId').selectedOptions[0];
+        const headerType  = selectedOpt?.getAttribute('data-header-type') || 'none';
+        const headerUrl   = document.getElementById('templateHeaderUrl')?.value || '';
+        
+        let templateComponents = [];
+
+        if (['image', 'video', 'document'].includes(headerType) && !headerUrl) {
+            alert('This template requires a Header Media file. Please select and upload a file before sending.');
+            btn.innerHTML = '<i class="bi bi-send-fill"></i> Send Message';
+            btn.disabled = false;
+            return;
+        }
+
+        if (['image', 'video', 'document'].includes(headerType) && headerUrl) {
+            const headerParam = { type: headerType };
+            headerParam[headerType] = { link: headerUrl };
+            templateComponents.push({ type: 'header', parameters: [headerParam] });
+        }
+
+        const formElem = document.getElementById('sendMessageForm');
+        const varInputs = formElem.querySelectorAll('input[name="tpl_vars[]"]');
+        if (varInputs.length > 0) {
+            const params = Array.from(varInputs).map(i => ({ type: 'text', text: i.value }));
+            templateComponents.push({ type: 'body', parameters: params });
+        }
+
+        const btnInputs = formElem.querySelectorAll('input[name="btn_vars[]"]');
+        if (btnInputs.length > 0) {
+            Array.from(btnInputs).forEach((inp, i) => {
+                templateComponents.push({
+                    type: 'button',
+                    sub_type: 'url',
+                    index: i.toString(),
+                    parameters: [{ type: 'text', text: inp.value }]
+                });
+            });
+        }
+        
+        if (templateComponents.length > 0) {
+            formData.append('template_components', JSON.stringify(templateComponents));
+        }
+        
+        formData.append('template_language', selectedOpt?.getAttribute('data-language') || 'en');
+    }
+
     try {
         const res = await fetch('', { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'} });
         const text = await res.text();
