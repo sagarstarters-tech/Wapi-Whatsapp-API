@@ -199,8 +199,10 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
                         <div class="col-md-6" id="mediaGroup" style="display:none;">
-                            <label class="form-label fw-bold">Media URL</label>
-                            <input type="url" name="media_url" class="form-control" id="bulkMediaUrl" placeholder="https://...">
+                            <label class="form-label fw-bold">Upload Media</label>
+                            <input type="file" class="form-control" accept="image/*,video/*,application/pdf" onchange="uploadGeneralMedia(this, 'bulkMediaUrl')">
+                            <input type="hidden" name="media_url" id="bulkMediaUrl">
+                            <small class="text-muted">Select a file to upload and send.</small>
                         </div>
                         <div class="col-md-6" id="templateGroup" style="display:none;">
                             <label class="form-label fw-bold">Select Template</label>
@@ -220,9 +222,10 @@ include __DIR__ . '/../includes/header.php';
                             </select>
                         </div>
                         <div class="col-12" id="templateHeaderGroup" style="display:none;">
-                            <label class="form-label fw-bold">📷 Template Header Media URL</label>
-                            <input type="url" class="form-control" id="templateHeaderUrl" placeholder="https://example.com/image.jpg">
-                            <small class="text-muted" id="templateHeaderHint">This template requires a header image. Provide the image URL.</small>
+                            <label class="form-label fw-bold">📷 Template Header Media</label>
+                            <input type="file" class="form-control" id="templateHeaderFile" accept="image/*,video/*,application/pdf" onchange="uploadGeneralMedia(this, 'templateHeaderUrl')">
+                            <input type="hidden" id="templateHeaderUrl">
+                            <small class="text-muted" id="templateHeaderHint" style="display:block; margin-top: 5px;">This template requires a header media. Please select a file to upload.</small>
                         </div>
                         <div class="col-12" id="templateVarsGroup" style="display:none;">
                             <label class="form-label fw-bold">Template Variables</label>
@@ -303,7 +306,7 @@ function updateTemplatePreview() {
         if (['image', 'video', 'document'].includes(headerType)) {
             headerGroup.style.display = 'block';
             const labels = { image: '📷 This template requires a header image.', video: '🎬 This template requires a header video.', document: '📄 This template requires a header document.' };
-            headerHint.textContent = labels[headerType] || 'Provide the media URL.';
+            headerHint.textContent = labels[headerType] || 'Please select a file to upload.';
         } else {
             headerGroup.style.display = 'none';
         }
@@ -335,6 +338,43 @@ function updateTemplatePreview() {
         headerGroup.style.display = 'none';
         varsContainer.innerHTML = '';
     }
+}
+
+// ── Media Upload ─────────────────────────────────────────────────────────────
+async function uploadGeneralMedia(input, targetHiddenId) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    const hintLabel = input.nextElementSibling.nextElementSibling; // the <small> tag
+    const originalHint = hintLabel.textContent;
+    
+    hintLabel.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span> Uploading file to server... please wait.';
+    input.disabled = true;
+    document.getElementById('sendBulkBtn').disabled = true;
+    
+    const fd = new FormData();
+    fd.append('media', file);
+    fd.append('_csrf_token', CSRF_TOKEN);
+    
+    try {
+        const r = await fetch('<?= baseUrl('api/upload-media.php') ?>', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.success) {
+            document.getElementById(targetHiddenId).value = d.url;
+            hintLabel.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> File uploaded successfully! Ready to send.</span>';
+        } else {
+            hintLabel.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Upload failed: ' + d.message + '</span>';
+            document.getElementById(targetHiddenId).value = '';
+            input.value = '';
+        }
+    } catch (e) {
+        hintLabel.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Upload error. Please try again.</span>';
+        document.getElementById(targetHiddenId).value = '';
+        input.value = '';
+    }
+    
+    input.disabled = false;
+    document.getElementById('sendBulkBtn').disabled = false;
 }
 
 // ── Sync Templates ───────────────────────────────────────────────────────────
@@ -382,7 +422,7 @@ async function startBulkSend() {
         const headerUrl   = document.getElementById('templateHeaderUrl')?.value || '';
 
         if (['image', 'video', 'document'].includes(headerType) && !headerUrl) {
-            alert('This template requires a Header Media URL. Please provide it before sending.');
+            alert('This template requires a Header Media file. Please select and upload a file before sending.');
             return;
         }
 
