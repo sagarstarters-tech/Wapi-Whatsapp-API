@@ -59,32 +59,6 @@ class Auth {
 
             $initialCredits = 0;
 
-            // Assign trial plan if selected
-            if (!empty($planSlug)) {
-                $plan = $this->db->fetch("SELECT * FROM plans WHERE slug = ? AND is_active = 1", [$planSlug]);
-                if ($plan) {
-                    $initialCredits = $plan['message_limit'] ?? 0;
-                    
-                    $subscriptionId = $this->db->insert('subscriptions', [
-                        'user_id' => $userId,
-                        'plan_id' => $plan['id'],
-                        'billing_cycle' => 'monthly',
-                        'amount' => 0,
-                        'status' => 'active',
-                        'starts_at' => date('Y-m-d H:i:s'),
-                        'expires_at' => date('Y-m-d H:i:s', strtotime('+14 days'))
-                    ]);
-                    
-                    $this->db->insert('payments', [
-                        'user_id' => $userId,
-                        'subscription_id' => $subscriptionId,
-                        'amount' => 0,
-                        'status' => 'success',
-                        'payment_method' => 'free_trial'
-                    ]);
-                }
-            }
-
             // Initialize credits (0 if no plan selected)
             $this->db->insert('credits', [
                 'user_id' => $userId,
