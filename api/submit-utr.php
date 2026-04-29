@@ -21,6 +21,11 @@ try {
     if (!$utrExists) {
         $db->query("ALTER TABLE `payments` ADD COLUMN `utr_number` VARCHAR(100) NULL AFTER `razorpay_signature`");
     }
+    
+    $cycleExists = $db->fetch("SHOW COLUMNS FROM `payments` LIKE 'billing_cycle'");
+    if (!$cycleExists) {
+        $db->query("ALTER TABLE `payments` ADD COLUMN `billing_cycle` VARCHAR(20) DEFAULT 'monthly' AFTER `plan_id`");
+    }
 } catch (Exception $e) {
     // Ignore error if it fails
 }
@@ -30,6 +35,8 @@ $userId = $_SESSION['user_id'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $planId = sanitizeInt($_POST['plan_id'] ?? 0);
     $utr = sanitize($_POST['utr'] ?? '');
+    $billingCycle = sanitize($_POST['billing_cycle'] ?? 'monthly');
+    if ($billingCycle !== 'yearly') $billingCycle = 'monthly';
 
     if (!$planId || !$utr) {
         error_log("Payment Submit: Missing plan_id ($planId) or utr ($utr)");
@@ -50,12 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         $paymentId = $db->insert('payments', [
             'user_id' => $userId,
             'plan_id' => $planId,
+            'billing_cycle' => $billingCycle,
             'utr_number' => $utr,
-            'amount' => str_replace(',', '', (string)$plan['monthly_price']),
+            'amount' => str_replace(',', '', (string)(($billingCycle === 'yearly') ? $plan['yearly_price'] : $plan['monthly_price'])),
             'currency' => 'INR',
             'payment_method' => 'UPI',
             'status' => 'pending',
-            'notes' => 'Manual UPI payment with UTR: ' . $utr
+            'notes' => 'Manual UPI payment with UTR: ' . $utr . ' (' . ucfirst($billingCycle) . ')'
         ]);
         error_log("Payment Submit: Insert success, ID: $paymentId");
     } catch (\Exception $e) {

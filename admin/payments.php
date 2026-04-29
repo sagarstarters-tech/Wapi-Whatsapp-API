@@ -22,6 +22,11 @@ try {
     if (!$utrExists) {
         $db->query("ALTER TABLE `payments` ADD COLUMN `utr_number` VARCHAR(100) NULL AFTER `razorpay_signature`");
     }
+
+    $cycleExists = $db->fetch("SHOW COLUMNS FROM `payments` LIKE 'billing_cycle'");
+    if (!$cycleExists) {
+        $db->query("ALTER TABLE `payments` ADD COLUMN `billing_cycle` VARCHAR(20) DEFAULT 'monthly' AFTER `plan_id`");
+    }
 } catch (Exception $e) {
     // Ignore error if it fails
 }
@@ -59,12 +64,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                 $db->update('subscriptions', ['status' => 'cancelled'], "user_id = ? AND status = 'active'", [$payment['user_id']]);
                 
                 $startsAt = date('Y-m-d H:i:s');
-                $expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+                $billingCycle = $payment['billing_cycle'] ?? 'monthly';
+                if ($billingCycle !== 'yearly') $billingCycle = 'monthly';
+                $expiresAt = ($billingCycle === 'yearly') ? date('Y-m-d H:i:s', strtotime('+1 year')) : date('Y-m-d H:i:s', strtotime('+1 month'));
                 
                 $subscriptionId = $db->insert('subscriptions', [
                     'user_id' => $payment['user_id'],
                     'plan_id' => $payment['plan_id'],
-                    'billing_cycle' => 'monthly',
+                    'billing_cycle' => $billingCycle,
                     'amount' => $payment['amount'],
                     'status' => 'active',
                     'starts_at' => $startsAt,

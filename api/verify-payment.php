@@ -11,6 +11,7 @@ $userId = $_SESSION['user_id'];
 
 $paymentId = sanitize($_GET['payment_id'] ?? '');
 $planId = sanitizeInt($_GET['plan_id'] ?? 0);
+$cycle = sanitize($_GET['cycle'] ?? 'monthly');
 
 if (empty($paymentId) || empty($planId)) {
     setFlash('danger', 'Invalid payment verification request.');
@@ -27,20 +28,22 @@ if (!$plan) {
 // In a real production app you would verify the signature using Razorpay API here.
 // For this SaaS boilerplate we assume successful return from checkout.js means payment succeeded
 
-$amount = $plan['monthly_price'];
+// Determine billing cycle, amount and expiration
+$billingCycle = ($cycle === 'yearly') ? 'yearly' : 'monthly';
+$amount = ($billingCycle === 'yearly') ? $plan['yearly_price'] : $plan['monthly_price'];
 
 // Complete any pending subscriptions or cancel active ones for this user
 $db->update('subscriptions', ['status' => 'cancelled'], "user_id = ? AND status = 'active'", [$userId]);
 
 // Calculate dates
 $startsAt = date('Y-m-d H:i:s');
-$expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+$expiresAt = ($billingCycle === 'yearly') ? date('Y-m-d H:i:s', strtotime('+1 year')) : date('Y-m-d H:i:s', strtotime('+1 month'));
 
 // Create subscription
 $subscriptionId = $db->insert('subscriptions', [
     'user_id' => $userId,
     'plan_id' => $planId,
-    'billing_cycle' => 'monthly',
+    'billing_cycle' => $billingCycle,
     'amount' => $amount,
     'status' => 'active',
     'starts_at' => $startsAt,
