@@ -15,8 +15,19 @@ $hideNav = true; // Prevents landing page nav from appearing in dashboard
 // Get available plans
 $plans = $db->fetchAll("SELECT p.*, GROUP_CONCAT(pf.feature_text, '|||', pf.is_included ORDER BY pf.sort_order SEPARATOR ';;;') as features_list FROM plans p LEFT JOIN plan_features pf ON p.id = pf.plan_id WHERE p.is_active = 1 GROUP BY p.id ORDER BY p.sort_order ASC");
 
-// Current subscription
-$currentSub = $db->fetch("SELECT s.*, p.name as plan_name FROM subscriptions s JOIN plans p ON s.plan_id = p.id WHERE s.user_id = ? AND s.status = 'active' ORDER BY s.created_at DESC LIMIT 1", [$userId]);
+// Latest subscription
+$latestSub = $db->fetch("SELECT s.*, p.name as plan_name FROM subscriptions s JOIN plans p ON s.plan_id = p.id WHERE s.user_id = ? ORDER BY s.created_at DESC LIMIT 1", [$userId]);
+
+$currentSub = null;
+$expiredSub = null;
+
+if ($latestSub) {
+    if ($latestSub['status'] === 'active' && strtotime($latestSub['expires_at']) > time()) {
+        $currentSub = $latestSub;
+    } else {
+        $expiredSub = $latestSub;
+    }
+}
 
 // Payment history
 $payments = $db->fetchAll("SELECT p.*, pl.name as plan_name FROM payments p LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 10", [$userId]);
@@ -58,10 +69,29 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
         </div>
+        <?php elseif ($expiredSub): ?>
+        <div class="card mb-4" style="border-radius: var(--border-radius); border-left: 4px solid var(--danger);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-danger">Subscription Expired</h5>
+                        <p class="text-muted mb-0">Your <strong><?= e($expiredSub['plan_name']); ?></strong> plan expired on <?= formatDate($expiredSub['expires_at']); ?>.</p>
+                    </div>
+                    <div class="text-end">
+                        <button class="btn btn-danger btn-razorpay-renew" 
+                                data-plan-id="<?= $expiredSub['plan_id']; ?>" 
+                                data-plan-name="<?= e($expiredSub['plan_name']); ?>"
+                                onclick="document.querySelector('.btn-razorpay[data-plan-id=\'<?= $expiredSub['plan_id']; ?>\']').click();">
+                            <i class="bi bi-arrow-repeat"></i> Renew Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php endif; ?>
 
         <div class="mb-4 text-center">
-            <h5 class="fw-bold mb-3"><?= $currentSub ? 'Upgrade Plan' : 'Choose a Plan'; ?></h5>
+            <h5 class="fw-bold mb-3"><?= ($currentSub || $expiredSub) ? 'Upgrade / Renew Plan' : 'Choose a Plan'; ?></h5>
             
             <!-- Pricing Toggle -->
             <div class="pricing-toggle" style="background: var(--bg-secondary); padding: 8px; border-radius: 50px; display: inline-flex; align-items: center; gap: 15px; cursor: pointer; border: 1px solid rgba(0,0,0,0.05);">
@@ -85,11 +115,13 @@ include __DIR__ . '/../includes/header.php';
                     }
                 }
                 $isCurrentPlan = $currentSub && $currentSub['plan_id'] == $plan['id'];
+                $isExpiredPlan = $expiredSub && $expiredSub['plan_id'] == $plan['id'];
             ?>
             <div class="col-lg-4 col-md-6">
                 <div class="pricing-card <?= $plan['is_popular'] ? 'popular' : ''; ?> <?= $isCurrentPlan ? '' : ''; ?>" style="text-align:left;">
                     <?php if ($plan['is_popular']): ?><div class="pricing-badge">Most Popular</div><?php endif; ?>
                     <?php if ($isCurrentPlan): ?><div style="position:absolute;top:10px;right:15px;"><span class="status-badge status-active">Current</span></div><?php endif; ?>
+                    <?php if ($isExpiredPlan): ?><div style="position:absolute;top:10px;right:15px;"><span class="status-badge status-expired" style="background:#fce8e8;color:#d93025;">Expired</span></div><?php endif; ?>
                     
                     <div class="fw-bold mb-1" style="color: <?= e($plan['badge_color']); ?>; font-size: 1.125rem;"><?= e($plan['name']); ?></div>
                     <p class="text-muted mb-3" style="font-size: 0.8125rem;"><?= e($plan['description']); ?></p>
@@ -147,7 +179,29 @@ include __DIR__ . '/../includes/header.php';
                     </ul>
 
                     <?php if ($isCurrentPlan): ?>
-                        <button class="btn btn-outline-primary w-100" disabled>Current Plan</button>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary w-100" disabled>Current Plan</button>
+                            <button class="btn btn-primary w-100 btn-razorpay" 
+                                    data-plan-id="<?= $plan['id']; ?>" 
+                                    data-plan-name="<?= e($plan['name']); ?>">
+                                <i class="bi bi-arrow-repeat"></i> Renew Early
+                            </button>
+                        </div>
+                    <?php elseif ($isExpiredPlan): ?>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-danger w-100 btn-razorpay" 
+                                    data-plan-id="<?= $plan['id']; ?>" 
+                                    data-plan-name="<?= e($plan['name']); ?>">
+                                <i class="bi bi-arrow-repeat"></i> Renew Plan
+                            </button>
+                            <?php if ($settings->get('payment_method_manual_enabled') == '1'): ?>
+                            <button class="btn btn-outline-danger w-100 btn-manual-upi" 
+                                    data-plan-id="<?= $plan['id']; ?>" 
+                                    data-plan-name="<?= e($plan['name']); ?>">
+                                <i class="bi bi-phone"></i> Renew via UPI
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     <?php elseif ($plan['monthly_price'] == 0): ?>
                         <button class="btn btn-outline-primary w-100" onclick="activateFreePlan(<?= $plan['id']; ?>)">Activate</button>
                     <?php else: ?>
