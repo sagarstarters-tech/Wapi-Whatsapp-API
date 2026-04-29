@@ -18,10 +18,11 @@ class Mail {
      */
     public static function send($to, $subject, $body, $fromName = null, $fromEmail = null) {
         $settings = new Settings();
-        $driver = $settings->get('email_driver', 'mail'); // Default to previous/mail
+        // Priority: 1. ENV Constant, 2. Settings DB
+        $driver = defined('MAIL_DRIVER') && MAIL_DRIVER ? MAIL_DRIVER : $settings->get('email_driver', 'mail');
         
-        $fromEmail = $fromEmail ?? $settings->get('smtp_from_email', 'noreply@wapi.com');
-        $fromName = $fromName ?? $settings->get('smtp_from_name', 'WAPI');
+        $fromEmail = $fromEmail ?? (defined('MAIL_FROM_ADDRESS') && MAIL_FROM_ADDRESS ? MAIL_FROM_ADDRESS : $settings->get('smtp_from_email', 'noreply@wapi.com'));
+        $fromName = $fromName ?? (defined('MAIL_FROM_NAME') && MAIL_FROM_NAME ? MAIL_FROM_NAME : $settings->get('smtp_from_name', 'WAPI'));
 
         if ($driver === 'mail') {
             // "Pahale wala" (Previous) PHP mail() method
@@ -43,12 +44,12 @@ class Mail {
         try {
             // Server settings
             $mail->isSMTP();
-            $mail->Host       = $settings->get('smtp_host', 'smtp.gmail.com');
+            $mail->Host       = defined('MAIL_HOST') && MAIL_HOST ? MAIL_HOST : $settings->get('smtp_host', 'smtp.gmail.com');
             $mail->SMTPAuth   = true;
-            $mail->Username   = $settings->get('smtp_username', '');
-            $mail->Password   = $settings->get('smtp_password', '');
-            $mail->SMTPSecure = $settings->get('smtp_encryption', 'tls'); 
-            $mail->Port       = $settings->get('smtp_port', 587);
+            $mail->Username   = defined('MAIL_USERNAME') && MAIL_USERNAME ? MAIL_USERNAME : $settings->get('smtp_username', '');
+            $mail->Password   = defined('MAIL_PASSWORD') && MAIL_PASSWORD ? MAIL_PASSWORD : $settings->get('smtp_password', '');
+            $mail->SMTPSecure = defined('MAIL_ENCRYPTION') && MAIL_ENCRYPTION ? MAIL_ENCRYPTION : $settings->get('smtp_encryption', 'tls'); 
+            $mail->Port       = defined('MAIL_PORT') && MAIL_PORT ? MAIL_PORT : $settings->get('smtp_port', 587);
 
             // Recipients
             $mail->setFrom($fromEmail, $fromName);
