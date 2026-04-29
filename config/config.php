@@ -72,13 +72,11 @@ define('LOCKOUT_DURATION', 900);
 date_default_timezone_set($_ENV['TIMEZONE'] ?? 'Asia/Kolkata');
 
 // Mail Configuration
-define('MAIL_DRIVER', $_ENV['MAIL_DRIVER'] ?? 'mail');
-define('MAIL_HOST', $_ENV['MAIL_HOST'] ?? 'smtp.gmail.com');
-define('MAIL_PORT', $_ENV['MAIL_PORT'] ?? 587);
-define('MAIL_USERNAME', $_ENV['MAIL_USERNAME'] ?? '');
-define('MAIL_PASSWORD', $_ENV['MAIL_PASSWORD'] ?? '');
-define('MAIL_ENCRYPTION', $_ENV['MAIL_ENCRYPTION'] ?? 'tls');
-define('MAIL_FROM_ADDRESS', $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@wapi.com');
+define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com');
+define('SMTP_USER', $_ENV['SMTP_USER'] ?? '');
+define('SMTP_PASS', $_ENV['SMTP_PASS'] ?? '');
+define('SMTP_PORT', $_ENV['SMTP_PORT'] ?? 465);
+define('SMTP_SECURE', $_ENV['SMTP_SECURE'] ?? 'ssl');
 define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? 'WAPI');
 
 // Include autoloader
