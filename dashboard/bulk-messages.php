@@ -66,10 +66,24 @@ $templates     = $db->fetchAll("SELECT id, name, language, body, header_type, he
 
 // Pre-process variable counts for each template
 $templateVarCounts = [];
+$templateButtonVars = [];
 foreach ($templates as $tpl) {
     preg_match_all('/\{\{(\d+)\}\}/', $tpl['body'], $matches);
     $maxVar = !empty($matches[1]) ? max(array_map('intval', $matches[1])) : 0;
     $templateVarCounts[$tpl['id']] = $maxVar;
+
+    $btnVarCount = 0;
+    if (!empty($tpl['buttons'])) {
+        $btns = json_decode($tpl['buttons'], true);
+        if (is_array($btns)) {
+            foreach ($btns as $btn) {
+                if (($btn['type'] ?? '') === 'URL' && strpos($btn['url'] ?? '', '{{1}}') !== false) {
+                    $btnVarCount++;
+                }
+            }
+        }
+    }
+    $templateButtonVars[$tpl['id']] = $btnVarCount;
 }
 
 $tags    = $db->fetchAll("SELECT DISTINCT tags FROM contacts WHERE user_id = ? AND tags != ''", [$userId]);
@@ -179,6 +193,11 @@ include __DIR__ . '/../includes/header.php';
                                 <option value="template">📋 Template</option>
                             </select>
                         </div>
+                        <div class="col-12" id="metaPolicyWarning" style="display:none;">
+                            <div class="alert alert-warning mb-0 py-2" style="font-size: 0.85rem;">
+                                <strong>⚠️ Meta Policy Warning:</strong> Free-form Text and Image messages will <strong>FAIL</strong> unless the contact has messaged you within the last 24 hours. For bulk promotional broadcasts, you <strong>MUST</strong> use an approved <a href="templates.php" class="alert-link">Template</a>.
+                            </div>
+                        </div>
                         <div class="col-md-6" id="mediaGroup" style="display:none;">
                             <label class="form-label fw-bold">Media URL</label>
                             <input type="url" name="media_url" class="form-control" id="bulkMediaUrl" placeholder="https://...">
@@ -191,6 +210,7 @@ include __DIR__ . '/../includes/header.php';
                                 <option value="<?= $tpl['id']; ?>"
                                         data-body="<?= e($tpl['body']); ?>"
                                         data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"
+                                        data-btn-vars="<?= $templateButtonVars[$tpl['id']] ?? 0; ?>"
                                         data-name="<?= e($tpl['name']); ?>"
                                         data-language="<?= e($tpl['language']); ?>"
                                         data-header-type="<?= e($tpl['header_type'] ?? 'none'); ?>">
@@ -256,6 +276,7 @@ function toggleMessageType() {
     document.getElementById('templatePreviewGroup').style.display= (type === 'template') ? 'block' : 'none';
     document.getElementById('templateVarsGroup').style.display   = 'none';
     document.getElementById('contentGroup').style.display        = (type === 'template') ? 'none'  : 'block';
+    document.getElementById('metaPolicyWarning').style.display   = (type === 'text' || type === 'image') ? 'block' : 'none';
     document.getElementById('msgContent').toggleAttribute('required', type !== 'template');
 }
 
@@ -273,6 +294,7 @@ function updateTemplatePreview() {
     if (option && option.value) {
         const body       = option.getAttribute('data-body');
         const varCount   = parseInt(option.getAttribute('data-vars')) || 0;
+        const btnVarCount= parseInt(option.getAttribute('data-btn-vars')) || 0;
         const headerType = option.getAttribute('data-header-type') || 'none';
         document.getElementById('msgContent').value = body;
         previewBox.textContent = body || 'No content.';
@@ -286,15 +308,22 @@ function updateTemplatePreview() {
             headerGroup.style.display = 'none';
         }
 
-        // Handle body variables
+        // Handle body and button variables
         varsContainer.innerHTML = '';
-        if (varCount > 0) {
+        if (varCount > 0 || btnVarCount > 0) {
             varsGroup.style.display = 'block';
             for (let i = 1; i <= varCount; i++) {
                 const d = document.createElement('div');
                 d.className = 'mb-2';
-                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Variable {{${i}}}</label>
+                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Body Variable {{${i}}}</label>
                     <input type="text" name="tpl_vars[]" class="form-control" placeholder="Value for {{${i}}}" required>`;
+                varsContainer.appendChild(d);
+            }
+            for (let i = 1; i <= btnVarCount; i++) {
+                const d = document.createElement('div');
+                d.className = 'mb-2';
+                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Button Dynamic Link Variable</label>
+                    <input type="text" name="btn_vars[]" class="form-control" placeholder="e.g. your-promo-code" required>`;
                 varsContainer.appendChild(d);
             }
         } else {
@@ -345,12 +374,17 @@ async function startBulkSend() {
     }
     if (!confirm('Send messages to all selected contacts?')) return;
 
-    // Collect template components (header + body)
+    // Collect template components (header + body + buttons)
     let templateComponents = [];
     if (type === 'template') {
         const selectedOpt = document.getElementById('templateId').selectedOptions[0];
         const headerType  = selectedOpt?.getAttribute('data-header-type') || 'none';
         const headerUrl   = document.getElementById('templateHeaderUrl')?.value || '';
+
+        if (['image', 'video', 'document'].includes(headerType) && !headerUrl) {
+            alert('This template requires a Header Media URL. Please provide it before sending.');
+            return;
+        }
 
         // Header component (image/video/document)
         if (['image', 'video', 'document'].includes(headerType) && headerUrl) {
@@ -364,6 +398,19 @@ async function startBulkSend() {
         if (varInputs.length > 0) {
             const params = Array.from(varInputs).map(i => ({ type: 'text', text: i.value }));
             templateComponents.push({ type: 'body', parameters: params });
+        }
+
+        // Button variables
+        const btnInputs = form.querySelectorAll('input[name="btn_vars[]"]');
+        if (btnInputs.length > 0) {
+            Array.from(btnInputs).forEach((inp, i) => {
+                templateComponents.push({
+                    type: 'button',
+                    sub_type: 'url',
+                    index: i.toString(),
+                    parameters: [{ type: 'text', text: inp.value }]
+                });
+            });
         }
     }
 
