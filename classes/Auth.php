@@ -30,7 +30,7 @@ class Auth {
     /**
      * Register a new user
      */
-    public function register($name, $email, $password, $phone = null, $company = null) {
+    public function register($name, $email, $password, $phone = null, $company = null, $planSlug = '') {
         // Check if email already exists
         if ($this->db->exists('users', 'email = ?', [$email])) {
             return ['success' => false, 'message' => 'Email address already registered.'];
@@ -63,6 +63,30 @@ class Auth {
                 'total_credits' => 100, // Free starting credits
                 'used_credits' => 0
             ]);
+
+            // Assign trial plan if selected
+            if (!empty($planSlug)) {
+                $plan = $this->db->fetch("SELECT * FROM plans WHERE slug = ? AND is_active = 1", [$planSlug]);
+                if ($plan) {
+                    $subscriptionId = $this->db->insert('subscriptions', [
+                        'user_id' => $userId,
+                        'plan_id' => $plan['id'],
+                        'billing_cycle' => 'monthly',
+                        'amount' => 0,
+                        'status' => 'active',
+                        'starts_at' => date('Y-m-d H:i:s'),
+                        'expires_at' => date('Y-m-d H:i:s', strtotime('+14 days'))
+                    ]);
+                    
+                    $this->db->insert('payments', [
+                        'user_id' => $userId,
+                        'subscription_id' => $subscriptionId,
+                        'amount' => 0,
+                        'status' => 'success',
+                        'payment_method' => 'free_trial'
+                    ]);
+                }
+            }
 
             // Log activity
             $this->logActivity($userId, 'register', 'New user registered');

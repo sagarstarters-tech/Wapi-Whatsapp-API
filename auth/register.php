@@ -35,8 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$isValid) {
             $error = $validator->getFirstError();
         } else {
+            $planSlug = $_POST['plan'] ?? '';
             $auth = new Auth();
-            $result = $auth->register($name, $email, $password, $phone, $company);
+            $result = $auth->register($name, $email, $password, $phone, $company, $planSlug);
 
             if ($result['success']) {
                 setFlash('success', 'Registration successful! Please login to continue.');
@@ -68,6 +69,7 @@ include __DIR__ . '/../includes/header.php';
 
         <form method="POST" action="" id="registerForm">
             <?= CSRF::tokenField(); ?>
+            <input type="hidden" name="plan" value="<?= e($_GET['plan'] ?? ''); ?>">
 
             <div class="row g-3">
                 <div class="col-md-6">
