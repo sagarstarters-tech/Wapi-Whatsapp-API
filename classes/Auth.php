@@ -282,6 +282,24 @@ class Auth {
     }
 
     /**
+     * Require WhatsApp setup - redirect if not configured
+     */
+    public static function requireWhatsAppSetup() {
+        self::requireActivePlan();
+        if (self::isAdmin()) return;
+
+        $db = Database::getInstance();
+        $userId = $_SESSION['user_id'];
+        $wa = $db->fetch("SELECT phone_number_id FROM whatsapp_accounts WHERE user_id = ?", [$userId]);
+        
+        if (empty($wa['phone_number_id'])) {
+            setFlash('warning', 'You must complete your WhatsApp Cloud API setup to access this feature.');
+            header('Location: ' . APP_URL . '/dashboard/whatsapp.php');
+            exit;
+        }
+    }
+
+    /**
      * Require admin - redirect if not admin
      */
     public static function requireAdmin() {

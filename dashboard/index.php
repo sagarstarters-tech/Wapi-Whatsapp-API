@@ -286,6 +286,79 @@ include __DIR__ . '/../includes/header.php';
 
 <script>
 window.chartData = { messages: <?= json_encode($chartData); ?>, totals: { sent: <?= $sentMessages; ?>, delivered: <?= $deliveredMessages; ?>, failed: <?= $failedMessages; ?>, queued: 0 } };
+
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if (!$subscription): ?>
+        // Force Subscription Modal
+        var subModal = new bootstrap.Modal(document.getElementById('onboardingSubModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        subModal.show();
+    <?php elseif (!$isWaVerified): ?>
+        // Force WhatsApp Setup Modal
+        var waModal = new bootstrap.Modal(document.getElementById('onboardingWaModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        waModal.show();
+    <?php endif; ?>
+});
 </script>
+
+<!-- Subscription Onboarding Modal -->
+<?php if (!$subscription): ?>
+<div class="modal fade" id="onboardingSubModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; border: none; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <div class="modal-body p-5 text-center">
+                <div class="mb-4">
+                    <div style="width: 80px; height: 80px; background: rgba(108, 99, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="bi bi-credit-card-2-front-fill" style="font-size: 2.5rem; color: var(--primary);"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold mb-3">Welcome to <?= e($settings->get('site_name', 'WAPI')); ?>! 👋</h3>
+                <p class="text-muted mb-4" style="font-size: 1.1rem;">
+                    To get started with sending WhatsApp messages, you need to select a subscription plan. We offer flexible plans tailored to your needs.
+                </p>
+                <div class="d-grid gap-3">
+                    <a href="<?= baseUrl('dashboard/subscription.php'); ?>" class="btn btn-primary btn-lg fw-bold" style="padding: 12px;">
+                        Choose a Plan to Continue <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- WhatsApp Setup Onboarding Modal -->
+<?php if ($subscription && !$isWaVerified): ?>
+<div class="modal fade" id="onboardingWaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; border: none; overflow: hidden; box-shadow: 0 10px 30px rgba(21, 163, 98, 0.2);">
+            <div class="modal-body p-5 text-center">
+                <div class="mb-4">
+                    <div style="width: 80px; height: 80px; background: rgba(21, 163, 98, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="bi bi-whatsapp" style="font-size: 2.5rem; color: #15a362;"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold mb-3">Setup WhatsApp API 📱</h3>
+                <p class="text-muted mb-4" style="font-size: 1.1rem;">
+                    Great! You have an active subscription. The final step is to connect your Facebook WhatsApp Cloud API account.
+                </p>
+                <div class="alert alert-warning text-start mb-4" style="font-size: 0.9rem; border-left: 4px solid #ffc107;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> You must configure your WhatsApp credentials before you can send any messages.
+                </div>
+                <div class="d-grid gap-3">
+                    <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>" class="btn btn-success btn-lg fw-bold" style="padding: 12px; background-color: #15a362; border-color: #15a362;">
+                        Configure WhatsApp Now <i class="bi bi-gear-fill ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

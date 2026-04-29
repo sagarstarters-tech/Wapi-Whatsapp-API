@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
-Auth::requireActivePlan();
+Auth::requireWhatsAppSetup();
 
 $db = Database::getInstance();
 $settings = new Settings();
