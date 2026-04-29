@@ -51,5 +51,11 @@ $db->insert('payments', [
     'payment_method' => 'free'
 ]);
 
+// Update credits
+$db->update('credits', [
+    'total_credits' => $plan['message_limit'],
+    'used_credits' => 0
+], "user_id = ?", [$userId]);
+
 setFlash('success', '14 Days Free Trial activated successfully!');
 redirect('dashboard/subscription.php');

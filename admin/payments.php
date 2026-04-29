@@ -77,6 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                     'status' => 'success'
                 ], 'id = ?', [$paymentId]);
 
+                // Update credits
+                $planDetails = $db->fetch("SELECT message_limit FROM plans WHERE id = ?", [$payment['plan_id']]);
+                if ($planDetails) {
+                    $db->update('credits', [
+                        'total_credits' => $planDetails['message_limit'],
+                        'used_credits' => 0
+                    ], "user_id = ?", [$payment['user_id']]);
+                }
+
                 $db->commit();
                 setFlash('success', 'Payment approved and subscription activated!');
             } catch (Exception $e) {

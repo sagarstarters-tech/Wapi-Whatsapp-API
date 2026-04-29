@@ -57,5 +57,11 @@ $db->insert('payments', [
     'payment_method' => 'razorpay'
 ]);
 
+// Update credits
+$db->update('credits', [
+    'total_credits' => $plan['message_limit'],
+    'used_credits' => 0
+], "user_id = ?", [$userId]);
+
 setFlash('success', 'Payment successful! Your subscription is now active.');
 redirect('dashboard/subscription.php');

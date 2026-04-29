@@ -57,17 +57,14 @@ class Auth {
                 'email_verify_token' => $verifyToken
             ]);
 
-            // Initialize credits
-            $this->db->insert('credits', [
-                'user_id' => $userId,
-                'total_credits' => 100, // Free starting credits
-                'used_credits' => 0
-            ]);
+            $initialCredits = 0;
 
             // Assign trial plan if selected
             if (!empty($planSlug)) {
                 $plan = $this->db->fetch("SELECT * FROM plans WHERE slug = ? AND is_active = 1", [$planSlug]);
                 if ($plan) {
+                    $initialCredits = $plan['message_limit'] ?? 0;
+                    
                     $subscriptionId = $this->db->insert('subscriptions', [
                         'user_id' => $userId,
                         'plan_id' => $plan['id'],
@@ -87,6 +84,13 @@ class Auth {
                     ]);
                 }
             }
+
+            // Initialize credits (0 if no plan selected)
+            $this->db->insert('credits', [
+                'user_id' => $userId,
+                'total_credits' => $initialCredits,
+                'used_credits' => 0
+            ]);
 
             // Log activity
             $this->logActivity($userId, 'register', 'New user registered');
@@ -235,6 +239,25 @@ class Auth {
         if (!self::isLoggedIn()) {
             $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
             header('Location: ' . APP_URL . '/auth/login.php');
+            exit;
+        }
+    }
+
+    /**
+     * Require active plan - redirect to subscription if no active plan
+     */
+    public static function requireActivePlan() {
+        self::requireLogin();
+        // Skip check if admin
+        if (self::isAdmin()) return;
+        
+        $db = Database::getInstance();
+        $userId = $_SESSION['user_id'];
+        $subscription = $db->fetch("SELECT id FROM subscriptions WHERE user_id = ? AND status = 'active' AND expires_at > NOW()", [$userId]);
+        
+        if (!$subscription) {
+            setFlash('warning', 'You must have an active plan to access this feature.');
+            header('Location: ' . APP_URL . '/dashboard/subscription.php');
             exit;
         }
     }

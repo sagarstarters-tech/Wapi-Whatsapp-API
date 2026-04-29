@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
-Auth::requireLogin();
+Auth::requireActivePlan();
 
 $db = Database::getInstance();
 $settings = new Settings();
