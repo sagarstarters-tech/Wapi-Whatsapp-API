@@ -186,6 +186,13 @@ include __DIR__ . '/../includes/header.php';
                                     data-plan-name="<?= e($plan['name']); ?>">
                                 <i class="bi bi-arrow-repeat"></i> Renew Early
                             </button>
+                            <?php if ($settings->get('payment_method_manual_enabled') == '1'): ?>
+                            <button class="btn btn-outline-success w-100 btn-manual-upi" 
+                                    data-plan-id="<?= $plan['id']; ?>" 
+                                    data-plan-name="<?= e($plan['name']); ?>">
+                                <i class="bi bi-phone"></i> Renew via UPI
+                            </button>
+                            <?php endif; ?>
                         </div>
                     <?php elseif ($isExpiredPlan): ?>
                         <div class="d-grid gap-2">
