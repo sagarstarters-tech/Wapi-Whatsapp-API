@@ -21,11 +21,21 @@ if (!empty($token)) {
         $status = 'danger';
     }
 } else {
-    // If logged in but not verified, show instructions
+    // If logged in but not verified, resend email
     if (Auth::isLoggedIn()) {
         $user = (new Auth())->getCurrentUser();
         if ($user && $user['email_verified']) {
             redirect('dashboard/');
+        } else {
+            $auth = new Auth();
+            $result = $auth->resendVerificationEmail($_SESSION['user_id']);
+            if ($result['success']) {
+                $status = 'info';
+                setFlash('success', $result['message']);
+            } else {
+                $status = 'danger';
+                $message = $result['message'];
+            }
         }
     } else {
         redirect('auth/login.php');

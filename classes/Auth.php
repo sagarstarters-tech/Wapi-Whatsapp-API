@@ -28,6 +28,48 @@ class Auth {
     }
 
     /**
+     * Resend verification email
+     */
+    public function resendVerificationEmail($userId) {
+        $user = $this->db->fetch("SELECT name, email, email_verified, email_verify_token FROM users WHERE id = ?", [$userId]);
+        
+        if (!$user) {
+            return ['success' => false, 'message' => 'User not found.'];
+        }
+        if ($user['email_verified']) {
+            return ['success' => false, 'message' => 'Email is already verified.'];
+        }
+
+        $verifyToken = $user['email_verify_token'];
+        if (empty($verifyToken)) {
+            $verifyToken = bin2hex(random_bytes(32));
+            $this->db->update('users', ['email_verify_token' => $verifyToken], 'id = ?', [$userId]);
+        }
+
+        $siteName = setting('site_name', 'WAPI');
+        $subject = "Verify your {$siteName} account";
+        $verifyLink = APP_URL . "/auth/verify-email.php?token={$verifyToken}";
+        
+        $body = "<h2>Hello {$user['name']},</h2>
+                <p>Please verify your email address to unlock all features on <strong>{$siteName}</strong>.</p>
+                <div style='margin-top: 20px; margin-bottom: 20px;'>
+                    <a href='{$verifyLink}' style='background-color: #6c63ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;'>Verify Email Address</a>
+                </div>
+                <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                <p><a href='{$verifyLink}'>{$verifyLink}</a></p>
+                <hr>
+                <p style='font-size: 0.8rem; color: #999;'>&copy; " . date('Y') . " {$siteName}. All rights reserved.</p>";
+
+        $mailResult = Mail::send($user['email'], $subject, $body);
+
+        if (!$mailResult['success']) {
+            return ['success' => false, 'message' => 'Failed to send verification email. Please try again.'];
+        }
+
+        return ['success' => true, 'message' => 'Verification email sent successfully! Please check your inbox.'];
+    }
+
+    /**
      * Register a new user
      */
     public function register($name, $email, $password, $phone = null, $company = null, $planSlug = '') {
@@ -71,16 +113,19 @@ class Auth {
 
             $this->db->commit();
 
-            // Send actual Welcome email using the new Mail class
+            // Send actual Welcome & Verification email
             $siteName = setting('site_name', 'WAPI');
-            $subject = "Welcome to {$siteName}!";
+            $subject = "Verify your {$siteName} account";
+            $verifyLink = APP_URL . "/auth/verify-email.php?token={$verifyToken}";
+            
             $body = "<h2>Hello {$name},</h2>
                     <p>Thank you for registering at <strong>{$siteName}</strong>.</p>
-                    <p>We're excited to have you on board! You can now log in and start using our WhatsApp API services.</p>
-                    <p>Your account comes with 100 free credits to get you started.</p>
-                    <div style='margin-top: 20px;'>
-                        <a href='" . APP_URL . "/auth/login.php' style='background-color: #6c63ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Log In to Dashboard</a>
+                    <p>To complete your registration and unlock all features, please verify your email address by clicking the button below.</p>
+                    <div style='margin-top: 20px; margin-bottom: 20px;'>
+                        <a href='{$verifyLink}' style='background-color: #6c63ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;'>Verify Email Address</a>
                     </div>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='{$verifyLink}'>{$verifyLink}</a></p>
                     <hr>
                     <p style='font-size: 0.8rem; color: #999;'>&copy; " . date('Y') . " {$siteName}. All rights reserved.</p>";
 
