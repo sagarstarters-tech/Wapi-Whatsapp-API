@@ -53,7 +53,9 @@ include __DIR__ . '/includes/header.php';
             <div class="col-lg-7">
                 <div class="bg-white p-5 rounded-4 shadow-sm">
                     <h3 class="fw-bold mb-4">Send Message</h3>
-                    <form action="#" method="POST" id="contactForm">
+                    <!-- Alert placeholder -->
+                    <div id="contactAlert" class="d-none"></div>
+                    <form action="api/contact.php" method="POST" id="contactForm">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">First Name</label>
@@ -76,7 +78,10 @@ include __DIR__ . '/includes/header.php';
                                 <textarea class="form-control" name="message" rows="5" required></textarea>
                             </div>
                             <div class="col-md-12 text-end">
-                                <button type="submit" class="btn btn-primary btn-lg px-5">Send Message</button>
+                                <button type="submit" class="btn btn-primary btn-lg px-5" id="contactSubmitBtn">
+                                    <span class="spinner-border spinner-border-sm d-none me-1" id="contactSpinner" role="status"></span>
+                                    Send Message
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -85,5 +90,49 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form      = document.getElementById('contactForm');
+    const alertBox  = document.getElementById('contactAlert');
+    const submitBtn = document.getElementById('contactSubmitBtn');
+    const spinner   = document.getElementById('contactSpinner');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Disable button & show spinner
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        alertBox.className = 'd-none';
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alertBox.className = 'alert alert-success';
+                alertBox.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + data.message;
+                form.reset();
+            } else {
+                alertBox.className = 'alert alert-danger';
+                alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>' + data.message;
+            }
+        })
+        .catch(() => {
+            alertBox.className = 'alert alert-danger';
+            alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>Network error. Please try again.';
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            spinner.classList.add('d-none');
+        });
+    });
+});
+</script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -54,6 +54,20 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
                 <i class="bi bi-chat-dots-fill"></i>
                 <span>Messages</span>
             </a>
+            <?php
+                try {
+                    $contactUnread = $db->fetchColumn("SELECT COUNT(*) FROM contact_messages WHERE status = 'unread'") ?: 0;
+                } catch (Exception $e) {
+                    $contactUnread = 0;
+                }
+            ?>
+            <a href="<?= baseUrl('admin/contact-messages.php'); ?>" class="sidebar-link <?= $currentPage === 'contact-messages' ? 'active' : ''; ?>">
+                <i class="bi bi-envelope-paper-fill"></i>
+                <span>Contact Messages</span>
+                <?php if ($contactUnread > 0): ?>
+                    <span class="badge"><?= $contactUnread; ?></span>
+                <?php endif; ?>
+            </a>
         </div>
 
         <!-- Content -->
