@@ -45,6 +45,7 @@ $db->query("CREATE TABLE IF NOT EXISTS `contact_messages` (
     `first_name` VARCHAR(100) NOT NULL,
     `last_name` VARCHAR(100) NOT NULL,
     `email` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(30) DEFAULT NULL,
     `subject` VARCHAR(255) NOT NULL,
     `message` TEXT NOT NULL,
     `status` ENUM('unread','read','replied') DEFAULT 'unread',
@@ -53,6 +54,13 @@ $db->query("CREATE TABLE IF NOT EXISTS `contact_messages` (
     INDEX `idx_status` (`status`),
     INDEX `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// Add phone column if it doesn't exist (for existing tables)
+try {
+    $db->query("ALTER TABLE `contact_messages` ADD COLUMN `phone` VARCHAR(30) DEFAULT NULL AFTER `email`");
+} catch (Exception $e) {
+    // Column already exists — ignore
+}
 
 // ---- Filters & Pagination --------------------------------------------------
 $search       = sanitize($_GET['search'] ?? '');
@@ -63,8 +71,8 @@ $where  = '1';
 $params = [];
 
 if ($search) {
-    $where .= " AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR subject LIKE ?)";
-    $params = array_merge($params, ["%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%"]);
+    $where .= " AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ? OR subject LIKE ?)";
+    $params = array_merge($params, ["%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%"]);
 }
 if ($statusFilter) {
     $where .= " AND status = ?";
@@ -125,6 +133,7 @@ include __DIR__ . '/../includes/header.php';
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
+                            <th>Phone</th>
                             <th>Subject</th>
                             <th>Message</th>
                             <th>Status</th>
@@ -134,7 +143,7 @@ include __DIR__ . '/../includes/header.php';
                     </thead>
                     <tbody>
                         <?php if (empty($messages)): ?>
-                        <tr><td colspan="7" class="text-center text-muted py-4">No contact messages found</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">No contact messages found</td></tr>
                         <?php else: ?>
                         <?php foreach ($messages as $msg): ?>
                         <tr id="row-<?= $msg['id']; ?>" class="<?= $msg['status'] === 'unread' ? 'table-warning' : ''; ?>">
@@ -142,6 +151,7 @@ include __DIR__ . '/../includes/header.php';
                                 <div class="fw-semibold" style="font-size: 0.875rem;"><?= e($msg['first_name'] . ' ' . $msg['last_name']); ?></div>
                             </td>
                             <td style="font-size: 0.875rem;"><?= e($msg['email']); ?></td>
+                            <td style="font-size: 0.875rem;"><?= e($msg['phone'] ?? '—'); ?></td>
                             <td style="font-size: 0.875rem;"><?= e($msg['subject']); ?></td>
                             <td style="max-width: 220px; font-size: 0.8125rem;" class="text-truncate" title="<?= e($msg['message']); ?>"><?= e(substr($msg['message'], 0, 60)); ?></td>
                             <td>
@@ -156,6 +166,7 @@ include __DIR__ . '/../includes/header.php';
                                 <button class="btn btn-sm btn-outline-primary me-1 view-msg-btn"
                                     data-name="<?= e($msg['first_name'] . ' ' . $msg['last_name']); ?>"
                                     data-email="<?= e($msg['email']); ?>"
+                                    data-phone="<?= e($msg['phone'] ?? ''); ?>"
                                     data-subject="<?= e($msg['subject']); ?>"
                                     data-message="<?= e($msg['message']); ?>"
                                     data-time="<?= e($msg['created_at']); ?>"
@@ -188,6 +199,7 @@ include __DIR__ . '/../includes/header.php';
       <div class="modal-body">
         <p><strong>Name:</strong> <span id="mdName"></span></p>
         <p><strong>Email:</strong> <span id="mdEmail"></span></p>
+        <p><strong>Phone:</strong> <span id="mdPhone"></span></p>
         <p><strong>Subject:</strong> <span id="mdSubject"></span></p>
         <p><strong>Sent at:</strong> <span id="mdTime"></span></p>
         <p><strong>IP:</strong> <span id="mdIp"></span></p>
@@ -211,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', () => {
             document.getElementById('mdName').textContent    = btn.dataset.name;
             document.getElementById('mdEmail').textContent   = btn.dataset.email;
+            document.getElementById('mdPhone').textContent   = btn.dataset.phone || '—';
             document.getElementById('mdSubject').textContent = btn.dataset.subject;
             document.getElementById('mdMessage').textContent = btn.dataset.message;
             document.getElementById('mdTime').textContent    = btn.dataset.time;

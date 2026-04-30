@@ -23,17 +23,23 @@ if (!rateLimit('contact_form_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 5, 600)
 }
 
 // Collect & sanitize input
-$firstName = sanitize($_POST['first_name'] ?? '');
-$lastName  = sanitize($_POST['last_name'] ?? '');
-$email     = sanitizeEmail($_POST['email'] ?? '');
-$subject   = sanitize($_POST['subject'] ?? '');
-$message   = sanitize($_POST['message'] ?? '');
+$firstName   = sanitize($_POST['first_name'] ?? '');
+$lastName    = sanitize($_POST['last_name'] ?? '');
+$email       = sanitizeEmail($_POST['email'] ?? '');
+$countryCode = sanitize($_POST['country_code'] ?? '+91');
+$phone       = preg_replace('/[^0-9]/', '', $_POST['phone'] ?? '');
+$subject     = sanitize($_POST['subject'] ?? '');
+$message     = sanitize($_POST['message'] ?? '');
+
+// Build full phone with country code
+$fullPhone = $countryCode . $phone;
 
 // Validate required fields
 $errors = [];
 if (empty($firstName)) $errors[] = 'First name is required.';
 if (empty($lastName))  $errors[] = 'Last name is required.';
 if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'A valid email is required.';
+if (empty($phone) || strlen($phone) < 6 || strlen($phone) > 15) $errors[] = 'A valid mobile number is required (6-15 digits).';
 if (empty($subject))   $errors[] = 'Subject is required.';
 if (empty($message))   $errors[] = 'Message is required.';
 
@@ -52,6 +58,7 @@ try {
         `first_name` VARCHAR(100) NOT NULL,
         `last_name` VARCHAR(100) NOT NULL,
         `email` VARCHAR(255) NOT NULL,
+        `phone` VARCHAR(30) DEFAULT NULL,
         `subject` VARCHAR(255) NOT NULL,
         `message` TEXT NOT NULL,
         `status` ENUM('unread','read','replied') DEFAULT 'unread',
@@ -61,11 +68,19 @@ try {
         INDEX `idx_created` (`created_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    // Add phone column if it doesn't exist (for existing tables)
+    try {
+        $db->query("ALTER TABLE `contact_messages` ADD COLUMN `phone` VARCHAR(30) DEFAULT NULL AFTER `email`");
+    } catch (Exception $e) {
+        // Column already exists — ignore
+    }
+
     // Insert message
     $db->insert('contact_messages', [
         'first_name' => $firstName,
         'last_name'  => $lastName,
         'email'      => $email,
+        'phone'      => $fullPhone,
         'subject'    => $subject,
         'message'    => $message,
         'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
@@ -81,8 +96,9 @@ try {
 
     if (!empty($adminEmail)) {
         $siteName   = $settings->get('site_name', 'WAPI');
-        $senderName = htmlspecialchars($firstName . ' ' . $lastName, ENT_QUOTES, 'UTF-8');
+        $senderName  = htmlspecialchars($firstName . ' ' . $lastName, ENT_QUOTES, 'UTF-8');
         $senderEmail = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+        $senderPhone = htmlspecialchars($fullPhone, ENT_QUOTES, 'UTF-8');
         $subjectSafe = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
         $messageSafe = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
         $adminUrl    = APP_URL . '/admin/contact-messages.php';
@@ -104,6 +120,10 @@ try {
                     <tr>
                         <td style='padding: 10px 0; color: #666; vertical-align: top;'><strong>Email:</strong></td>
                         <td style='padding: 10px 0;'><a href='mailto:{$senderEmail}' style='color: #6c63ff; text-decoration: none;'>{$senderEmail}</a></td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 10px 0; color: #666; vertical-align: top;'><strong>Phone:</strong></td>
+                        <td style='padding: 10px 0;'><a href='tel:{$senderPhone}' style='color: #6c63ff; text-decoration: none;'>{$senderPhone}</a></td>
                     </tr>
                     <tr>
                         <td style='padding: 10px 0; color: #666; vertical-align: top;'><strong>Subject:</strong></td>

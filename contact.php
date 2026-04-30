@@ -58,23 +58,61 @@ include __DIR__ . '/includes/header.php';
                     <form action="api/contact.php" method="POST" id="contactForm">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">First Name</label>
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="first_name" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Last Name</label>
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="last_name" required>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Email Address</label>
+                                <label class="form-label">Email Address <span class="text-danger">*</span></label>
                                 <input type="email" class="form-control" name="email" required>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Subject</label>
+                                <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <select name="country_code" class="form-select" style="max-width: 140px;" required>
+                                        <option value="+91" selected>🇮🇳 +91</option>
+                                        <option value="+1">🇺🇸 +1</option>
+                                        <option value="+44">🇬🇧 +44</option>
+                                        <option value="+971">🇦🇪 +971</option>
+                                        <option value="+966">🇸🇦 +966</option>
+                                        <option value="+61">🇦🇺 +61</option>
+                                        <option value="+81">🇯🇵 +81</option>
+                                        <option value="+49">🇩🇪 +49</option>
+                                        <option value="+33">🇫🇷 +33</option>
+                                        <option value="+86">🇨🇳 +86</option>
+                                        <option value="+55">🇧🇷 +55</option>
+                                        <option value="+7">🇷🇺 +7</option>
+                                        <option value="+27">🇿🇦 +27</option>
+                                        <option value="+234">🇳🇬 +234</option>
+                                        <option value="+92">🇵🇰 +92</option>
+                                        <option value="+880">🇧🇩 +880</option>
+                                        <option value="+94">🇱🇰 +94</option>
+                                        <option value="+977">🇳🇵 +977</option>
+                                        <option value="+60">🇲🇾 +60</option>
+                                        <option value="+65">🇸🇬 +65</option>
+                                        <option value="+63">🇵🇭 +63</option>
+                                        <option value="+82">🇰🇷 +82</option>
+                                        <option value="+39">🇮🇹 +39</option>
+                                        <option value="+34">🇪🇸 +34</option>
+                                        <option value="+52">🇲🇽 +52</option>
+                                        <option value="+62">🇮🇩 +62</option>
+                                        <option value="+90">🇹🇷 +90</option>
+                                        <option value="+20">🇪🇬 +20</option>
+                                        <option value="+254">🇰🇪 +254</option>
+                                        <option value="+64">🇳🇿 +64</option>
+                                    </select>
+                                    <input type="tel" class="form-control" name="phone" placeholder="Enter mobile number" pattern="[0-9]{6,15}" title="Enter a valid phone number (6-15 digits)" required>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Subject <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="subject" required>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Message</label>
+                                <label class="form-label">Message <span class="text-danger">*</span></label>
                                 <textarea class="form-control" name="message" rows="5" required></textarea>
                             </div>
                             <div class="col-md-12 text-end">
