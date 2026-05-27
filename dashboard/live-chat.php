@@ -56,13 +56,16 @@ include __DIR__ . '/../includes/header.php';
     }
     .chat-sidebar {
         width: 320px;
+        min-width: 320px;
         border-right: 1px solid #eee;
         display: flex;
         flex-direction: column;
+        transition: transform 0.3s ease, opacity 0.3s ease;
     }
     .chat-list {
         flex: 1;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .chat-item {
         padding: 15px;
@@ -78,6 +81,7 @@ include __DIR__ . '/../includes/header.php';
         display: flex;
         flex-direction: column;
         background: #f8fafc;
+        min-width: 0;
     }
     .chat-header {
         padding: 15px 20px;
@@ -86,11 +90,40 @@ include __DIR__ . '/../includes/header.php';
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 10px;
+    }
+    .chat-header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+    }
+    .chat-back-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: var(--primary, #6C63FF);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 1.1rem;
+    }
+    .chat-back-btn:hover {
+        background: var(--primary, #6C63FF);
+        color: #fff;
+        border-color: var(--primary, #6C63FF);
     }
     .chat-messages {
         flex: 1;
         padding: 20px;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         gap: 15px;
@@ -101,6 +134,8 @@ include __DIR__ . '/../includes/header.php';
         border-radius: 12px;
         font-size: 0.9rem;
         position: relative;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     .msg-in {
         align-self: flex-start;
@@ -120,6 +155,109 @@ include __DIR__ . '/../includes/header.php';
     .chat-input-row {
         display: flex;
         gap: 10px;
+    }
+    #activeContactName {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ===== Mobile Responsive (≤768px) ===== */
+    @media (max-width: 768px) {
+        .chat-container {
+            height: calc(100vh - 120px);
+            border-radius: 8px;
+            position: relative;
+        }
+        .chat-sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-width: 100%;
+            height: 100%;
+            z-index: 10;
+            background: #fff;
+            border-right: none;
+            transform: translateX(0);
+        }
+        /* When a chat is open, hide sidebar */
+        .chat-container.chat-open .chat-sidebar {
+            transform: translateX(-100%);
+            pointer-events: none;
+            opacity: 0;
+        }
+        .chat-main {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            transform: translateX(100%);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+        /* When a chat is open, show main area */
+        .chat-container.chat-open .chat-main {
+            transform: translateX(0);
+            opacity: 1;
+            z-index: 15;
+        }
+        .chat-back-btn {
+            display: flex;
+        }
+        .chat-header {
+            padding: 12px 15px;
+        }
+        .chat-messages {
+            padding: 15px;
+            gap: 10px;
+        }
+        .chat-footer {
+            padding: 12px 15px;
+        }
+        .msg-bubble {
+            max-width: 85%;
+            font-size: 0.85rem;
+        }
+        .chat-item {
+            padding: 12px 15px;
+        }
+        #clearChatBtn {
+            font-size: 0.75rem;
+            padding: 4px 8px !important;
+            white-space: nowrap;
+        }
+    }
+
+    /* ===== Small Mobile (≤480px) ===== */
+    @media (max-width: 480px) {
+        .chat-container {
+            height: calc(100vh - 100px);
+            border-radius: 6px;
+        }
+        .msg-bubble {
+            max-width: 90%;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+        }
+        .chat-header {
+            padding: 10px 12px;
+        }
+        .chat-messages {
+            padding: 10px;
+            gap: 8px;
+        }
+        .chat-footer {
+            padding: 10px 12px;
+        }
+        .chat-input-row .btn {
+            padding: 6px 12px;
+        }
+        #activeContactName {
+            font-size: 0.9rem;
+        }
     }
 </style>
 
@@ -142,7 +280,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Sidebar: Conversations -->
             <div class="chat-sidebar">
                 <div class="p-3 border-bottom">
-                    <input type="text" class="form-control form-control-sm" placeholder="Search contacts...">
+                    <input type="text" id="chatSearch" class="form-control form-control-sm" placeholder="Search contacts...">
                 </div>
                 <div class="chat-list">
                     <?php if (empty($conversations)): ?>
@@ -166,9 +304,12 @@ include __DIR__ . '/../includes/header.php';
             <!-- Main Chat Area -->
             <div class="chat-main">
                 <div class="chat-header">
-                    <div>
-                        <div id="activeContactName" class="fw-bold">Select a conversation</div>
-                        <div class="text-success small" id="activeStatus"></div>
+                    <div class="chat-header-left">
+                        <button class="chat-back-btn" onclick="goBackToList()" title="Back to contacts"><i class="bi bi-arrow-left"></i></button>
+                        <div style="min-width:0;">
+                            <div id="activeContactName" class="fw-bold">Select a conversation</div>
+                            <div class="text-success small" id="activeStatus"></div>
+                        </div>
                     </div>
                     <button class="btn btn-danger btn-sm" id="clearChatBtn" style="display: none; align-items: center; gap: 5px;" onclick="clearCurrentChat()"><i class="bi bi-trash"></i> Clear Chat</button>
                 </div>
@@ -199,6 +340,17 @@ include __DIR__ . '/../includes/header.php';
 <script>
     let currentChat = null;
 
+    function isMobileView() {
+        return window.innerWidth <= 768;
+    }
+
+    function goBackToList() {
+        const container = document.querySelector('.chat-container');
+        if (container) {
+            container.classList.remove('chat-open');
+        }
+    }
+
     function loadMessages(phone, el) {
         currentChat = phone;
         document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
@@ -206,6 +358,12 @@ include __DIR__ . '/../includes/header.php';
         document.getElementById('activeContactName').innerText = phone;
         document.getElementById('chatFooter').style.display = 'block';
         document.getElementById('clearChatBtn').style.display = 'flex';
+
+        // On mobile, slide to chat view
+        if (isMobileView()) {
+            document.querySelector('.chat-container').classList.add('chat-open');
+            history.pushState({ chatOpen: true }, '');
+        }
         
         // In a real app, this would be an AJAX call
         document.getElementById('chatMessages').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
@@ -268,6 +426,21 @@ include __DIR__ . '/../includes/header.php';
             });
         }
     }
+    // Search contacts filter
+    document.getElementById('chatSearch')?.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        document.querySelectorAll('.chat-item').forEach(item => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(query) ? '' : 'none';
+        });
+    });
+
+    // Handle browser/Android back button on mobile
+    window.addEventListener('popstate', function(e) {
+        if (isMobileView() && document.querySelector('.chat-container.chat-open')) {
+            goBackToList();
+        }
+    });
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
