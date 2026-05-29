@@ -38,11 +38,12 @@ $webhookLogs = $db->fetchAll(
         th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f8f9fa; font-weight: 600; }
         tr:hover { background: #f8f9fa; }
-        pre { background: #1a1a2e; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; max-height: 250px; }
+        pre { background: #1a1a2e; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; }
         .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
         .badge-red { background: #fee2e2; color: #991b1b; }
         .badge-blue { background: #dbeafe; color: #1e40af; }
         .btn { display: inline-block; background: #6C63FF; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 0.9rem; font-weight: bold; margin-bottom: 15px; }
+        .btn-sm { padding: 4px 8px; font-size: 0.75rem; background: #1e293b; }
         .btn:hover { background: #5a52d5; }
     </style>
 </head>
@@ -91,8 +92,11 @@ $webhookLogs = $db->fetchAll(
                 }
                 ?>
                 <div style="border: 1px solid <?= $isInteresting ? '#6C63FF' : '#ddd' ?>; border-radius: 6px; padding: 12px; margin-bottom: 15px; background: <?= $isInteresting ? '#f3f2ff' : '#fff' ?>;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong>Log ID: <?= $log['id'] ?></strong>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong>Log ID: <?= $log['id'] ?></strong>
+                            <a href="<?= baseUrl('api/dump-log.php?id=' . $log['id']) ?>" target="_blank" class="btn btn-sm" style="margin-left: 10px;">View Full Raw JSON</a>
+                        </div>
                         <span style="font-size: 0.8rem; color: #666;"><?= htmlspecialchars($log['created_at']) ?></span>
                         <?php if ($isInteresting): ?>
                             <span class="badge badge-blue">🎯 Matches Phone/Keyword</span>
