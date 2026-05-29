@@ -394,6 +394,20 @@ class WhatsApp {
                 $text  = "[Reaction: {$emoji}]";
                 break;
 
+            case 'unsupported':
+                $unsupportedType = $msg['unsupported']['type'] ?? '';
+                $errorMsg = $msg['errors'][0]['message'] ?? $msg['errors'][0]['error_data']['details'] ?? '';
+                $text = '[UNSUPPORTED message' . ($unsupportedType ? ' type: ' . $unsupportedType : '') . ']';
+                if (!empty($errorMsg)) {
+                    $text .= ' (Reason: ' . $errorMsg . ')';
+                }
+                break;
+
+            case 'template':
+                $templateName = $msg['template']['name'] ?? 'Unknown';
+                $text = '[Template: ' . $templateName . ']';
+                break;
+
             default:
                 // Fallback: try common sub-fields, then dump raw
                 $text = $msg[$msgType]['body']    ??
