@@ -11,22 +11,49 @@ $db = Database::getInstance();
 $userId = $_SESSION['user_id'];
 $hideNav = true;
 
-// Handle Clear Chat
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_chat') {
+// Get active WhatsApp account (needed by both AJAX handlers and page render)
+$waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
+
+// Handle AJAX actions (Send Message / Clear Chat)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isAjax() && isset($_POST['action'])) {
     if (!CSRF::validateToken()) {
-        if (isAjax()) jsonResponse(['success' => false, 'message' => 'Invalid security token.']);
-    } else {
+        jsonResponse(['success' => false, 'message' => 'Invalid security token. Please refresh the page.']);
+    }
+
+    // --- Send Message from Live Chat ---
+    if ($_POST['action'] === 'send_message') {
+        $to = sanitize($_POST['to'] ?? '');
+        $content = $_POST['content'] ?? '';
+
+        if (empty($to) || empty(trim($content))) {
+            jsonResponse(['success' => false, 'message' => 'Recipient and message content are required.']);
+        }
+
+        if (!$waAccount) {
+            jsonResponse(['success' => false, 'message' => 'No active WhatsApp account. Please configure your WhatsApp API first.']);
+        }
+
+        try {
+            $wa = new WhatsApp();
+            $result = $wa->sendText($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $to, trim($content));
+            jsonResponse($result);
+        } catch (\Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    // --- Clear Chat ---
+    if ($_POST['action'] === 'clear_chat') {
         $chatPhone = sanitize($_POST['phone'] ?? '');
         if ($chatPhone) {
             $db->query("DELETE FROM messages WHERE user_id = ? AND to_number = ?", [$userId, $chatPhone]);
-            if (isAjax()) jsonResponse(['success' => true]);
+            jsonResponse(['success' => true]);
         }
+        jsonResponse(['success' => false, 'message' => 'Failed to clear chat.']);
     }
-    if (isAjax()) jsonResponse(['success' => false, 'message' => 'Failed to clear chat.']);
-}
 
-// Get active WhatsApp account
-$waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
+    jsonResponse(['success' => false, 'message' => 'Unknown action.']);
+}
 
 // Fetch recent active conversations (grouped by phone number)
 $conversations = $db->fetchAll("
@@ -390,21 +417,51 @@ include __DIR__ . '/../includes/header.php';
 
     document.getElementById('chatForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        const msg = document.getElementById('chatInput').value;
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
         if (!msg || !currentChat) return;
 
-        // AJAX to send message
-        fetch('<?= baseUrl('dashboard/messages.php'); ?>', {
+        const sendBtn = this.querySelector('button[type="submit"]');
+        const originalBtnHtml = sendBtn.innerHTML;
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        sendBtn.disabled = true;
+        input.disabled = true;
+
+        // Send message via this page's own handler
+        fetch('<?= baseUrl('dashboard/live-chat.php'); ?>', {
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=send&to=${currentChat}&message_type=text&content=${encodeURIComponent(msg)}&_csrf_token=<?= CSRF::generateToken(); ?>`
+            body: `action=send_message&to=${encodeURIComponent(currentChat)}&content=${encodeURIComponent(msg)}&_csrf_token=<?= CSRF::generateToken(); ?>`
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error('Server error (' + r.status + ')');
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
-                document.getElementById('chatInput').value = '';
-                loadMessages(currentChat, document.querySelector('.chat-item.active'));
+                input.value = '';
+                // Append the sent message bubble immediately for instant feedback
+                const chatMessages = document.getElementById('chatMessages');
+                const now = new Date();
+                const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+                const bubble = document.createElement('div');
+                bubble.className = 'msg-bubble msg-out';
+                bubble.innerHTML = `${msg.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<div style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right;">${timeStr}</div>`;
+                chatMessages.appendChild(bubble);
+                scrollToBottom();
+            } else {
+                alert('Failed to send: ' + (data.message || 'Unknown error'));
             }
+        })
+        .catch(err => {
+            console.error('Send error:', err);
+            alert('Failed to send message. Please try again.');
+        })
+        .finally(() => {
+            sendBtn.innerHTML = originalBtnHtml;
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
         });
     });
 
