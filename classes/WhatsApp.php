@@ -97,7 +97,13 @@ class WhatsApp {
         if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
         file_put_contents(
             $logDir . '/api_payload.log',
-            '[' . date('Y-m-d H:i:s') . '] TO: ' . $to . ' | PAYLOAD: ' . json_encode($payload) . "\n",
+            '[' . date('Y-m-d H:i:s') . "] TEMPLATE SEND\n" .
+            '  TO: ' . $this->formatPhone($to) . "\n" .
+            '  TEMPLATE: ' . $templateName . ' (lang: ' . $language . ")\n" .
+            '  COMPONENTS: ' . json_encode($components) . "\n" .
+            '  FULL PAYLOAD: ' . json_encode($payload) . "\n" .
+            '  API URL: ' . $this->apiUrl . '/' . $phoneNumberId . "/messages\n" .
+            "---\n",
             FILE_APPEND
         );
 
@@ -148,9 +154,36 @@ class WhatsApp {
         // Make API call
         $response = $this->makeApiCall($url, $payload, $accessToken);
 
+        // Log full API response for debugging (especially for template messages)
+        $logDir = APP_ROOT . '/logs';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+        file_put_contents(
+            $logDir . '/api_response.log',
+            '[' . date('Y-m-d H:i:s') . "] TYPE: {$type} | TO: " . $this->formatPhone($to) .
+            ' | HTTP_SUCCESS: ' . ($response['success'] ? 'YES' : 'NO') .
+            ' | RESPONSE: ' . json_encode($response['data'] ?? $response['message']) . "\n",
+            FILE_APPEND
+        );
+
         if ($response['success']) {
-            // Update message status
+            // Validate that Meta actually accepted the message
             $waMessageId = $response['data']['messages'][0]['id'] ?? null;
+            $messageStatus = $response['data']['messages'][0]['message_status'] ?? null;
+
+            if (!$waMessageId) {
+                // Meta returned 200 but no message ID — something is wrong
+                $this->db->update('messages', [
+                    'status' => 'failed',
+                    'error_message' => 'Meta API returned success but no message ID. Response: ' . json_encode($response['data'])
+                ], 'id = ?', [$messageId]);
+
+                $this->logApiError('NO_MESSAGE_ID', $url, $payload, 'HTTP 200 but no messages[0].id in response: ' . json_encode($response['data']));
+
+                return ['success' => false, 'message' => 'Message was not accepted by WhatsApp. Please check your template status and business verification.'];
+            }
+
+            // Check if Meta flagged the message as "accepted" but not deliverable
+            // message_status can be 'accepted' (queued for delivery) or absent
             $this->db->update('messages', [
                 'message_id' => $waMessageId,
                 'status' => 'sent',
@@ -548,6 +581,19 @@ class WhatsApp {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
         curl_close($ch);
+
+        // Always log the full API exchange for debugging
+        $logDir = APP_ROOT . '/logs';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+        file_put_contents(
+            $logDir . '/whatsapp_api.log',
+            '[' . date('Y-m-d H:i:s') . "] HTTP {$httpCode} | URL: {$url}\n" .
+            '  REQUEST: ' . json_encode($data) . "\n" .
+            '  RESPONSE: ' . ($response ?: '(empty)') . "\n" .
+            ($error ? '  CURL_ERROR: ' . $error . "\n" : '') .
+            "---\n",
+            FILE_APPEND
+        );
 
         if ($error) {
             $this->logApiError('CURL_ERROR', $url, $data, $error);
