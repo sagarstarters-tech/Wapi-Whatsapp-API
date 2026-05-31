@@ -71,4 +71,15 @@ try {
     echo "Messages Error: " . $e->getMessage() . "\n";
 }
 
+echo "\n=== RAW PAYLOADS OF LATEST UNSUPPORTED/UNKNOWN WEBHOOK LOGS ===\n";
+try {
+    $rawLogs = $db->fetchAll("SELECT id, payload, created_at FROM webhook_logs WHERE event_type = 'incoming' AND (payload LIKE '%unsupported%' OR payload LIKE '%unknown%' OR payload LIKE '%918573934013%') ORDER BY id DESC LIMIT 5");
+    foreach ($rawLogs as $rLog) {
+        echo "LOG ID: {$rLog['id']} | Created: {$rLog['created_at']}\n";
+        echo json_encode(json_decode($rLog['payload'], true), JSON_PRETTY_PRINT) . "\n\n";
+    }
+} catch (Exception $e) {
+    echo "Logs Error: " . $e->getMessage() . "\n";
+}
+
 exit;
