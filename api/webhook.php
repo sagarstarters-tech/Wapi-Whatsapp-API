@@ -355,24 +355,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Session exists but flow '$sessionFlowId' is no longer active.\n", FILE_APPEND);
                         }
                     } else {
-                        // 4. No trigger and no session: Handle fallback (auto-start LATEST flow only for non-text)
-                        if ($type !== 'text') {
-                            $latestFlow = $activeFlows[0]; 
-                            $nodes = $getNodes($latestFlow['flow_json']);
-                            foreach ($nodes as $nId => $nData) {
-                                if (($nData['name'] ?? '') === 'start') {
-                                    $startNode = $nData;
-                                    $firstConns = $startNode['outputs']['output_1']['connections'] ?? [];
-                                    $targetNodeId = (!empty($firstConns)) ? $firstConns[0]['node'] : null;
-                                    
-                                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Auto-starting latest flow '{$latestFlow['id']}' for non-text message type '$type'.\n", FILE_APPEND);
-                                    runFlow($from, $userId, $latestFlow['id'], $targetNodeId, $phoneNumberId, $accessToken, $profileName);
-                                    break;
-                                }
-                            }
-                        } else {
-                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No trigger match and no active session for '$textBody'\n", FILE_APPEND);
-                        }
+                        // 4. No trigger and no session: Log and do not auto-start
+                        file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No trigger match and no active session for type '$type' with text '$textBody'\n", FILE_APPEND);
                     }
                 }
             }

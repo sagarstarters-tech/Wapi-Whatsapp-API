@@ -186,25 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Continuing session (type=$type) at node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
                             runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
                         } else {
-                            // For non-text messages without active session, auto-start the flow
-                            if ($type !== 'text') {
-                                foreach ($nodes as $nId => $nData) {
-                                    if ($nData['name'] === 'start') {
-                                        $startConns = $nData['outputs']['output_1']['connections'] ?? [];
-                                        if (!empty($startConns)) {
-                                            $firstNodeId = $startConns[0]['node'];
-                                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for non-text (type=$type) at node: $firstNodeId\n", FILE_APPEND);
-                                            runFlow($from, $userId, $flow['id'], $firstNodeId, $phoneNumberId, $accessToken);
-                                        } else {
-                                            runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
-                                        }
-                                        break;
-                                    }
-                                }
-                            } else {
-                                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Auto-starting flow for '$textBody'\n", FILE_APPEND);
-                                runFlow($from, $userId, $flow['id'], null, $phoneNumberId, $accessToken);
-                            }
+                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] No trigger match and no active session for type '$type' with text '$textBody'\n", FILE_APPEND);
                         }
                     }
                 }
