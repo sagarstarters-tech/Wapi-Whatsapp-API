@@ -285,8 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!empty($rawKeywords)) {
                             $keywordArr = array_values(array_filter(
                                 array_map(function($kw) {
-                                    // trim whitespace, then strip leading/trailing non-alphanumeric chars
-                                    return preg_replace('/^[^a-z0-9\x{0080}-\x{FFFF}]+|[^a-z0-9\x{0080}-\x{FFFF}]+$/u', '', strtolower(trim($kw)));
+                                    return strtolower(trim($kw));
                                 }, explode(',', $rawKeywords)),
                                 function($kw) { return $kw !== ''; }
                             ));
