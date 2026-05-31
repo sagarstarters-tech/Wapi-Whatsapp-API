@@ -82,9 +82,9 @@ try {
     echo "Logs Error: " . $e->getMessage() . "\n";
 }
 
-echo "\n=== TARGET WEBHOOK LOG AROUND 15:14:48 ===\n";
+echo "\n=== TARGET WEBHOOK LOG FOR MSG wamid.HBgMOTE4NTczOTM0MDEzFQIAEhggQTVEQzEyNEZCNjE4MjFBQTA1MzlBRjZBRUNCQkFBMUYA ===\n";
 try {
-    $targetLogs = $db->fetchAll("SELECT id, payload, created_at FROM webhook_logs WHERE created_at LIKE '2026-05-31 15:14%' ORDER BY id DESC");
+    $targetLogs = $db->fetchAll("SELECT id, payload, created_at FROM webhook_logs WHERE payload LIKE '%QTVEQzEyNEZCNjE4MjFBQTA1MzlBRjZBRUNCQkFBMUYA%' ORDER BY id DESC");
     foreach ($targetLogs as $tLog) {
         echo "LOG ID: {$tLog['id']} | Created: {$tLog['created_at']}\n";
         echo json_encode(json_decode($tLog['payload'], true), JSON_PRETTY_PRINT) . "\n\n";
