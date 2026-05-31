@@ -47,11 +47,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Fix for port interaction
+    // Fix for form inputs inside nodes: stop propagation so Drawflow
+    // doesn't interpret typing/clicking in inputs as node drag actions.
     canvas.addEventListener('mousedown', (e) => {
+        // Allow port interaction to pass through
         if (e.target.classList.contains('input') || e.target.classList.contains('output')) {
              return;
         }
+        // Only stop propagation for actual form elements to allow typing
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
             e.stopPropagation();
         }
@@ -66,15 +69,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Canvas Mouse Wheel Zoom Logic
+    // NOTE: Drawflow already has a built-in wheel zoom handler (zoom_enter).
+    // We only need to prevent the default page scroll behavior.
+    // Do NOT call editor.zoom_in()/zoom_out() here — that would double-zoom.
     canvas.addEventListener('wheel', (e) => {
         if (!editor || editor.editor_mode === 'fixed') return;
-        e.preventDefault(); // Prevent standard page scroll
-        if (e.deltaY > 0) {
-            editor.zoom_out();
-        } else {
-            editor.zoom_in();
-        }
+        e.preventDefault(); // Prevent page scroll, let Drawflow handle zoom
     }, { passive: false });
 
     // Auto-load master flow on start

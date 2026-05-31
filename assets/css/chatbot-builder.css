@@ -94,11 +94,22 @@ body {
     background: transparent !important;
     will-change: transform;
     transition: none !important; /* Prevents ghosting during fast drag */
+    transform: translateZ(0); /* Force GPU layer for smooth panning */
 }
 
-/* Optimization for nodes during move */
+/* Ensure parent container allows proper canvas panning */
+.parent-drawflow {
+    touch-action: none;
+    overflow: hidden;
+    cursor: grab;
+}
+.parent-drawflow:active {
+    cursor: grabbing;
+}
+
+/* Nodes should not all have will-change — causes GPU layer explosion with many nodes */
 .drawflow-node {
-    will-change: left, top;
+    /* will-change removed intentionally for performance */
 }
 
 .drawflow .drawflow-node {

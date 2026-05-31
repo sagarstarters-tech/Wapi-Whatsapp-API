@@ -12,11 +12,11 @@ $hideNav = true;
 
 // Custom Assets for this page
 $extraCss = [
-    'https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css',
+    'https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.59/dist/drawflow.min.css',
     asset('assets/css/chatbot-builder.css')
 ];
 $extraJs = [
-    'https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js',
+    'https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.59/dist/drawflow.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
     asset('assets/js/chatbot-builder.js?v=' . time())
 ];
