@@ -69,13 +69,102 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // NOTE: Drawflow already has a built-in wheel zoom handler (zoom_enter).
-    // We only need to prevent the default page scroll behavior.
-    // Do NOT call editor.zoom_in()/zoom_out() here — that would double-zoom.
+    // ==========================================
+    // PREMIUM CANVAS ZOOM & PANNING ENHANCEMENT
+    // ==========================================
+    
+    // 1. Direct Mouse Wheel Zoom (without Ctrl key requirement)
     canvas.addEventListener('wheel', (e) => {
         if (!editor || editor.editor_mode === 'fixed') return;
-        e.preventDefault(); // Prevent page scroll, let Drawflow handle zoom
-    }, { passive: false });
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        if (e.deltaY > 0) {
+            editor.zoom_out();
+        } else {
+            editor.zoom_in();
+        }
+    }, { capture: true, passive: false });
+
+    // 2. Custom Multi-Gesture Canvas Panning (Middle-Click, Right-Click, Space+Left-Click)
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panStartCanvasX = 0;
+    let panStartCanvasY = 0;
+    let spacePressed = false;
+
+    // Track Spacebar state for panning
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || activeEl.isContentEditable)) {
+                return; // Allow typing spaces in input fields
+            }
+            spacePressed = true;
+            canvas.style.cursor = 'grab';
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            spacePressed = false;
+            canvas.style.cursor = '';
+        }
+    });
+
+    // Capture mousedown events to start panning
+    canvas.addEventListener('mousedown', (e) => {
+        const isMiddleClick = e.button === 1;
+        const isRightClick = e.button === 2;
+        const isSpaceDrag = e.button === 0 && spacePressed;
+
+        if (isMiddleClick || isRightClick || isSpaceDrag) {
+            isPanning = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartCanvasX = editor.canvas_x;
+            panStartCanvasY = editor.canvas_y;
+            canvas.style.cursor = 'grabbing';
+            
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true); // True handles capture phase, intercepting before Drawflow node dragging triggers
+
+    // Apply smooth pan offsets on mousemove
+    window.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+
+        const dx = e.clientX - panStartX;
+        const dy = e.clientY - panStartY;
+
+        // Apply pan coordinates to Drawflow internal state
+        editor.canvas_x = panStartCanvasX + dx;
+        editor.canvas_y = panStartCanvasY + dy;
+
+        // Trigger visual transformation of the canvas precanvas
+        editor.precanvas.style.transform = `translate(${editor.canvas_x}px, ${editor.canvas_y}px) scale(${editor.zoom})`;
+        
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
+
+    // End panning on mouseup
+    window.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            canvas.style.cursor = spacePressed ? 'grab' : '';
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    // Disable default browser context menus on the canvas to allow smooth right-click panning
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    }, true);
 
     // Auto-load master flow on start
     setTimeout(() => loadFlow(true), 100);
