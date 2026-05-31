@@ -15,10 +15,22 @@ $db = Database::getInstance();
 if (isset($_GET['clear_expired']) && $_GET['clear_expired'] == '1') {
     try {
         $stmt = $db->query(
-            "UPDATE chatbot_sessions SET state = 'finished', updated_at = NOW() WHERE state = 'active' AND updated_at < DATE_SUB(NOW(), INTERVAL 4 HOUR)"
+            "UPDATE chatbot_sessions SET state = 'finished', updated_at = NOW() WHERE state = 'active' AND (updated_at < DATE_SUB(NOW(), INTERVAL 4 HOUR) OR current_node_id = '49')"
         );
         $count = $stmt->rowCount();
         echo "=== EXPIRED SESSIONS CLEARED: $count SESSIONS UPDATED TO FINISHED ===\n\n";
+    } catch (Exception $e) {
+        echo "=== CLEAR ERROR: " . $e->getMessage() . " ===\n\n";
+    }
+}
+
+if (isset($_GET['clear_all']) && $_GET['clear_all'] == '1') {
+    try {
+        $stmt = $db->query(
+            "UPDATE chatbot_sessions SET state = 'finished', updated_at = NOW() WHERE state = 'active'"
+        );
+        $count = $stmt->rowCount();
+        echo "=== ALL ACTIVE SESSIONS FORCE CLEARED: $count SESSIONS UPDATED TO FINISHED ===\n\n";
     } catch (Exception $e) {
         echo "=== CLEAR ERROR: " . $e->getMessage() . " ===\n\n";
     }
