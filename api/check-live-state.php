@@ -11,6 +11,19 @@ header('Content-Type: text/plain; charset=utf-8');
 
 $db = Database::getInstance();
 
+// Manual cleanup option
+if (isset($_GET['clear_expired']) && $_GET['clear_expired'] == '1') {
+    try {
+        $stmt = $db->query(
+            "UPDATE chatbot_sessions SET state = 'finished', updated_at = NOW() WHERE state = 'active' AND updated_at < DATE_SUB(NOW(), INTERVAL 4 HOUR)"
+        );
+        $count = $stmt->rowCount();
+        echo "=== EXPIRED SESSIONS CLEARED: $count SESSIONS UPDATED TO FINISHED ===\n\n";
+    } catch (Exception $e) {
+        echo "=== CLEAR ERROR: " . $e->getMessage() . " ===\n\n";
+    }
+}
+
 echo "=== ACTIVE CHATBOT SESSIONS ===\n";
 try {
     $sessions = $db->fetchAll("SELECT * FROM chatbot_sessions ORDER BY updated_at DESC LIMIT 10");

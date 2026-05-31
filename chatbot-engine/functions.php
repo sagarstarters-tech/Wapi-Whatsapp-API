@@ -598,10 +598,19 @@ function setSession($phone, $userId, $flowId, $nodeId, $state) {
 function getSession($phone, $userId) {
     $db = Database::getInstance();
     try {
-        return $db->fetch(
-            "SELECT * FROM chatbot_sessions WHERE phone = ? AND user_id = ? LIMIT 1",
+        $session = $db->fetch(
+            "SELECT *, (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(updated_at)) as seconds_inactive FROM chatbot_sessions WHERE phone = ? AND user_id = ? LIMIT 1",
             [$phone, $userId]
         );
+        if ($session && ($session['state'] ?? '') === 'active') {
+            $sessionTimeout = 4 * 3600; // 4 hours
+            if (isset($session['seconds_inactive']) && (int)$session['seconds_inactive'] > $sessionTimeout) {
+                // Mark session as finished in the database
+                setSession($phone, $userId, $session['flow_id'], $session['current_node_id'], 'finished');
+                $session['state'] = 'finished'; // Update in-memory copy
+            }
+        }
+        return $session;
     } catch (Exception $e) {
         file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] getSession Error: " . $e->getMessage() . "\n", FILE_APPEND);
         return null;
