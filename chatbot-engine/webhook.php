@@ -182,18 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $session = getSession($from, $userId);
                         if ($session && ($session['state'] ?? '') === 'active' && ($session['flow_id'] ?? 0) == $flow['id']) {
-                            $activeNodeId = $session['current_node_id'] ?? '';
-                            $activeNode = $nodes[$activeNodeId] ?? null;
-                            $nodeType = $activeNode['name'] ?? '';
-                            
-                            if ($nodeType === 'start') {
-                                file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Session active at Start node. Bypassing.\n", FILE_APPEND);
-                                setSession($from, $userId, $flow['id'], $activeNodeId, 'finished');
-                                continue;
-                            }
-
-                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Continuing session (type=$type) at node: " . ($session['current_node_id'] ?? 'null') . "\n", FILE_APPEND);
-                            runFlow($from, $userId, $flow['id'], $session['current_node_id'], $phoneNumberId, $accessToken);
+                            file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] Unmatched message received during active session at node: " . ($session['current_node_id'] ?? 'null') . ". Logging only.\n", FILE_APPEND);
                         } else {
                             file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] No trigger match and no active session for type '$type' with text '$textBody'\n", FILE_APPEND);
                         }

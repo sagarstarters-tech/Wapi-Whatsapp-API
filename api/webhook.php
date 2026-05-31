@@ -346,26 +346,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($session && ($session['state'] ?? '') === 'active' && !empty($session['current_node_id'])) {
                         $sessionFlowId = $session['flow_id'];
                         
-                        // Load the flow json to inspect the node type
-                        $flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = ?", [$sessionFlowId]);
-                        if ($flow) {
-                            $nodes = $getNodes($flow['flow_json']);
-                            $activeNode = $nodes[$session['current_node_id']] ?? null;
-                            $nodeType = $activeNode['name'] ?? '';
-                            
-                            if ($nodeType === 'start') {
-                                // Bypassing start node session continuation to prevent infinite welcome message loops!
-                                file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Session is active at a Start node. Bypassing continuation.\n", FILE_APPEND);
-                                setSession($from, $userId, $sessionFlowId, $session['current_node_id'], 'finished');
-                                continue;
-                            }
-                        }
-
                         // Verify if the session flow is still in our active list
                         $activeFlowIds = array_column($activeFlows, 'id');
                         if (in_array($sessionFlowId, $activeFlowIds)) {
-                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Continuing session for flow '$sessionFlowId' at node: " . $session['current_node_id'] . "\n", FILE_APPEND);
-                            runFlow($from, $userId, $sessionFlowId, $session['current_node_id'], $phoneNumberId, $accessToken, $profileName);
+                            file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Unmatched message received during active session for flow '$sessionFlowId' at node: " . $session['current_node_id'] . ". Logging only.\n", FILE_APPEND);
                         } else {
                             file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Session exists but flow '$sessionFlowId' is no longer active.\n", FILE_APPEND);
                         }
