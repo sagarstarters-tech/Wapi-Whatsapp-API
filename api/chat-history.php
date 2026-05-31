@@ -30,6 +30,8 @@ foreach ($messages as $m) {
     $response[] = [
         'id' => $m['id'],
         'content' => e($m['content']),
+        'type' => $m['type'] ?? 'text',
+        'media_url' => $m['media_url'] ?? '',
         'direction' => $m['direction'],
         'status' => $m['status'],
         'time' => date('H:i', strtotime($m['created_at']))

@@ -428,6 +428,14 @@ class WhatsApp {
         }
 
 
+        // Resolve media URL for media messages (image, video, document, audio, sticker, voice)
+        $mediaUrl = null;
+        $mediaTypes = ['image', 'video', 'document', 'audio', 'sticker', 'voice'];
+        if (in_array($msgType, $mediaTypes) && isset($msg[$msgType]['id'])) {
+            $mediaId = $msg[$msgType]['id'];
+            $mediaUrl = $this->getMediaUrl($mediaId, $phoneNumberId, $userId);
+        }
+
         // Save incoming message
         $this->db->insert('messages', [
             'user_id'    => $userId,
@@ -435,6 +443,7 @@ class WhatsApp {
             'to_number'  => $from,
             'type'       => $msgType,
             'content'    => $text,
+            'media_url'  => $mediaUrl,
             'status'     => 'delivered',
             'direction'  => 'inbound'
         ]);
@@ -641,5 +650,67 @@ class WhatsApp {
             '[' . date('Y-m-d H:i:s') . '] ' . $type . ' | TO: ' . $to . ' | TEMPLATE: ' . $templateName . ' | ERROR: ' . $error . "\n",
             FILE_APPEND
         );
+    }
+
+    /**
+     * Get media download URL from WhatsApp media ID
+     * Meta requires a two-step process: first get the URL, then download with auth header
+     */
+    private function getMediaUrl($mediaId, $phoneNumberId, $userId) {
+        try {
+            // Get access token for this phone number ID
+            $account = $this->db->fetch(
+                "SELECT access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND user_id = ? AND status IN ('active', 'pending') LIMIT 1",
+                [$phoneNumberId, $userId]
+            );
+            if (!$account) {
+                // Try without user_id (webhook might not always have it)
+                $account = $this->db->fetch(
+                    "SELECT access_token FROM whatsapp_accounts WHERE phone_number_id = ? AND status IN ('active', 'pending') LIMIT 1",
+                    [$phoneNumberId]
+                );
+            }
+            if (!$account || empty($account['access_token'])) {
+                return null;
+            }
+
+            $accessToken = $account['access_token'];
+            $url = "{$this->apiUrl}/{$mediaId}";
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_HTTPHEADER => ["Authorization: Bearer {$accessToken}"],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_SSL_VERIFYPEER => true
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                return $data['url'] ?? null;
+            }
+
+            $logDir = APP_ROOT . '/logs';
+            if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+            file_put_contents(
+                $logDir . '/media_fetch.log',
+                '[' . date('Y-m-d H:i:s') . "] Failed to get media URL for ID: {$mediaId} | HTTP: {$httpCode} | Response: {$response}\n",
+                FILE_APPEND
+            );
+        } catch (\Exception $e) {
+            $logDir = APP_ROOT . '/logs';
+            if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+            file_put_contents(
+                $logDir . '/media_fetch.log',
+                '[' . date('Y-m-d H:i:s') . "] Exception fetching media URL: " . $e->getMessage() . "\n",
+                FILE_APPEND
+            );
+        }
+        return null;
     }
 }

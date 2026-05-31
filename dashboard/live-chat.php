@@ -164,6 +164,19 @@ include __DIR__ . '/../includes/header.php';
         word-wrap: break-word;
         overflow-wrap: break-word;
     }
+    .msg-media img,
+    .msg-media video {
+        max-width: 280px;
+        min-width: 120px;
+    }
+    .msg-media audio {
+        min-width: 200px;
+        max-width: 280px;
+    }
+    .msg-in .msg-media img,
+    .msg-in .msg-media video {
+        border: 1px solid #eee;
+    }
     .msg-in {
         align-self: flex-start;
         background: #fff;
@@ -320,7 +333,17 @@ include __DIR__ . '/../includes/header.php';
                                     <small class="text-muted"><?= date('H:i', strtotime($c['created_at'])); ?></small>
                                 </div>
                                 <div class="text-muted text-truncate mini-msg" style="font-size: 0.75rem;">
-                                    <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?= e(substr($c['content'] ?? '', 0, 30)); ?>
+                                    <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?php
+                                        $msgType = $c['type'] ?? 'text';
+                                        $preview = substr($c['content'] ?? '', 0, 30);
+                                        if ($msgType === 'image') echo '📷 ' . ($preview !== '[Image]' ? e($preview) : 'Photo');
+                                        elseif ($msgType === 'video') echo '🎥 ' . ($preview !== '[Video]' ? e($preview) : 'Video');
+                                        elseif ($msgType === 'audio' || $msgType === 'voice') echo '🎵 Audio';
+                                        elseif ($msgType === 'document') echo '📄 ' . ($preview !== '[Document]' ? e($preview) : 'Document');
+                                        elseif ($msgType === 'sticker') echo '🏷️ Sticker';
+                                        elseif ($msgType === 'location') echo '📍 Location';
+                                        else echo e($preview);
+                                    ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -367,6 +390,12 @@ include __DIR__ . '/../includes/header.php';
 <script>
     let currentChat = null;
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     function isMobileView() {
         return window.innerWidth <= 768;
     }
@@ -400,8 +429,54 @@ include __DIR__ . '/../includes/header.php';
             .then(data => {
                 let html = '';
                 data.forEach(m => {
-                    html += `<div class="msg-bubble ${m.direction === 'inbound' ? 'msg-in' : 'msg-out'}">
-                        ${m.content}
+                    const bubbleClass = m.direction === 'inbound' ? 'msg-in' : 'msg-out';
+                    let contentHtml = '';
+                    const proxyBase = '<?= baseUrl('api/media-proxy.php'); ?>?url=';
+
+                    if (m.media_url && ['image', 'sticker'].includes(m.type)) {
+                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                        contentHtml = `<div class="msg-media">
+                            <img src="${proxiedUrl}" alt="Image" style="max-width: 100%; max-height: 300px; border-radius: 8px; cursor: pointer; display: block;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <span style="display:none; opacity:0.7; font-size:0.8rem;">⚠️ Image could not be loaded</span>
+                        </div>`;
+                        if (m.content && m.content !== '[Image]' && m.content !== '[Sticker]') {
+                            contentHtml += `<div style="margin-top: 6px;">${escapeHtml(m.content)}</div>`;
+                        }
+                    } else if (m.media_url && m.type === 'video') {
+                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                        contentHtml = `<div class="msg-media">
+                            <video controls style="max-width: 100%; max-height: 300px; border-radius: 8px;" preload="metadata">
+                                <source src="${proxiedUrl}">
+                                Your browser does not support video playback.
+                            </video>
+                        </div>`;
+                        if (m.content && m.content !== '[Video]') {
+                            contentHtml += `<div style="margin-top: 6px;">${escapeHtml(m.content)}</div>`;
+                        }
+                    } else if (m.media_url && (m.type === 'audio' || m.type === 'voice')) {
+                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                        contentHtml = `<div class="msg-media">
+                            <audio controls style="max-width: 100%;" preload="metadata">
+                                <source src="${proxiedUrl}">
+                                Your browser does not support audio playback.
+                            </audio>
+                        </div>`;
+                    } else if (m.media_url && m.type === 'document') {
+                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                        const fileName = m.content && m.content !== '[Document]' ? m.content : 'Document';
+                        contentHtml = `<div class="msg-media">
+                            <a href="${proxiedUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; color:${m.direction === 'inbound' ? '#6C63FF' : '#fff'}; text-decoration:none; word-break:break-all;">
+                                <i class="bi bi-file-earmark-arrow-down" style="font-size:1.3rem;"></i>
+                                <span>${escapeHtml(fileName)}</span>
+                            </a>
+                        </div>`;
+                    } else {
+                        // Text or fallback for media without URL
+                        contentHtml = escapeHtml(m.content || '');
+                    }
+
+                    html += `<div class="msg-bubble ${bubbleClass}">
+                        ${contentHtml}
                         <div style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right;">${m.time}</div>
                     </div>`;
                 });
