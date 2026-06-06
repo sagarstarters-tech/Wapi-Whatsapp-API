@@ -21,7 +21,9 @@ $perPage = 20;
 $offset = ($page - 1) * $perPage;
 
 // Fetch bots for filter dropdown
-$bots = $db->fetchAll("SELECT id, name FROM ai_bots WHERE user_id = ? ORDER BY name", [$userId]);
+try {
+    $bots = $db->fetchAll("SELECT id, name FROM ai_bots WHERE user_id = ? ORDER BY name", [$userId]);
+} catch (Exception $e) { $bots = []; }
 
 // Build query
 $where = "c.user_id = ?";
@@ -42,16 +44,21 @@ if ($search) {
 }
 
 // Count total
-$totalConversations = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations c WHERE $where", $params);
-$totalPages = max(1, ceil($totalConversations / $perPage));
-
-// Fetch conversations
-$conversations = $db->fetchAll("SELECT c.*, b.name as bot_name 
-    FROM ai_conversations c 
-    JOIN ai_bots b ON c.bot_id = b.id 
-    WHERE $where 
-    ORDER BY c.last_message_at DESC 
-    LIMIT $perPage OFFSET $offset", $params);
+try {
+    $totalConversations = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations c WHERE $where", $params) ?: 0;
+    $totalPages = max(1, ceil($totalConversations / $perPage));
+    // Fetch conversations
+    $conversations = $db->fetchAll("SELECT c.*, b.name as bot_name 
+        FROM ai_conversations c 
+        JOIN ai_bots b ON c.bot_id = b.id 
+        WHERE $where 
+        ORDER BY c.last_message_at DESC 
+        LIMIT $perPage OFFSET $offset", $params);
+} catch (Exception $e) {
+    $totalConversations = 0;
+    $totalPages = 1;
+    $conversations = [];
+}
 
 $pageTitle = 'AI Conversations';
 $extraCss = [asset('assets/css/ai-chatbot.css')];

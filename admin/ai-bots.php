@@ -30,10 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 }
 
 // Stats
-$totalBots = $db->count('ai_bots', '1');
-$activeBots = $db->count('ai_bots', "status = 'active'");
-$totalConversations = $db->count('ai_conversations', '1');
-$totalTokens = $db->fetchColumn("SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE sender_type = 'ai'") ?: 0;
+try { $totalBots = $db->count('ai_bots', '1'); } catch (Exception $e) { $totalBots = 0; }
+try { $activeBots = $db->count('ai_bots', "status = 'active'"); } catch (Exception $e) { $activeBots = 0; }
+try { $totalConversations = $db->count('ai_conversations', '1'); } catch (Exception $e) { $totalConversations = 0; }
+try { $totalTokens = $db->fetchColumn("SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE sender_type = 'ai'") ?: 0; } catch (Exception $e) { $totalTokens = 0; }
 
 // Search & filter
 $search = sanitize($_GET['search'] ?? '');
@@ -56,18 +56,23 @@ if ($statusFilter && in_array($statusFilter, ['active', 'inactive', 'suspended']
     $params[] = $statusFilter;
 }
 
-$totalFiltered = $db->fetchColumn("SELECT COUNT(*) FROM ai_bots b JOIN users u ON b.user_id = u.id WHERE $where", $params);
-$totalPages = max(1, ceil($totalFiltered / $perPage));
-
-// Fetch bots with owner info
-$bots = $db->fetchAll("SELECT b.*, u.name as owner_name, u.email as owner_email,
-    (SELECT COUNT(*) FROM ai_conversations WHERE bot_id = b.id) as conv_count,
-    (SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE bot_id = b.id AND sender_type = 'ai') as tokens_used
-    FROM ai_bots b 
-    JOIN users u ON b.user_id = u.id 
-    WHERE $where 
-    ORDER BY b.created_at DESC 
-    LIMIT $perPage OFFSET $offset", $params);
+try {
+    $totalFiltered = $db->fetchColumn("SELECT COUNT(*) FROM ai_bots b JOIN users u ON b.user_id = u.id WHERE $where", $params) ?: 0;
+    $totalPages = max(1, ceil($totalFiltered / $perPage));
+    // Fetch bots with owner info
+    $bots = $db->fetchAll("SELECT b.*, u.name as owner_name, u.email as owner_email,
+        (SELECT COUNT(*) FROM ai_conversations WHERE bot_id = b.id) as conv_count,
+        (SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE bot_id = b.id AND sender_type = 'ai') as tokens_used
+        FROM ai_bots b 
+        JOIN users u ON b.user_id = u.id 
+        WHERE $where 
+        ORDER BY b.created_at DESC 
+        LIMIT $perPage OFFSET $offset", $params);
+} catch (Exception $e) {
+    $totalFiltered = 0;
+    $totalPages = 1;
+    $bots = [];
+}
 
 $pageTitle = 'AI Bots Management';
 $extraCss = [asset('assets/css/dashboard.css')];

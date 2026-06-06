@@ -28,20 +28,24 @@ if ($isEdit) {
 // Load WA accounts for dropdown
 $waAccounts = $db->fetchAll('SELECT id, phone_number, business_name FROM whatsapp_accounts WHERE user_id = ?', [$userId]);
 
-// Load enabled AI models from settings
+// Load enabled AI models from settings (fallback to all models if settings not seeded yet)
 $enabledModels = [];
-if ($settings->get('ai_openai_enabled', '0') === '1') {
+if ($settings->get('ai_openai_enabled', '1') !== '0') {
     $enabledModels[] = ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'desc' => 'OpenAI most capable model with vision', 'icon' => 'bi-stars'];
     $enabledModels[] = ['id' => 'gpt-4.1', 'name' => 'GPT-4.1', 'desc' => 'OpenAI latest model with improved reasoning', 'icon' => 'bi-lightning-charge'];
 }
-if ($settings->get('ai_gemini_enabled', '0') === '1') {
+if ($settings->get('ai_gemini_enabled', '1') !== '0') {
     $enabledModels[] = ['id' => 'gemini', 'name' => 'Gemini Pro', 'desc' => 'Google Gemini with multimodal capabilities', 'icon' => 'bi-google'];
 }
 if ($settings->get('ai_claude_enabled', '0') === '1') {
     $enabledModels[] = ['id' => 'claude', 'name' => 'Claude', 'desc' => 'Anthropic Claude with long context window', 'icon' => 'bi-chat-square-heart'];
 }
-if ($settings->get('ai_custom_enabled', '0') === '1') {
+if ($settings->get('ai_custom_enabled', '1') !== '0') {
     $enabledModels[] = ['id' => 'custom', 'name' => 'Custom API', 'desc' => 'Use your own AI model endpoint', 'icon' => 'bi-gear'];
+}
+if (empty($enabledModels)) {
+    // Ultimate fallback — show GPT-4o always
+    $enabledModels[] = ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'desc' => 'OpenAI most capable model', 'icon' => 'bi-stars'];
 }
 
 // Load knowledge base items if editing
@@ -49,9 +53,13 @@ $documents = [];
 $urls = [];
 $qaPairs = [];
 if ($isEdit) {
-    $documents = $db->fetchAll("SELECT * FROM ai_knowledge_base WHERE bot_id = ? AND type = 'document' ORDER BY created_at DESC", [$botId]);
-    $urls = $db->fetchAll("SELECT * FROM ai_knowledge_base WHERE bot_id = ? AND type = 'url' ORDER BY created_at DESC", [$botId]);
-    $qaPairs = $db->fetchAll("SELECT * FROM ai_knowledge_base WHERE bot_id = ? AND type = 'qa' ORDER BY created_at DESC", [$botId]);
+    try {
+        $documents = $db->fetchAll("SELECT d.*, kb.id as kb_id FROM ai_kb_documents d JOIN ai_knowledge_bases kb ON d.kb_id = kb.id WHERE kb.bot_id = ? ORDER BY d.created_at DESC", [$botId]);
+        $urls = $db->fetchAll("SELECT u.*, kb.id as kb_id FROM ai_kb_urls u JOIN ai_knowledge_bases kb ON u.kb_id = kb.id WHERE kb.bot_id = ? ORDER BY u.created_at DESC", [$botId]);
+        $qaPairs = $db->fetchAll("SELECT q.*, kb.id as kb_id FROM ai_kb_qa_pairs q JOIN ai_knowledge_bases kb ON q.kb_id = kb.id WHERE kb.bot_id = ? ORDER BY q.created_at DESC", [$botId]);
+    } catch (Exception $e) {
+        $documents = $urls = $qaPairs = [];
+    }
 }
 
 $pageTitle = $isEdit ? 'Edit AI Bot' : 'Create AI Bot';

@@ -11,22 +11,32 @@ $db = Database::getInstance();
 $settings = new Settings();
 $userId = $_SESSION['user_id'];
 $hideNav = true;
+$migrationNeeded = false;
 
-// Fetch user's AI bots
-$bots = $db->fetchAll("SELECT b.*, 
-    (SELECT COUNT(*) FROM ai_conversations WHERE bot_id = b.id) as total_conversations,
-    wa.phone_number as wa_phone, wa.business_name as wa_business
-    FROM ai_bots b 
-    LEFT JOIN whatsapp_accounts wa ON b.whatsapp_account_id = wa.id 
-    WHERE b.user_id = ? 
-    ORDER BY b.created_at DESC", [$userId]);
+// Fetch user's AI bots (wrapped in try-catch for pre-migration state)
+try {
+    $bots = $db->fetchAll("SELECT b.*, 
+        (SELECT COUNT(*) FROM ai_conversations WHERE bot_id = b.id) as total_conversations,
+        wa.phone_number as wa_phone, wa.business_name as wa_business
+        FROM ai_bots b 
+        LEFT JOIN whatsapp_accounts wa ON b.whatsapp_account_id = wa.id 
+        WHERE b.user_id = ? 
+        ORDER BY b.created_at DESC", [$userId]);
+} catch (Exception $e) {
+    $bots = [];
+    $migrationNeeded = true;
+}
 
 // Plan limit for AI bots
-$subscription = $db->fetch("SELECT s.*, p.ai_bots_limit FROM subscriptions s 
-    JOIN plans p ON s.plan_id = p.id 
-    WHERE s.user_id = ? AND s.status = 'active' 
-    ORDER BY s.created_at DESC LIMIT 1", [$userId]);
-$botsLimit = $subscription['ai_bots_limit'] ?? 0;
+try {
+    $subscription = $db->fetch("SELECT s.*, p.ai_bots_limit FROM subscriptions s 
+        JOIN plans p ON s.plan_id = p.id 
+        WHERE s.user_id = ? AND s.status = 'active' 
+        ORDER BY s.created_at DESC LIMIT 1", [$userId]);
+    $botsLimit = $subscription['ai_bots_limit'] ?? 0;
+} catch (Exception $e) {
+    $botsLimit = 0;
+}
 $botsUsed = count($bots);
 
 // Fetch WA accounts for display
@@ -82,6 +92,16 @@ include __DIR__ . '/../includes/header.php';
         <!-- Flash Messages -->
         <?php $flash = getFlash(); if ($flash): ?>
             <div class="alert alert-<?= $flash['type']; ?> fade-in"><i class="bi bi-check-circle-fill"></i> <?= e($flash['message']); ?></div>
+        <?php endif; ?>
+
+        <?php if ($migrationNeeded): ?>
+        <div class="alert alert-warning d-flex align-items-center gap-3" style="border-radius: var(--border-radius);">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem;"></i>
+            <div>
+                <strong>Database Setup Required</strong><br>
+                <span style="font-size: 0.875rem;">AI ChatBot Builder tables have not been created yet. Please run the SQL migration: <code>database/ai_chatbot_schema.sql</code></span>
+            </div>
+        </div>
         <?php endif; ?>
 
         <?php if (!empty($bots)): ?>

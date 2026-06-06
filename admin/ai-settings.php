@@ -65,9 +65,9 @@ $aiRateLimit = $settings->get('ai_rate_limit_default', '100');
 $aiDefaultPrompt = $settings->get('ai_default_system_prompt', 'You are a helpful customer support assistant. Answer questions based on the provided knowledge base. If you cannot find the answer, politely let the customer know and offer to connect them with a human agent.');
 
 // Stats
-$totalBots = $db->count('ai_bots', '1');
-$activeBots = $db->count('ai_bots', "status = 'active'");
-$totalConversations = $db->count('ai_conversations', '1');
+try { $totalBots = $db->count('ai_bots', '1'); } catch (Exception $e) { $totalBots = 0; }
+try { $activeBots = $db->count('ai_bots', "status = 'active'"); } catch (Exception $e) { $activeBots = 0; }
+try { $totalConversations = $db->count('ai_conversations', '1'); } catch (Exception $e) { $totalConversations = 0; }
 
 $pageTitle = 'AI Settings';
 $extraCss = [asset('assets/css/dashboard.css')];

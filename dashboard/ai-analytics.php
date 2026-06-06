@@ -13,7 +13,7 @@ $userId = $_SESSION['user_id'];
 $hideNav = true;
 
 // Fetch user's bots for filter
-$bots = $db->fetchAll("SELECT id, name FROM ai_bots WHERE user_id = ? ORDER BY name", [$userId]);
+try { $bots = $db->fetchAll("SELECT id, name FROM ai_bots WHERE user_id = ? ORDER BY name", [$userId]); } catch (Exception $e) { $bots = []; }
 $selectedBot = sanitizeInt($_GET['bot'] ?? 0);
 $period = $_GET['period'] ?? '30d';
 
@@ -29,41 +29,43 @@ $dateFrom = date('Y-m-d', strtotime("-{$days} days"));
 $botCondition = $selectedBot > 0 ? "AND bot_id = ?" : "";
 $botParams = $selectedBot > 0 ? [$userId, $selectedBot] : [$userId];
 
-// Dashboard Stats
-$totalConversations = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? $botCondition", $botParams);
-$resolvedByAI = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? AND resolved_by = 'ai' $botCondition", $botParams);
-$transferredToHuman = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? AND status = 'handed_over' $botCondition", $botParams);
-$leadsGenerated = $db->fetchColumn("SELECT COUNT(*) FROM ai_leads WHERE user_id = ? $botCondition", $botParams);
-
-$avgResponseTime = $db->fetchColumn("SELECT ROUND(AVG(response_time_ms)) FROM ai_messages WHERE bot_id IN (SELECT id FROM ai_bots WHERE user_id = ?) AND sender_type = 'ai'" . ($selectedBot > 0 ? " AND bot_id = ?" : ""), $botParams);
-$totalTokens = $db->fetchColumn("SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE bot_id IN (SELECT id FROM ai_bots WHERE user_id = ?) AND sender_type = 'ai'" . ($selectedBot > 0 ? " AND bot_id = ?" : ""), $botParams);
+// Dashboard Stats (all wrapped in try-catch for pre-migration safety)
+try { $totalConversations = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? $botCondition", $botParams) ?: 0; } catch (Exception $e) { $totalConversations = 0; }
+try { $resolvedByAI = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? AND resolved_by = 'ai' $botCondition", $botParams) ?: 0; } catch (Exception $e) { $resolvedByAI = 0; }
+try { $transferredToHuman = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? AND status = 'handed_over' $botCondition", $botParams) ?: 0; } catch (Exception $e) { $transferredToHuman = 0; }
+try { $leadsGenerated = $db->fetchColumn("SELECT COUNT(*) FROM ai_leads WHERE user_id = ? $botCondition", $botParams) ?: 0; } catch (Exception $e) { $leadsGenerated = 0; }
+try { $avgResponseTime = $db->fetchColumn("SELECT ROUND(AVG(response_time_ms)) FROM ai_messages WHERE bot_id IN (SELECT id FROM ai_bots WHERE user_id = ?) AND sender_type = 'ai'" . ($selectedBot > 0 ? " AND bot_id = ?" : ""), $botParams); } catch (Exception $e) { $avgResponseTime = null; }
+try { $totalTokens = $db->fetchColumn("SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE bot_id IN (SELECT id FROM ai_bots WHERE user_id = ?) AND sender_type = 'ai'" . ($selectedBot > 0 ? " AND bot_id = ?" : ""), $botParams) ?: 0; } catch (Exception $e) { $totalTokens = 0; }
 
 // Chart Data - Conversations per day
-$chartParams = array_merge($botParams, [$dateFrom]);
-$chartData = $db->fetchAll("SELECT DATE(created_at) as date, 
-    COUNT(*) as total,
-    SUM(CASE WHEN resolved_by = 'ai' THEN 1 ELSE 0 END) as ai_resolved,
-    SUM(CASE WHEN status = 'handed_over' THEN 1 ELSE 0 END) as human_transferred
-    FROM ai_conversations 
-    WHERE user_id = ? $botCondition AND DATE(created_at) >= ?
-    GROUP BY DATE(created_at) 
-    ORDER BY date ASC", $chartParams);
+try {
+    $chartParams = array_merge($botParams, [$dateFrom]);
+    $chartData = $db->fetchAll("SELECT DATE(created_at) as date, 
+        COUNT(*) as total,
+        SUM(CASE WHEN resolved_by = 'ai' THEN 1 ELSE 0 END) as ai_resolved,
+        SUM(CASE WHEN status = 'handed_over' THEN 1 ELSE 0 END) as human_transferred
+        FROM ai_conversations 
+        WHERE user_id = ? $botCondition AND DATE(created_at) >= ?
+        GROUP BY DATE(created_at) 
+        ORDER BY date ASC", $chartParams);
+} catch (Exception $e) { $chartData = []; }
 
 // Resolution Breakdown
-$resolutionData = [
-    'ai' => (int)$resolvedByAI,
-    'human' => (int)$transferredToHuman,
-    'active' => (int)$db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? AND status = 'active' $botCondition", $botParams),
-];
+try {
+    $activeConvs = $db->fetchColumn("SELECT COUNT(*) FROM ai_conversations WHERE user_id = ? AND status = 'active' $botCondition", $botParams) ?: 0;
+} catch (Exception $e) { $activeConvs = 0; }
+$resolutionData = ['ai' => (int)$resolvedByAI, 'human' => (int)$transferredToHuman, 'active' => (int)$activeConvs];
 
 // Most Asked Questions
-$topQuestions = $db->fetchAll("SELECT content, COUNT(*) as ask_count 
-    FROM ai_messages 
-    WHERE bot_id IN (SELECT id FROM ai_bots WHERE user_id = ?) 
-    AND sender_type = 'customer' AND LENGTH(content) > 10
-    " . ($selectedBot > 0 ? "AND bot_id = ?" : "") . "
-    GROUP BY content 
-    ORDER BY ask_count DESC LIMIT 10", $botParams);
+try {
+    $topQuestions = $db->fetchAll("SELECT content, COUNT(*) as ask_count 
+        FROM ai_messages 
+        WHERE bot_id IN (SELECT id FROM ai_bots WHERE user_id = ?) 
+        AND sender_type = 'customer' AND LENGTH(content) > 10
+        " . ($selectedBot > 0 ? "AND bot_id = ?" : "") . "
+        GROUP BY content 
+        ORDER BY ask_count DESC LIMIT 10", $botParams);
+} catch (Exception $e) { $topQuestions = []; }
 
 $pageTitle = 'AI Analytics';
 $extraCss = [asset('assets/css/ai-chatbot.css')];
