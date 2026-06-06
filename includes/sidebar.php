@@ -79,6 +79,11 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
                 <span>Chatbot Builder</span>
                 <span class="badge rounded-pill bg-primary ms-auto" style="font-size: 0.6rem;">NEW</span>
             </a>
+            <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-chatbot' || $currentPage === 'ai-chatbot-editor' ? 'active' : ''; ?>">
+                <i class="bi bi-stars"></i>
+                <span>AI ChatBot Builder</span>
+                <span class="badge rounded-pill ms-auto" style="font-size: 0.6rem; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">AI</span>
+            </a>
         </div>
 
         <!-- CRM & Contacts -->
@@ -101,6 +106,14 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
             <a href="<?= baseUrl('dashboard/message-logs.php'); ?>" class="sidebar-link <?= $currentPage === 'message-logs' ? 'active' : ''; ?>">
                 <i class="bi bi-list-check"></i>
                 <span>Message Logs</span>
+            </a>
+            <a href="<?= baseUrl('dashboard/ai-analytics.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-analytics' ? 'active' : ''; ?>">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span>AI Analytics</span>
+            </a>
+            <a href="<?= baseUrl('dashboard/ai-conversations.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-conversations' ? 'active' : ''; ?>">
+                <i class="bi bi-chat-left-text"></i>
+                <span>AI Conversations</span>
             </a>
         </div>
 

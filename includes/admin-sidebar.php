@@ -68,6 +68,15 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
                     <span class="badge"><?= $contactUnread; ?></span>
                 <?php endif; ?>
             </a>
+            <a href="<?= baseUrl('admin/ai-bots.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-bots' ? 'active' : ''; ?>">
+                <i class="bi bi-robot"></i>
+                <span>AI Bots</span>
+                <span class="badge rounded-pill ms-auto" style="font-size: 0.6rem; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">AI</span>
+            </a>
+            <a href="<?= baseUrl('admin/ai-settings.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-settings' ? 'active' : ''; ?>">
+                <i class="bi bi-cpu"></i>
+                <span>AI Settings</span>
+            </a>
         </div>
 
         <!-- Content -->
