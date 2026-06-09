@@ -357,21 +357,28 @@ class AIBot
     {
         $db = Database::getInstance();
 
-        // Get user's plan limit
-        $user = $db->fetch(
-            "SELECT u.plan_id, p.ai_bots_limit 
-             FROM users u 
-             LEFT JOIN plans p ON u.plan_id = p.id 
-             WHERE u.id = ?",
+        // Admin override (unlimited bots)
+        $role = $db->fetchColumn("SELECT role FROM users WHERE id = ?", [$userId]);
+        if ($role === 'admin') {
+            return true;
+        }
+
+        // Get user's active plan limit from subscriptions
+        $subscription = $db->fetch(
+            "SELECT s.plan_id, p.ai_bots_limit 
+             FROM subscriptions s 
+             JOIN plans p ON s.plan_id = p.id 
+             WHERE s.user_id = ? AND s.status = 'active' 
+             ORDER BY s.created_at DESC LIMIT 1",
             [$userId]
         );
 
-        if (!$user) {
+        if (!$subscription) {
             return false;
         }
 
-        // If no plan or unlimited (-1 or null), allow
-        $limit = $user['ai_bots_limit'] ?? null;
+        // If no plan limit or unlimited (-1 or null), allow
+        $limit = $subscription['ai_bots_limit'] ?? null;
         if ($limit === null || (int) $limit === -1) {
             return true;
         }
