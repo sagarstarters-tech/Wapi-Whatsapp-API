@@ -38,4 +38,7 @@ checkAndAddColumn('ai_conversations', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_T
 // 2. Check if ai_credits table exists and fix updated_at
 checkAndAddColumn('ai_credits', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
+// 3. Check if ai_handovers table exists and fix updated_at
+checkAndAddColumn('ai_handovers', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+
 echo "<br><b>Database fixes completed. Please delete this file after execution for security.</b>";
