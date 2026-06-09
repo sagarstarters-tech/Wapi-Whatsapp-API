@@ -125,7 +125,7 @@ class AIOrchestrator
                 return [
                     'status' => 'handover',
                     'trigger' => 'keyword',
-                    'message' => $bot['handover_message'],
+                    'message' => !empty($bot['handover_message']) ? $bot['handover_message'] : "I'm connecting you with a human agent. Please wait a moment.",
                     'handover' => $handoverResult,
                 ];
             }
@@ -241,6 +241,7 @@ class AIOrchestrator
                         'status' => 'handover',
                         'trigger' => 'low_confidence',
                         'ai_response' => $responseContent,
+                        'message' => !empty($bot['handover_message']) ? $bot['handover_message'] : "I'm connecting you with a human agent. Please wait a moment.",
                         'handover' => $handoverResult,
                     ];
                 }
