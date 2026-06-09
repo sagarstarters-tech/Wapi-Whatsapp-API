@@ -397,7 +397,8 @@ class AIAnalytics
 
         // Check if already aggregated
         $existing = $db->exists(
-            "SELECT 1 FROM ai_analytics_daily WHERE bot_id = ? AND date = ?",
+            'ai_analytics_daily',
+            'bot_id = ? AND date = ?',
             [$botId, $date]
         );
 

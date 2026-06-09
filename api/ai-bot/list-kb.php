@@ -55,7 +55,7 @@ try {
         $documents = $db->fetchAll(
             "SELECT id, file_name, file_path, file_type, file_size, status, created_at 
              FROM ai_kb_documents 
-             WHERE knowledge_base_id = ? 
+             WHERE kb_id = ? 
              ORDER BY created_at DESC",
             [$kbId]
         ) ?: [];
@@ -64,16 +64,16 @@ try {
         $urls = $db->fetchAll(
             "SELECT id, url, title, status, last_crawled_at, created_at 
              FROM ai_kb_urls 
-             WHERE knowledge_base_id = ? 
+             WHERE kb_id = ? 
              ORDER BY created_at DESC",
             [$kbId]
         ) ?: [];
 
         // Fetch Q&A pairs
         $qaPairs = $db->fetchAll(
-            "SELECT id, question, answer, status, created_at 
+            "SELECT id, question, answer, is_active, created_at 
              FROM ai_kb_qa_pairs 
-             WHERE knowledge_base_id = ? 
+             WHERE kb_id = ? 
              ORDER BY created_at DESC",
             [$kbId]
         ) ?: [];

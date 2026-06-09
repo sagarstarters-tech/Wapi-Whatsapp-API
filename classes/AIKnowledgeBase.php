@@ -125,13 +125,13 @@ class AIKnowledgeBase
 
             // Save document record
             $docId = $db->insert('ai_kb_documents', [
-                'knowledge_base_id' => $kbId,
+                'kb_id' => $kbId,
+                'user_id' => $userId,
                 'file_name' => sanitize($file['name']),
                 'file_path' => 'uploads/ai-kb/' . $uniqueName,
                 'file_type' => $fileType,
                 'file_size' => $file['size'],
-                'content' => $text,
-                'status' => 'processed',
+                'status' => 'completed',
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
@@ -364,7 +364,8 @@ class AIKnowledgeBase
 
         // Check for duplicate URL
         $exists = $db->exists(
-            "SELECT 1 FROM ai_kb_urls WHERE knowledge_base_id = ? AND url = ?",
+            'ai_kb_urls',
+            'kb_id = ? AND url = ?',
             [$kbId, $url]
         );
         if ($exists) {
@@ -416,11 +417,11 @@ class AIKnowledgeBase
 
         // Save URL record
         $urlId = $db->insert('ai_kb_urls', [
-            'knowledge_base_id' => $kbId,
+            'kb_id' => $kbId,
+            'user_id' => $userId,
             'url' => $url,
             'title' => sanitize($title ?: $url),
-            'content' => $text,
-            'status' => 'processed',
+            'status' => 'completed',
             'last_crawled_at' => date('Y-m-d H:i:s'),
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -496,7 +497,8 @@ class AIKnowledgeBase
         }
 
         $qaId = $db->insert('ai_kb_qa_pairs', [
-            'knowledge_base_id' => $kbId,
+            'kb_id' => $kbId,
+            'user_id' => $userId,
             'question' => sanitize($question),
             'answer' => sanitize($answer),
             'created_at' => date('Y-m-d H:i:s'),
@@ -535,13 +537,13 @@ class AIKnowledgeBase
         }
 
         $docId = $db->insert('ai_kb_documents', [
-            'knowledge_base_id' => $kbId,
+            'kb_id' => $kbId,
+            'user_id' => $userId,
             'file_name' => 'Manual Entry - ' . date('Y-m-d H:i:s'),
-            'file_path' => null,
-            'file_type' => 'manual',
+            'file_path' => 'manual',
+            'file_type' => 'txt',
             'file_size' => strlen($content),
-            'content' => $content,
-            'status' => 'processed',
+            'status' => 'completed',
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
@@ -584,7 +586,7 @@ class AIKnowledgeBase
         $item = $db->fetch(
             "SELECT i.*, kb.user_id, kb.id as kb_id 
              FROM {$table} i 
-             JOIN ai_knowledge_bases kb ON i.knowledge_base_id = kb.id 
+             JOIN ai_knowledge_bases kb ON i.kb_id = kb.id 
              WHERE i.id = ? AND kb.user_id = ?",
             [$id, $userId]
         );
@@ -595,7 +597,7 @@ class AIKnowledgeBase
 
         // Delete associated chunks
         $sourceType = ($type === 'qa') ? 'qa' : $type;
-        $db->delete('ai_kb_chunks', 'knowledge_base_id = ? AND source_type = ? AND source_id = ?', [$item['kb_id'], $sourceType, $id]);
+        $db->delete('ai_kb_chunks', 'kb_id = ? AND source_type = ? AND source_id = ?', [$item['kb_id'], $sourceType, $id]);
 
         // Delete the file if it's a document with a file path
         if ($type === 'document' && !empty($item['file_path'])) {
@@ -630,7 +632,7 @@ class AIKnowledgeBase
         if ($type === null || $type === 'document') {
             $docs = $db->fetchAll(
                 "SELECT id, file_name, file_type, file_size, status, created_at, 'document' as item_type 
-                 FROM ai_kb_documents WHERE knowledge_base_id = ? ORDER BY created_at DESC",
+                 FROM ai_kb_documents WHERE kb_id = ? ORDER BY created_at DESC",
                 [$kbId]
             );
             $result = array_merge($result, $docs);
@@ -639,7 +641,7 @@ class AIKnowledgeBase
         if ($type === null || $type === 'url') {
             $urls = $db->fetchAll(
                 "SELECT id, url, title, status, last_crawled_at, created_at, 'url' as item_type 
-                 FROM ai_kb_urls WHERE knowledge_base_id = ? ORDER BY created_at DESC",
+                 FROM ai_kb_urls WHERE kb_id = ? ORDER BY created_at DESC",
                 [$kbId]
             );
             $result = array_merge($result, $urls);
@@ -648,7 +650,7 @@ class AIKnowledgeBase
         if ($type === null || $type === 'qa') {
             $qas = $db->fetchAll(
                 "SELECT id, question, answer, created_at, 'qa' as item_type 
-                 FROM ai_kb_qa_pairs WHERE knowledge_base_id = ? ORDER BY created_at DESC",
+                 FROM ai_kb_qa_pairs WHERE kb_id = ? ORDER BY created_at DESC",
                 [$kbId]
             );
             $result = array_merge($result, $qas);
@@ -719,10 +721,9 @@ class AIKnowledgeBase
             }
 
             $db->insert('ai_kb_chunks', [
-                'knowledge_base_id' => $kbId,
+                'kb_id' => $kbId,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
-                'chunk_index' => $index,
                 'content' => $chunkText,
                 'word_count' => str_word_count($chunkText),
                 'created_at' => date('Y-m-d H:i:s'),
@@ -787,7 +788,7 @@ class AIKnowledgeBase
             $results = $db->fetchAll(
                 "SELECT c.*, MATCH(c.content) AGAINST(? IN BOOLEAN MODE) AS relevance_score
                  FROM ai_kb_chunks c
-                 WHERE c.knowledge_base_id IN ({$placeholders})
+                 WHERE c.kb_id IN ({$placeholders})
                  AND MATCH(c.content) AGAINST(? IN BOOLEAN MODE)
                  ORDER BY relevance_score DESC
                  LIMIT ?",
@@ -826,7 +827,7 @@ class AIKnowledgeBase
         $results = $db->fetchAll(
             "SELECT c.*, ({$scoreExpr}) AS relevance_score
              FROM ai_kb_chunks c
-             WHERE c.knowledge_base_id IN ({$placeholders})
+             WHERE c.kb_id IN ({$placeholders})
              AND {$likeWhere}
              ORDER BY relevance_score DESC, c.id ASC
              LIMIT ?",
@@ -847,27 +848,27 @@ class AIKnowledgeBase
         $db = Database::getInstance();
 
         $documentCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_documents WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_documents WHERE kb_id = ?",
             [$kbId]
         );
 
         $urlCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_urls WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_urls WHERE kb_id = ?",
             [$kbId]
         );
 
         $qaCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_qa_pairs WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_qa_pairs WHERE kb_id = ?",
             [$kbId]
         );
 
         $totalChunks = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_chunks WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_chunks WHERE kb_id = ?",
             [$kbId]
         );
 
         $totalWords = (int) $db->fetchColumn(
-            "SELECT COALESCE(SUM(word_count), 0) FROM ai_kb_chunks WHERE knowledge_base_id = ?",
+            "SELECT COALESCE(SUM(word_count), 0) FROM ai_kb_chunks WHERE kb_id = ?",
             [$kbId]
         );
 
