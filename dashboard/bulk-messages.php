@@ -124,7 +124,7 @@ include __DIR__ . '/../includes/header.php';
         <?php endif; ?>
 
         <?php if (!$waAccount): ?>
-        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>" class="fw-bold">Configure WhatsApp API</a> first.</div>
+        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill"></i> <span>Please <a href="<?= baseUrl('dashboard/whatsapp.php'); ?>" class="fw-bold alert-link">Configure WhatsApp API</a> first.</span></div>
         <?php endif; ?>
 
         <!-- Progress Card (hidden until send starts) -->
@@ -149,8 +149,8 @@ include __DIR__ . '/../includes/header.php';
                     </details>
                 </div>
                 <div id="progressDone" class="alert alert-success mt-3" style="display:none;">
-                    <i class="bi bi-check-circle-fill"></i> <strong>Done!</strong> Bulk send complete.
-                    <a href="" class="ms-2 fw-bold">Refresh</a>
+                    <i class="bi bi-check-circle-fill"></i> 
+                    <span><strong>Done!</strong> Bulk send complete. <a href="" class="alert-link ms-2 fw-bold">Refresh</a></span>
                 </div>
             </div>
         </div>
@@ -195,7 +195,9 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-12" id="metaPolicyWarning" style="display:none;">
                             <div class="alert alert-warning mb-0 py-2" style="font-size: 0.85rem;">
-                                <strong>⚠️ Meta Policy Warning:</strong> Free-form Text and Image messages will <strong>FAIL</strong> unless the contact has messaged you within the last 24 hours. For bulk promotional broadcasts, you <strong>MUST</strong> use an approved <a href="templates.php" class="alert-link">Template</a>.
+                                <span>
+                                    <strong>⚠️ Meta Policy Warning:</strong> Free-form Text and Image messages will <strong>FAIL</strong> unless the contact has messaged you within the last 24 hours. For bulk promotional broadcasts, you <strong>MUST</strong> use an approved <a href="templates.php" class="alert-link">Template</a>.
+                                </span>
                             </div>
                         </div>
                         <div class="col-md-6" id="mediaGroup" style="display:none;">
