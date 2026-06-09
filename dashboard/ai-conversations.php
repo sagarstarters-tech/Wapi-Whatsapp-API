@@ -61,7 +61,7 @@ try {
 }
 
 $pageTitle = 'AI Conversations';
-$extraCss = [asset('assets/css/ai-chatbot.css')];
+$extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
 $extraJs = [asset('assets/js/ai-chatbot.js')];
 include __DIR__ . '/../includes/header.php';
 ?>

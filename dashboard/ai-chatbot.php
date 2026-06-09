@@ -43,7 +43,7 @@ $botsUsed = count($bots);
 $waAccounts = $db->fetchAll('SELECT id, phone_number, business_name FROM whatsapp_accounts WHERE user_id = ?', [$userId]);
 
 $pageTitle = 'AI ChatBot Builder';
-$extraCss = [asset('assets/css/ai-chatbot.css')];
+$extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
 $extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js')];
 include __DIR__ . '/../includes/header.php';
 ?>

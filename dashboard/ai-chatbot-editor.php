@@ -63,7 +63,7 @@ if ($isEdit) {
 }
 
 $pageTitle = $isEdit ? 'Edit AI Bot' : 'Create AI Bot';
-$extraCss = [asset('assets/css/ai-chatbot.css')];
+$extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
 $extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js')];
 include __DIR__ . '/../includes/header.php';
 ?>

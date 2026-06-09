@@ -68,7 +68,7 @@ try {
 } catch (Exception $e) { $topQuestions = []; }
 
 $pageTitle = 'AI Analytics';
-$extraCss = [asset('assets/css/ai-chatbot.css')];
+$extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
 $extraJs = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', asset('assets/js/ai-analytics.js')];
 include __DIR__ . '/../includes/header.php';
 ?>
