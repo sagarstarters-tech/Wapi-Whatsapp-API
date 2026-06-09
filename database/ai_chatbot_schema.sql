@@ -4,7 +4,7 @@
 -- Version: 1.0.0
 -- ============================================
 
-USE `wapi_saas`;
+-- Database is selected by the application's PDO connection (config.php)
 
 -- ============================================
 -- 1. AI Bots Table (Core)

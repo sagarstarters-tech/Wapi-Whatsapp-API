@@ -47,25 +47,25 @@ if ($botId <= 0) {
 }
 
 try {
-    // Check plan limit before cloning
-    $limitCheck = AIBot::checkPlanLimit($userId);
-
-    if (!$limitCheck['allowed']) {
+    // Check plan limit before cloning — checkPlanLimit returns bool
+    if (!AIBot::checkPlanLimit($userId)) {
         http_response_code(403);
         echo json_encode([
             'success' => false,
-            'message' => $limitCheck['message'] ?? 'You have reached the maximum number of bots for your plan. Please upgrade to clone more.'
+            'message' => 'You have reached the maximum number of bots for your plan. Please upgrade to clone more.'
         ]);
         exit;
     }
 
-    $newBot = AIBot::cloneBot($botId, $userId);
+    $newBotId = AIBot::cloneBot($botId, $userId);
 
-    if (!$newBot) {
+    if (!$newBotId) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Bot not found or you do not have permission to clone it.']);
         exit;
     }
+
+    $newBot = AIBot::getById($newBotId, $userId);
 
     echo json_encode([
         'success' => true,

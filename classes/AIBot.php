@@ -132,40 +132,31 @@ class AIBot
         $uuid = self::generateUuid();
 
         // Ensure unique UUID
-        while ($db->exists("SELECT 1 FROM ai_bots WHERE uuid = ?", [$uuid])) {
+        while ($db->exists('ai_bots', 'uuid = ?', [$uuid])) {
             $uuid = self::generateUuid();
         }
 
         $insertData = [
-            'user_id' => $userId,
-            'uuid' => $uuid,
-            'name' => sanitize($data['name'] ?? 'Untitled Bot'),
-            'description' => sanitize($data['description'] ?? ''),
-            'ai_model' => sanitize($data['ai_model'] ?? 'gpt-4o'),
-            'system_prompt' => $data['system_prompt'] ?? '',
-            'welcome_message' => $data['welcome_message'] ?? 'Hello! How can I help you today?',
-            'fallback_message' => $data['fallback_message'] ?? "I'm sorry, I couldn't understand that. Could you please rephrase?",
-            'handover_message' => $data['handover_message'] ?? "I'm transferring you to a human agent. Please wait a moment.",
-            'handover_keywords' => $data['handover_keywords'] ?? 'agent,human,operator,support,help',
-            'max_context_messages' => (int) ($data['max_context_messages'] ?? 10),
-            'temperature' => (float) ($data['temperature'] ?? 0.7),
-            'max_tokens' => (int) ($data['max_tokens'] ?? 1024),
-            'response_language' => sanitize($data['response_language'] ?? 'en'),
-            'business_hours_enabled' => (int) ($data['business_hours_enabled'] ?? 0),
-            'business_hours_start' => $data['business_hours_start'] ?? '09:00',
-            'business_hours_end' => $data['business_hours_end'] ?? '18:00',
-            'business_hours_timezone' => sanitize($data['business_hours_timezone'] ?? 'UTC'),
-            'outside_hours_message' => $data['outside_hours_message'] ?? 'We are currently outside business hours. We will get back to you soon.',
-            'crm_capture_enabled' => (int) ($data['crm_capture_enabled'] ?? 0),
-            'auto_handover_enabled' => (int) ($data['auto_handover_enabled'] ?? 1),
-            'confidence_threshold' => (float) ($data['confidence_threshold'] ?? 0.5),
-            'rate_limit_per_minute' => (int) ($data['rate_limit_per_minute'] ?? 30),
-            'whatsapp_account_id' => !empty($data['whatsapp_account_id']) ? (int) $data['whatsapp_account_id'] : null,
-            'custom_api_endpoint' => $data['custom_api_endpoint'] ?? null,
-            'custom_api_key' => $data['custom_api_key'] ?? null,
-            'status' => 'inactive',
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
+            'user_id'                      => $userId,
+            'uuid'                         => $uuid,
+            'name'                         => sanitize($data['name'] ?? 'Untitled Bot'),
+            'description'                  => sanitize($data['description'] ?? ''),
+            'status'                       => sanitize($data['status'] ?? 'inactive'),
+            'whatsapp_account_id'          => !empty($data['whatsapp_account_id']) ? (int) $data['whatsapp_account_id'] : null,
+            'ai_model'                     => sanitize($data['ai_model'] ?? 'gpt-4o'),
+            'custom_api_endpoint'          => $data['custom_api_endpoint'] ?? null,
+            'custom_api_key_encrypted'     => $data['custom_api_key_encrypted'] ?? null,
+            'bot_role'                     => sanitize($data['bot_role'] ?? 'Customer Support Agent'),
+            'business_type'                => sanitize($data['business_type'] ?? 'General'),
+            'response_tone'                => sanitize($data['response_tone'] ?? 'professional'),
+            'response_length'              => sanitize($data['response_length'] ?? 'moderate'),
+            'language'                     => sanitize($data['language'] ?? 'English'),
+            'system_prompt'                => $data['system_prompt'] ?? '',
+            'handover_enabled'             => (int) ($data['handover_enabled'] ?? 0),
+            'handover_keywords'            => $data['handover_keywords'] ?? 'talk to human,human support,agent,representative',
+            'handover_confidence_threshold'=> (float) ($data['handover_confidence_threshold'] ?? 0.30),
+            'crm_capture_enabled'          => (int) ($data['crm_capture_enabled'] ?? 1),
+            'rate_limit_per_minute'        => (int) ($data['rate_limit_per_minute'] ?? 100),
         ];
 
         return $db->insert('ai_bots', $insertData);
@@ -191,13 +182,11 @@ class AIBot
 
         $allowedFields = [
             'name', 'description', 'ai_model', 'system_prompt',
-            'welcome_message', 'fallback_message', 'handover_message',
-            'handover_keywords', 'max_context_messages', 'temperature',
-            'max_tokens', 'response_language', 'business_hours_enabled',
-            'business_hours_start', 'business_hours_end', 'business_hours_timezone',
-            'outside_hours_message', 'crm_capture_enabled', 'auto_handover_enabled',
-            'confidence_threshold', 'rate_limit_per_minute', 'whatsapp_account_id',
-            'custom_api_endpoint', 'custom_api_key', 'status'
+            'bot_role', 'business_type', 'response_tone', 'response_length',
+            'language', 'handover_enabled', 'handover_keywords',
+            'handover_confidence_threshold', 'crm_capture_enabled',
+            'rate_limit_per_minute', 'whatsapp_account_id',
+            'custom_api_endpoint', 'custom_api_key_encrypted', 'status'
         ];
 
         $updateData = [];
@@ -207,16 +196,12 @@ class AIBot
 
                 // Type casting
                 switch ($field) {
-                    case 'max_context_messages':
-                    case 'max_tokens':
-                    case 'rate_limit_per_minute':
-                    case 'business_hours_enabled':
+                    case 'handover_enabled':
                     case 'crm_capture_enabled':
-                    case 'auto_handover_enabled':
+                    case 'rate_limit_per_minute':
                         $value = (int) $value;
                         break;
-                    case 'temperature':
-                    case 'confidence_threshold':
+                    case 'handover_confidence_threshold':
                         $value = (float) $value;
                         break;
                     case 'whatsapp_account_id':
@@ -225,8 +210,11 @@ class AIBot
                     case 'name':
                     case 'description':
                     case 'ai_model':
-                    case 'response_language':
-                    case 'business_hours_timezone':
+                    case 'bot_role':
+                    case 'business_type':
+                    case 'response_tone':
+                    case 'response_length':
+                    case 'language':
                     case 'status':
                         $value = sanitize($value);
                         break;
@@ -287,29 +275,22 @@ class AIBot
         }
 
         $cloneData = [
-            'name' => 'Copy of ' . $bot['name'],
-            'description' => $bot['description'],
-            'ai_model' => $bot['ai_model'],
-            'system_prompt' => $bot['system_prompt'],
-            'welcome_message' => $bot['welcome_message'],
-            'fallback_message' => $bot['fallback_message'],
-            'handover_message' => $bot['handover_message'],
-            'handover_keywords' => $bot['handover_keywords'],
-            'max_context_messages' => $bot['max_context_messages'],
-            'temperature' => $bot['temperature'],
-            'max_tokens' => $bot['max_tokens'],
-            'response_language' => $bot['response_language'],
-            'business_hours_enabled' => $bot['business_hours_enabled'],
-            'business_hours_start' => $bot['business_hours_start'],
-            'business_hours_end' => $bot['business_hours_end'],
-            'business_hours_timezone' => $bot['business_hours_timezone'],
-            'outside_hours_message' => $bot['outside_hours_message'],
-            'crm_capture_enabled' => $bot['crm_capture_enabled'],
-            'auto_handover_enabled' => $bot['auto_handover_enabled'],
-            'confidence_threshold' => $bot['confidence_threshold'],
-            'rate_limit_per_minute' => $bot['rate_limit_per_minute'],
-            'custom_api_endpoint' => $bot['custom_api_endpoint'],
-            'custom_api_key' => $bot['custom_api_key'],
+            'name'                         => 'Copy of ' . $bot['name'],
+            'description'                  => $bot['description'],
+            'ai_model'                     => $bot['ai_model'],
+            'bot_role'                     => $bot['bot_role'],
+            'business_type'                => $bot['business_type'],
+            'response_tone'                => $bot['response_tone'],
+            'response_length'              => $bot['response_length'],
+            'language'                     => $bot['language'],
+            'system_prompt'                => $bot['system_prompt'],
+            'handover_enabled'             => $bot['handover_enabled'],
+            'handover_keywords'            => $bot['handover_keywords'],
+            'handover_confidence_threshold'=> $bot['handover_confidence_threshold'],
+            'crm_capture_enabled'          => $bot['crm_capture_enabled'],
+            'rate_limit_per_minute'        => $bot['rate_limit_per_minute'],
+            'custom_api_endpoint'          => $bot['custom_api_endpoint'],
+            'custom_api_key_encrypted'     => $bot['custom_api_key_encrypted'],
         ];
 
         return self::create($userId, $cloneData);
@@ -363,7 +344,7 @@ class AIBot
     public static function countByUser(int $userId): int
     {
         $db = Database::getInstance();
-        return (int) $db->count("SELECT COUNT(*) FROM ai_bots WHERE user_id = ?", [$userId]);
+        return (int) $db->count('ai_bots', 'user_id = ?', [$userId]);
     }
 
     /**

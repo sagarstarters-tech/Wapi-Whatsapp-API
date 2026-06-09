@@ -166,9 +166,9 @@ include __DIR__ . '/../includes/header.php';
                                         <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: var(--bg-secondary); border-radius: 8px;" data-id="<?= $doc['id']; ?>">
                                             <div class="d-flex align-items-center gap-2">
                                                 <i class="bi bi-file-earmark-text text-primary"></i>
-                                                <span style="font-size: 0.8125rem;"><?= e($doc['title'] ?? $doc['content']); ?></span>
+                                                <span style="font-size: 0.8125rem;"><?= e($doc['file_name'] ?? 'Document'); ?></span>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge(<?= $doc['id']; ?>, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge('document', <?= $doc['id']; ?>, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
                                         </div>
                                         <?php endforeach; ?>
                                     </div>
@@ -190,9 +190,9 @@ include __DIR__ . '/../includes/header.php';
                                         <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: var(--bg-secondary); border-radius: 8px;" data-id="<?= $url['id']; ?>">
                                             <div class="d-flex align-items-center gap-2">
                                                 <i class="bi bi-link-45deg text-primary"></i>
-                                                <span style="font-size: 0.8125rem;"><?= e($url['content']); ?></span>
+                                                <span style="font-size: 0.8125rem;"><?= e($url['url']); ?></span>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge(<?= $url['id']; ?>, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge('url', <?= $url['id']; ?>, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
                                         </div>
                                         <?php endforeach; ?>
                                     </div>
@@ -208,14 +208,13 @@ include __DIR__ . '/../includes/header.php';
                                     <div id="qaPairsContainer">
                                         <?php if (!empty($qaPairs)): ?>
                                         <?php foreach ($qaPairs as $i => $qa): ?>
-                                        <?php $qaData = json_decode($qa['content'], true); ?>
                                         <div class="qa-pair mb-3 p-3" style="background: var(--bg-secondary); border-radius: 8px;">
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="form-label mb-0 fw-semibold" style="font-size: 0.8125rem;">Q&A Pair</label>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.qa-pair').remove()" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
                                             </div>
-                                            <input type="text" name="qa_question[]" class="form-control form-control-sm mb-2" placeholder="Question" value="<?= e($qaData['question'] ?? ''); ?>">
-                                            <textarea name="qa_answer[]" class="form-control form-control-sm" rows="2" placeholder="Answer"><?= e($qaData['answer'] ?? ''); ?></textarea>
+                                            <input type="text" name="qa_question[]" class="form-control form-control-sm mb-2" placeholder="Question" value="<?= e($qa['question'] ?? ''); ?>">
+                                            <textarea name="qa_answer[]" class="form-control form-control-sm" rows="2" placeholder="Answer"><?= e($qa['answer'] ?? ''); ?></textarea>
                                         </div>
                                         <?php endforeach; ?>
                                         <?php endif; ?>
@@ -225,16 +224,6 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
 
-                        <!-- Manual Knowledge -->
-                        <div class="col-lg-6">
-                            <div class="card h-100" style="border-radius: var(--border-radius);">
-                                <div class="card-body p-4">
-                                    <h6 class="fw-bold mb-3"><i class="bi bi-journal-text text-primary me-2"></i>Manual Knowledge</h6>
-                                    <textarea name="manual_knowledge" class="form-control" rows="10" placeholder="Enter custom business information, product details, FAQ answers, or any text you want the bot to know about..."><?= e($bot['manual_knowledge'] ?? ''); ?></textarea>
-                                    <small class="text-muted mt-2 d-block">This text will be used as context for AI responses.</small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -300,7 +289,7 @@ include __DIR__ . '/../includes/header.php';
                                 <?php foreach ($enabledModels as $model): ?>
                                 <div class="col-md-6 col-lg-4">
                                     <label class="d-block">
-                                        <input type="radio" name="model" value="<?= $model['id']; ?>" class="d-none model-radio" <?= ($bot['model'] ?? 'gpt-4o') === $model['id'] ? 'checked' : ''; ?>>
+                                        <input type="radio" name="model" value="<?= $model['id']; ?>" class="d-none model-radio" <?= ($bot['ai_model'] ?? 'gpt-4o') === $model['id'] ? 'checked' : ''; ?>>
                                         <div class="card h-100 model-card" style="border-radius: var(--border-radius); cursor: pointer; transition: all 0.2s; border: 2px solid var(--border-color);">
                                             <div class="card-body p-3 text-center">
                                                 <div style="width: 50px; height: 50px; background: var(--primary-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
@@ -316,7 +305,7 @@ include __DIR__ . '/../includes/header.php';
                             </div>
 
                             <!-- Custom API fields (shown when custom model is selected) -->
-                            <div id="customApiFields" class="mt-4" style="display: <?= ($bot['model'] ?? '') === 'custom' ? 'block' : 'none'; ?>;">
+                            <div id="customApiFields" class="mt-4" style="display: <?= ($bot['ai_model'] ?? '') === 'custom' ? 'block' : 'none'; ?>;">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">API Endpoint</label>
@@ -324,7 +313,8 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">API Key</label>
-                                        <input type="password" name="custom_api_key" class="form-control" value="<?= e($bot['custom_api_key'] ?? ''); ?>" placeholder="sk-...">
+                                        <input type="password" name="custom_api_key" class="form-control" value="" placeholder="sk-...">
+                                        <small class="text-muted"><?= $isEdit ? 'Leave blank to keep existing key' : ''; ?></small>
                                     </div>
                                 </div>
                             </div>
@@ -352,8 +342,11 @@ include __DIR__ . '/../includes/header.php';
                                     <small class="text-muted">Comma-separated keywords that trigger handover to human agent.</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Confidence Threshold: <strong id="thresholdValue"><?= e($bot['handover_threshold'] ?? '30'); ?>%</strong></label>
-                                    <input type="range" name="handover_threshold" class="form-range" min="0" max="100" value="<?= e($bot['handover_threshold'] ?? '30'); ?>" id="thresholdSlider">
+                                    <label class="form-label">Confidence Threshold: <strong id="thresholdValue"><?php
+                                        $thresholdDisplay = isset($bot['handover_confidence_threshold']) ? round($bot['handover_confidence_threshold'] * 100) : 30;
+                                        echo e($thresholdDisplay);
+                                    ?>%</strong></label>
+                                    <input type="range" name="handover_threshold" class="form-range" min="0" max="100" value="<?= e($thresholdDisplay); ?>" id="thresholdSlider">
                                     <div class="d-flex justify-content-between" style="font-size: 0.75rem; color: var(--text-muted);">
                                         <span>0% (Always handover)</span>
                                         <span>100% (Never handover)</span>
@@ -465,7 +458,7 @@ function uploadFiles(files) {
                 if (data.success) {
                     const html = `<div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: var(--bg-secondary); border-radius: 8px;" data-id="${data.id}">
                         <div class="d-flex align-items-center gap-2"><i class="bi bi-file-earmark-text text-primary"></i><span style="font-size: 0.8125rem;">${file.name}</span></div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge(${data.id}, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge('document', ${data.id}, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
                     </div>`;
                     document.getElementById('uploadedFiles').insertAdjacentHTML('beforeend', html);
                 } else { Swal.fire('Error', data.message || 'Upload failed.', 'error'); }
@@ -488,20 +481,21 @@ document.getElementById('btnCrawlUrl')?.addEventListener('click', function() {
             document.getElementById('crawlUrl').value = '';
             const html = `<div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: var(--bg-secondary); border-radius: 8px;" data-id="${data.id}">
                 <div class="d-flex align-items-center gap-2"><i class="bi bi-link-45deg text-primary"></i><span style="font-size: 0.8125rem;">${url}</span></div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge(${data.id}, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge('url', ${data.id}, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
             </div>`;
             document.getElementById('urlsList').insertAdjacentHTML('beforeend', html);
         } else { Swal.fire('Error', data.message || 'Failed to crawl URL.', 'error'); }
     }).catch(() => { this.disabled = false; this.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Crawl'; Swal.fire('Error', 'Network error.', 'error'); });
 });
 
-function deleteKnowledge(id, el) {
-    fetch(baseUrl + 'api/ai-bot/delete-knowledge.php', {
+function deleteKnowledge(type, id, el) {
+    fetch(baseUrl + 'api/ai-bot/delete-kb-item.php', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({ id: id })
+        body: JSON.stringify({ type: type, item_id: id })
     }).then(r => r.json()).then(data => {
         if (data.success) el.closest('[data-id]').remove();
-    });
+        else Swal.fire('Error', data.message || 'Failed to delete.', 'error');
+    }).catch(() => Swal.fire('Error', 'Network error.', 'error'));
 }
 
 // Save Bot

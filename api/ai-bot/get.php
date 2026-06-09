@@ -53,15 +53,15 @@ try {
         $kbId = $kb['id'];
 
         $kbStats['documents'] = (int) $db->fetchColumn(
-            "SELECT COUNT(*) FROM ai_kb_documents WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_documents WHERE kb_id = ?",
             [$kbId]
         );
         $kbStats['urls'] = (int) $db->fetchColumn(
-            "SELECT COUNT(*) FROM ai_kb_urls WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_urls WHERE kb_id = ?",
             [$kbId]
         );
         $kbStats['qa_pairs'] = (int) $db->fetchColumn(
-            "SELECT COUNT(*) FROM ai_kb_qa_pairs WHERE knowledge_base_id = ?",
+            "SELECT COUNT(*) FROM ai_kb_qa_pairs WHERE kb_id = ?",
             [$kbId]
         );
         $kbStats['total'] = $kbStats['documents'] + $kbStats['urls'] + $kbStats['qa_pairs'];

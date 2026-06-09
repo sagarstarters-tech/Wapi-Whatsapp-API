@@ -42,18 +42,27 @@ $input    = is_array($jsonData) ? $jsonData : $_POST;
 $botId                      = sanitizeInt($input['bot_id'] ?? 0);
 $name                       = sanitize($input['name'] ?? '');
 $description                = sanitize($input['description'] ?? '');
-$aiModel                    = sanitize($input['ai_model'] ?? 'gpt-3.5-turbo');
-$botRole                    = sanitize($input['bot_role'] ?? 'customer_support');
-$businessType               = sanitize($input['business_type'] ?? '');
-$responseTone               = sanitize($input['response_tone'] ?? 'professional');
-$responseLength             = sanitize($input['response_length'] ?? 'medium');
-$language                   = sanitize($input['language'] ?? 'en');
-$systemPrompt               = trim($input['system_prompt'] ?? '');
+$status                     = sanitize($input['status'] ?? 'inactive');
 $whatsappAccountId          = sanitizeInt($input['whatsapp_account_id'] ?? 0);
+
+// Form sends "model" via radio buttons, schema column is "ai_model"
+$aiModel                    = sanitize($input['model'] ?? ($input['ai_model'] ?? 'gpt-4o'));
+
+$botRole                    = sanitize($input['bot_role'] ?? 'Customer Support Agent');
+$businessType               = sanitize($input['business_type'] ?? 'General');
+$responseTone               = sanitize($input['response_tone'] ?? 'professional');
+$responseLength             = sanitize($input['response_length'] ?? 'moderate');
+$language                   = sanitize($input['language'] ?? 'English');
+$systemPrompt               = trim($input['system_prompt'] ?? '');
+
 $handoverEnabled            = sanitizeInt($input['handover_enabled'] ?? 0) ? 1 : 0;
 $handoverKeywords           = sanitize($input['handover_keywords'] ?? '');
-$handoverConfidenceThreshold = sanitizeFloat($input['handover_confidence_threshold'] ?? 0.3);
-$crmCaptureEnabled          = sanitizeInt($input['crm_capture_enabled'] ?? 0) ? 1 : 0;
+
+// Form sends handover_threshold as 0-100, schema stores as DECIMAL(3,2) i.e. 0.00-1.00
+$handoverThresholdRaw       = sanitizeFloat($input['handover_threshold'] ?? 30);
+$handoverConfidenceThreshold = round($handoverThresholdRaw / 100, 2);
+
+$crmCaptureEnabled          = sanitizeInt($input['crm_capture_enabled'] ?? 1) ? 1 : 0;
 $customApiEndpoint          = sanitizeUrl($input['custom_api_endpoint'] ?? '');
 $customApiKeyRaw            = trim($input['custom_api_key'] ?? '');
 
@@ -76,16 +85,17 @@ if (!empty($errors)) {
 }
 
 // Encrypt custom API key if provided
-$encryptedApiKey = '';
+$encryptedApiKey = null;
 if (!empty($customApiKeyRaw)) {
     $encryptedApiKey = encryptData($customApiKeyRaw);
 }
 
 try {
-    // Build data array
+    // Build data array (keys match schema columns exactly)
     $botData = [
         'name'                         => $name,
         'description'                  => $description,
+        'status'                       => $status,
         'ai_model'                     => $aiModel,
         'bot_role'                     => $botRole,
         'business_type'                => $businessType,
@@ -99,7 +109,7 @@ try {
         'handover_confidence_threshold'=> $handoverConfidenceThreshold,
         'crm_capture_enabled'          => $crmCaptureEnabled,
         'custom_api_endpoint'          => $customApiEndpoint ?: null,
-        'custom_api_key'               => $encryptedApiKey ?: null,
+        'custom_api_key_encrypted'     => $encryptedApiKey,
     ];
 
     if ($botId > 0) {
@@ -117,30 +127,29 @@ try {
         echo json_encode([
             'success' => true,
             'data'    => $bot,
+            'bot_id'  => $botId,
             'message' => 'Bot updated successfully'
         ]);
     } else {
-        // Check plan limit before creating
-        $limitCheck = AIBot::checkPlanLimit($userId);
-
-        if (!$limitCheck['allowed']) {
+        // Check plan limit before creating — checkPlanLimit returns bool
+        if (!AIBot::checkPlanLimit($userId)) {
             http_response_code(403);
             echo json_encode([
                 'success' => false,
-                'message' => $limitCheck['message'] ?? 'You have reached the maximum number of bots for your plan. Please upgrade to create more.'
+                'message' => 'You have reached the maximum number of bots for your plan. Please upgrade to create more.'
             ]);
             exit;
         }
 
-        // Create new bot
-        $botData['user_id'] = $userId;
-        $newBotId = AIBot::create($botData);
+        // Create new bot — create(userId, data) takes two separate arguments
+        $newBotId = AIBot::create($userId, $botData);
 
         $bot = AIBot::getById($newBotId, $userId);
 
         echo json_encode([
             'success' => true,
             'data'    => $bot,
+            'bot_id'  => $newBotId,
             'message' => 'Bot created successfully'
         ]);
     }
@@ -149,3 +158,4 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Failed to save bot. Please try again.']);
 }
+

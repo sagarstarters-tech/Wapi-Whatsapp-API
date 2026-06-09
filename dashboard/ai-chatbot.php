@@ -152,9 +152,9 @@ include __DIR__ . '/../includes/header.php';
                                 <i class="bi bi-whatsapp me-1"></i><?= e($bot['wa_phone']); ?>
                             </span>
                             <?php endif; ?>
-                            <?php if (!empty($bot['model'])): ?>
+                            <?php if (!empty($bot['ai_model'])): ?>
                             <span class="badge-custom" style="background: var(--primary-bg); color: var(--primary); font-size: 0.75rem;">
-                                <i class="bi bi-cpu me-1"></i><?= e(strtoupper($bot['model'])); ?>
+                                <i class="bi bi-cpu me-1"></i><?= e(strtoupper($bot['ai_model'])); ?>
                             </span>
                             <?php endif; ?>
                         </div>
