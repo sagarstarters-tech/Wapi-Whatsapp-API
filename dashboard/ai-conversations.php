@@ -85,43 +85,49 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
         <!-- Filters -->
-        <div class="card mb-4" style="border-radius: var(--border-radius);">
-            <div class="card-body p-3">
-                <form method="GET" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label" style="font-size: 0.75rem; font-weight: 600;">Bot</label>
-                        <select name="bot" class="form-select form-select-sm">
-                            <option value="0">All Bots</option>
-                            <?php foreach ($bots as $b): ?>
-                            <option value="<?= $b['id']; ?>" <?= $botFilter == $b['id'] ? 'selected' : ''; ?>><?= e($b['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label" style="font-size: 0.75rem; font-weight: 600;">Status</label>
-                        <select name="status" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            <option value="active" <?= $statusFilter === 'active' ? 'selected' : ''; ?>>Active</option>
-                            <option value="resolved" <?= $statusFilter === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
-                            <option value="handed_over" <?= $statusFilter === 'handed_over' ? 'selected' : ''; ?>>Handed Over</option>
-                            <option value="expired" <?= $statusFilter === 'expired' ? 'selected' : ''; ?>>Expired</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" style="font-size: 0.75rem; font-weight: 600;">Search</label>
-                        <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by phone or name..." value="<?= e($search); ?>">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search me-1"></i>Filter</button>
-                    </div>
-                </form>
-            </div>
+        <div class="ai-editor-card" style="position: relative; overflow: hidden; margin-bottom: 1.5rem;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); opacity: 0.7;"></div>
+            <h6 style="margin-bottom: 1.25rem;"><i class="bi bi-funnel"></i> Filter Conversations</h6>
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">
+                        <i class="bi bi-robot me-1" style="color: #667eea;"></i>Bot
+                    </label>
+                    <select name="bot" class="form-select form-select-sm" style="border-radius: 8px; border-color: var(--border-color);">
+                        <option value="0">All Bots</option>
+                        <?php foreach ($bots as $b): ?>
+                        <option value="<?= $b['id']; ?>" <?= $botFilter == $b['id'] ? 'selected' : ''; ?>><?= e($b['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">
+                        <i class="bi bi-circle-fill me-1" style="color: #10b981; font-size: 0.5rem; vertical-align: middle;"></i>Status
+                    </label>
+                    <select name="status" class="form-select form-select-sm" style="border-radius: 8px; border-color: var(--border-color);">
+                        <option value="">All Statuses</option>
+                        <option value="active" <?= $statusFilter === 'active' ? 'selected' : ''; ?>>Active</option>
+                        <option value="resolved" <?= $statusFilter === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
+                        <option value="handed_over" <?= $statusFilter === 'handed_over' ? 'selected' : ''; ?>>Handed Over</option>
+                        <option value="expired" <?= $statusFilter === 'expired' ? 'selected' : ''; ?>>Expired</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">
+                        <i class="bi bi-search me-1" style="color: #667eea;"></i>Search
+                    </label>
+                    <input type="text" name="search" class="form-control form-control-sm" style="border-radius: 8px; border-color: var(--border-color);" placeholder="Search by phone or name..." value="<?= e($search); ?>">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-ai btn-sm w-100" style="border-radius: 8px; padding: 0.4rem 0.75rem;"><i class="bi bi-funnel-fill me-1"></i>Filter</button>
+                </div>
+            </form>
         </div>
 
         <!-- Conversations Table -->
         <div class="data-table">
             <div class="data-table-header">
-                <h5 class="data-table-title">Conversations (<?= number_format($totalConversations); ?>)</h5>
+                <h5 class="data-table-title"><i class="bi bi-chat-dots me-2" style="color: #667eea;"></i>Conversations <span style="font-weight: 400; color: var(--text-muted); font-size: 0.875rem;">(<?= number_format($totalConversations); ?>)</span></h5>
             </div>
             <div class="table-responsive">
                 <table class="table">
@@ -138,8 +144,13 @@ include __DIR__ . '/../includes/header.php';
                     </thead>
                     <tbody>
                         <?php if (empty($conversations)): ?>
-                        <tr><td colspan="7" class="text-center text-muted py-4">
-                            <i class="bi bi-inbox" style="font-size: 1.5rem;"></i><br>No conversations found
+                        <tr><td colspan="7" class="p-0" style="border: none;">
+                            <div class="ai-empty-state" style="border: none; border-radius: 0;">
+                                <div class="empty-icon"><i class="bi bi-chat-square-dots"></i></div>
+                                <h4>No Conversations Yet</h4>
+                                <p>No conversations match your current filters. Try adjusting your search criteria or wait for new customer interactions.</p>
+                                <a href="?" class="btn btn-ai-outline btn-sm" style="border-radius: 8px;"><i class="bi bi-arrow-counterclockwise me-1"></i>Clear Filters</a>
+                            </div>
                         </td></tr>
                         <?php else: ?>
                         <?php foreach ($conversations as $conv): ?>
@@ -157,10 +168,10 @@ include __DIR__ . '/../includes/header.php';
                             </td>
                             <td>
                                 <?php
-                                $statusColors = ['active' => 'success', 'resolved' => 'primary', 'handed_over' => 'warning', 'expired' => 'secondary'];
-                                $statusColor = $statusColors[$conv['status']] ?? 'secondary';
+                                $statusClasses = ['active' => 'status-active', 'resolved' => 'status-sent', 'handed_over' => 'status-pending', 'expired' => 'status-inactive'];
+                                $statusClass = $statusClasses[$conv['status']] ?? 'status-inactive';
                                 ?>
-                                <span class="badge bg-<?= $statusColor; ?>" style="font-size: 0.6875rem;"><?= ucfirst(str_replace('_', ' ', $conv['status'])); ?></span>
+                                <span class="status-badge <?= $statusClass; ?>"><?= ucfirst(str_replace('_', ' ', $conv['status'])); ?></span>
                             </td>
                             <td>
                                 <?php if ($conv['resolved_by']): ?>
@@ -186,19 +197,21 @@ include __DIR__ . '/../includes/header.php';
             <!-- Pagination -->
             <?php if ($totalPages > 1): ?>
             <div class="d-flex justify-content-between align-items-center p-3 border-top">
-                <div style="font-size: 0.8125rem; color: var(--text-muted);">
-                    Showing <?= $offset + 1; ?>-<?= min($offset + $perPage, $totalConversations); ?> of <?= $totalConversations; ?>
+                <div style="font-size: 0.8125rem; color: var(--text-muted); font-weight: 500;">
+                    Showing <strong><?= $offset + 1; ?>–<?= min($offset + $perPage, $totalConversations); ?></strong> of <strong><?= $totalConversations; ?></strong> conversations
                 </div>
                 <nav>
-                    <ul class="pagination pagination-sm mb-0">
+                    <ul class="pagination pagination-sm mb-0" style="gap: 4px;">
                         <?php if ($page > 1): ?>
-                        <li class="page-item"><a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>">«</a></li>
+                        <li class="page-item"><a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" style="border-radius: 8px; border-color: var(--border-color); color: #667eea; font-weight: 600;">«</a></li>
                         <?php endif; ?>
                         <?php for ($p = max(1, $page - 2); $p <= min($totalPages, $page + 2); $p++): ?>
-                        <li class="page-item <?= $p == $page ? 'active' : ''; ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])); ?>"><?= $p; ?></a></li>
+                        <li class="page-item <?= $p == $page ? 'active' : ''; ?>">
+                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])); ?>" style="border-radius: 8px; <?= $p == $page ? 'background: linear-gradient(135deg, #667eea, #764ba2); border-color: transparent; color: #fff; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);' : 'border-color: var(--border-color); color: var(--text-secondary);'; ?> font-weight: 600;"><?= $p; ?></a>
+                        </li>
                         <?php endfor; ?>
                         <?php if ($page < $totalPages): ?>
-                        <li class="page-item"><a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>">»</a></li>
+                        <li class="page-item"><a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" style="border-radius: 8px; border-color: var(--border-color); color: #667eea; font-weight: 600;">»</a></li>
                         <?php endif; ?>
                     </ul>
                 </nav>

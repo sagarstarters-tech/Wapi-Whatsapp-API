@@ -79,7 +79,7 @@ include __DIR__ . '/../includes/header.php';
     <main class="main-content">
         <div class="dash-header">
             <div>
-                <h1 class="dash-title">📊 AI Analytics</h1>
+                <h1 class="dash-title"><i class="bi bi-bar-chart-line-fill" style="background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i> AI Analytics</h1>
                 <div class="dash-breadcrumb">
                     <a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a>
                     <i class="bi bi-chevron-right"></i>
@@ -88,12 +88,15 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-2 align-items-center">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <select class="form-select form-select-sm" style="width: auto; border-radius: 8px;" onchange="location.href='?bot='+this.value+'&period=<?= e($period); ?>'">
-                    <option value="0">All Bots</option>
-                    <?php foreach ($bots as $b): ?>
-                    <option value="<?= $b['id']; ?>" <?= $selectedBot == $b['id'] ? 'selected' : ''; ?>><?= e($b['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="d-flex align-items-center gap-2" style="background: var(--bg-secondary, #f3f4f6); border-radius: 8px; padding: 0.25rem 0.5rem 0.25rem 0.75rem;">
+                    <i class="bi bi-robot" style="color: #667eea; font-size: 0.875rem;"></i>
+                    <select class="form-select form-select-sm" style="width: auto; border: none; background: transparent; font-weight: 500; font-size: 0.8125rem; box-shadow: none;" onchange="location.href='?bot='+this.value+'&period=<?= e($period); ?>'">
+                        <option value="0">All Bots</option>
+                        <?php foreach ($bots as $b): ?>
+                        <option value="<?= $b['id']; ?>" <?= $selectedBot == $b['id'] ? 'selected' : ''; ?>><?= e($b['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="period-filters">
                     <?php foreach (['7d' => '7D', '30d' => '30D', '90d' => '90D'] as $p => $label): ?>
                     <a href="?bot=<?= $selectedBot; ?>&period=<?= $p; ?>" class="period-btn <?= $period === $p ? 'active' : ''; ?>"><?= $label; ?></a>
@@ -182,7 +185,13 @@ include __DIR__ . '/../includes/header.php';
                     <thead><tr><th>#</th><th>Question</th><th>Times Asked</th></tr></thead>
                     <tbody>
                         <?php if (empty($topQuestions)): ?>
-                        <tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size: 1.5rem;"></i><br>No data yet</td></tr>
+                        <tr><td colspan="3" class="p-0 border-0">
+                            <div class="ai-empty-state" style="border: none; padding: 3rem 2rem;">
+                                <div class="empty-icon"><i class="bi bi-chat-square-quote"></i></div>
+                                <h4>No Questions Yet</h4>
+                                <p>Once customers start chatting with your AI bot, the most frequently asked questions will appear here.</p>
+                            </div>
+                        </td></tr>
                         <?php else: ?>
                         <?php foreach ($topQuestions as $i => $q): ?>
                         <tr>
