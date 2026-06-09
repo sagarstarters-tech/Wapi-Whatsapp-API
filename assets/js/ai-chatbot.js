@@ -95,11 +95,12 @@
         });
     };
 
-    window.toggleBotStatus = function(botId, newStatus) {
-        const action = newStatus === 'active' ? 'activate' : 'deactivate';
+    window.toggleBotStatus = function(botId, currentStatus) {
+        const targetStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        const action = targetStatus === 'active' ? 'activate' : 'deactivate';
         apiRequest(window.APP_BASE + 'api/ai-bot/toggle-status.php', {
             method: 'POST',
-            body: JSON.stringify({ bot_id: botId, status: newStatus })
+            body: JSON.stringify({ bot_id: botId, status: targetStatus })
         }).then(data => {
             if (data.success) {
                 showToast(`Bot ${action}d successfully`);
