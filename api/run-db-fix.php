@@ -13,8 +13,15 @@ echo "<h3>Running DB Schema Fixes...</h3>";
 function checkAndAddColumn($table, $column, $definition) {
     global $db, $pdo;
     try {
-        $columns = $db->fetchAll("SHOW COLUMNS FROM `{$table}` LIKE ?", [$column]);
-        if (empty($columns)) {
+        $columns = $db->fetchAll("SHOW COLUMNS FROM `{$table}`");
+        $exists = false;
+        foreach ($columns as $col) {
+            if (($col['Field'] ?? $col['field'] ?? '') === $column) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
             $pdo->exec("ALTER TABLE `{$table}` ADD `{$column}` {$definition}");
             echo "<span style='color:green;'>[SUCCESS]</span> Added column `{$column}` to table `{$table}`.<br>";
         } else {
