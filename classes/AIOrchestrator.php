@@ -69,7 +69,6 @@ class AIOrchestrator
                 'customer_phone' => $customerPhone,
                 'customer_name' => sanitize($customerName),
                 'status' => 'active',
-                'started_at' => date('Y-m-d H:i:s'),
                 'last_message_at' => date('Y-m-d H:i:s'),
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
@@ -85,9 +84,10 @@ class AIOrchestrator
 
                 $db->insert('ai_messages', [
                     'conversation_id' => $conversation['id'],
-                    'role' => 'assistant',
+                    'bot_id' => $botId,
+                    'direction' => 'outbound',
+                    'sender_type' => 'ai',
                     'content' => $bot['welcome_message'],
-                    'message_type' => 'welcome',
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
             }
@@ -105,9 +105,10 @@ class AIOrchestrator
         // 3. Save inbound message
         $db->insert('ai_messages', [
             'conversation_id' => $conversationId,
-            'role' => 'user',
+            'bot_id' => $botId,
+            'direction' => 'inbound',
+            'sender_type' => 'customer',
             'content' => $messageText,
-            'message_type' => 'inbound',
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
@@ -147,8 +148,11 @@ class AIOrchestrator
         // Get last N conversation messages for context
         $maxContext = (int) ($bot['max_context_messages'] ?? 10);
         $historyMessages = $db->fetchAll(
-            "SELECT role, content FROM ai_messages 
-             WHERE conversation_id = ? AND message_type != 'welcome'
+            "SELECT 
+                CASE WHEN sender_type = 'customer' THEN 'user' ELSE 'assistant' END AS role,
+                content 
+             FROM ai_messages 
+             WHERE conversation_id = ? 
              ORDER BY created_at DESC LIMIT ?",
             [$conversationId, $maxContext]
         );
@@ -172,9 +176,11 @@ class AIOrchestrator
 
             $db->insert('ai_messages', [
                 'conversation_id' => $conversationId,
-                'role' => 'system',
-                'content' => 'AI Error: ' . $e->getMessage(),
-                'message_type' => 'error',
+                'bot_id' => $botId,
+                'direction' => 'outbound',
+                'sender_type' => 'ai',
+                'content' => $fallback,
+                'metadata' => json_encode(['error' => $e->getMessage()]),
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
@@ -192,11 +198,12 @@ class AIOrchestrator
         // 8. Save AI response
         $db->insert('ai_messages', [
             'conversation_id' => $conversationId,
-            'role' => 'assistant',
+            'bot_id' => $botId,
+            'direction' => 'outbound',
+            'sender_type' => 'ai',
             'content' => $responseContent,
-            'message_type' => 'ai_response',
             'tokens_used' => $tokensUsed,
-            'model_used' => $aiResponse['model'] ?? $bot['ai_model'],
+            'ai_model_used' => $aiResponse['model'] ?? $bot['ai_model'],
             'response_time_ms' => $responseTime,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -256,8 +263,12 @@ class AIOrchestrator
         // 12. Update conversation and analytics
         $db->update('ai_conversations', [
             'last_message_at' => date('Y-m-d H:i:s'),
-            'total_messages' => $db->fetchColumn(
+            'messages_count' => $db->fetchColumn(
                 "SELECT COUNT(*) FROM ai_messages WHERE conversation_id = ?",
+                [$conversationId]
+            ),
+            'ai_messages_count' => $db->fetchColumn(
+                "SELECT COUNT(*) FROM ai_messages WHERE conversation_id = ? AND sender_type = 'ai'",
                 [$conversationId]
             ),
             'updated_at' => date('Y-m-d H:i:s'),
@@ -354,9 +365,10 @@ class AIOrchestrator
         // Save handover message in conversation
         $db->insert('ai_messages', [
             'conversation_id' => $conversationId,
-            'role' => 'system',
+            'bot_id' => $bot['id'],
+            'direction' => 'outbound',
+            'sender_type' => 'ai',
             'content' => $handoverMessage,
-            'message_type' => 'handover',
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
@@ -420,7 +432,7 @@ class AIOrchestrator
 
         // Check if CRM lead already exists for this conversation
         $existingLead = $db->fetch(
-            "SELECT id FROM ai_crm_leads WHERE conversation_id = ?",
+            "SELECT id FROM ai_leads WHERE conversation_id = ?",
             [$conversationId]
         );
 
@@ -432,15 +444,14 @@ class AIOrchestrator
             'customer_name' => $extractedData['name'] ?? null,
             'customer_email' => $extractedData['email'] ?? null,
             'customer_company' => $extractedData['company'] ?? null,
-            'extracted_data' => json_encode($extractedData),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
         if ($existingLead) {
-            $db->update('ai_crm_leads', $leadData, 'id = ?', [$existingLead['id']]);
+            $db->update('ai_leads', $leadData, 'id = ?', [$existingLead['id']]);
         } else {
             $leadData['created_at'] = date('Y-m-d H:i:s');
-            $db->insert('ai_crm_leads', $leadData);
+            $db->insert('ai_leads', $leadData);
             AIBot::incrementCounter($botId, 'total_leads_captured');
         }
     }
@@ -518,9 +529,8 @@ class AIOrchestrator
 
         // Count messages in the last minute across all conversations for this bot
         $count = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_messages m 
-             JOIN ai_conversations c ON m.conversation_id = c.id 
-             WHERE c.bot_id = ? AND m.role = 'user' AND m.created_at >= ?",
+            'ai_messages',
+            'bot_id = ? AND direction = \'inbound\' AND created_at >= ?',
             [$botId, $oneMinuteAgo]
         );
 
@@ -546,27 +556,17 @@ class AIOrchestrator
 
         if ($credits) {
             $db->query(
-                "UPDATE ai_credits SET tokens_used = tokens_used + ?, updated_at = ? WHERE user_id = ?",
+                "UPDATE ai_credits SET used_tokens = used_tokens + ?, updated_at = ? WHERE user_id = ?",
                 [$tokensUsed, date('Y-m-d H:i:s'), $userId]
             );
         } else {
             $db->insert('ai_credits', [
                 'user_id' => $userId,
-                'tokens_used' => $tokensUsed,
-                'tokens_limit' => 0,
-                'created_at' => date('Y-m-d H:i:s'),
+                'used_tokens' => $tokensUsed,
+                'total_tokens' => 0,
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
         }
-
-        // Log token usage
-        $db->insert('ai_credit_log', [
-            'user_id' => $userId,
-            'tokens' => $tokensUsed,
-            'action' => 'deduct',
-            'description' => 'AI message processing',
-            'created_at' => date('Y-m-d H:i:s'),
-        ]);
     }
 
     /**

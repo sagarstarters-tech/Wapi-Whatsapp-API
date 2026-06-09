@@ -403,9 +403,10 @@ class AIBot
         }
 
         $db = Database::getInstance();
-        return $db->query(
+        $db->query(
             "UPDATE ai_bots SET {$field} = {$field} + 1, updated_at = ? WHERE id = ?",
             [date('Y-m-d H:i:s'), $botId]
         );
+        return true;
     }
 }

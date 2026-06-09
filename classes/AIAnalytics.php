@@ -53,7 +53,7 @@ class AIAnalytics
 
         // Leads generated
         $leadsGenerated = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_crm_leads l 
+            "SELECT COUNT(*) FROM ai_leads l 
              JOIN ai_bots b ON l.bot_id = b.id 
              WHERE b.user_id = ?" . ($botId ? ' AND l.bot_id = ?' : ''),
             $params
@@ -64,7 +64,7 @@ class AIAnalytics
             "SELECT COALESCE(AVG(m.response_time_ms), 0) FROM ai_messages m 
              JOIN ai_conversations c ON m.conversation_id = c.id 
              JOIN ai_bots b ON c.bot_id = b.id 
-             WHERE b.user_id = ? AND m.role = 'assistant' AND m.response_time_ms > 0{$botFilter}",
+             WHERE b.user_id = ? AND m.sender_type = 'ai' AND m.response_time_ms > 0{$botFilter}",
             $params
         );
 
@@ -252,8 +252,7 @@ class AIAnalytics
              JOIN ai_conversations c ON m.conversation_id = c.id
              JOIN ai_bots b ON c.bot_id = b.id
              WHERE b.user_id = ?
-             AND m.role = 'user'
-             AND m.message_type = 'inbound'
+             AND m.direction = 'inbound'
              AND (m.content LIKE '%?%' 
                   OR m.content LIKE 'what %' 
                   OR m.content LIKE 'how %' 
@@ -293,8 +292,7 @@ class AIAnalytics
                  JOIN ai_conversations c ON m.conversation_id = c.id
                  JOIN ai_bots b ON c.bot_id = b.id
                  WHERE b.user_id = ?
-                 AND m.role = 'user'
-                 AND m.message_type = 'inbound'
+                 AND m.direction = 'inbound'
                  {$botFilter}
                  GROUP BY SUBSTRING(m.content, 1, 100)
                  HAVING COUNT(*) > 1
@@ -349,7 +347,7 @@ class AIAnalytics
                 (SELECT COUNT(*) FROM ai_conversations c WHERE c.bot_id = b.id AND c.status = 'handed_over') as handover_conversations,
                 (SELECT COALESCE(AVG(m.response_time_ms), 0) FROM ai_messages m 
                     JOIN ai_conversations c ON m.conversation_id = c.id 
-                    WHERE c.bot_id = b.id AND m.role = 'assistant' AND m.response_time_ms > 0) as avg_response_time,
+                    WHERE c.bot_id = b.id AND m.sender_type = 'ai' AND m.response_time_ms > 0) as avg_response_time,
                 (SELECT COALESCE(SUM(m.tokens_used), 0) FROM ai_messages m 
                     JOIN ai_conversations c ON m.conversation_id = c.id 
                     WHERE c.bot_id = b.id AND m.tokens_used > 0) as total_tokens
@@ -421,12 +419,12 @@ class AIAnalytics
                 COALESCE(AVG(CASE WHEN m.response_time_ms > 0 THEN m.response_time_ms END), 0) as avg_response_time
              FROM ai_messages m
              JOIN ai_conversations c ON m.conversation_id = c.id
-             WHERE c.bot_id = ? AND DATE(m.created_at) = ? AND m.role = 'assistant'",
+             WHERE c.bot_id = ? AND DATE(m.created_at) = ? AND m.sender_type = 'ai'",
             [$botId, $date]
         );
 
         $leadsCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_crm_leads WHERE bot_id = ? AND DATE(created_at) = ?",
+            "SELECT COUNT(*) FROM ai_leads WHERE bot_id = ? AND DATE(created_at) = ?",
             [$botId, $date]
         );
 
@@ -473,7 +471,7 @@ class AIAnalytics
         $totalMessages = (int) $db->count("SELECT COUNT(*) FROM ai_messages");
 
         // Total tokens
-        $totalTokens = (int) $db->fetchColumn(
+        $totalTokens = $db->fetchColumn(
             "SELECT COALESCE(SUM(tokens_used), 0) FROM ai_messages WHERE tokens_used > 0"
         );
 
@@ -493,14 +491,14 @@ class AIAnalytics
         $pendingHandovers = (int) $db->count("SELECT COUNT(*) FROM ai_handovers WHERE status = 'pending'");
 
         // Total leads
-        $totalLeads = (int) $db->count("SELECT COUNT(*) FROM ai_crm_leads");
+        $totalLeads = (int) $db->count("SELECT COUNT(*) FROM ai_leads");
 
         // Users with bots
         $usersWithBots = (int) $db->count("SELECT COUNT(DISTINCT user_id) FROM ai_bots");
 
         // Average response time
         $avgResponseTime = (float) $db->fetchColumn(
-            "SELECT COALESCE(AVG(response_time_ms), 0) FROM ai_messages WHERE role = 'assistant' AND response_time_ms > 0"
+            "SELECT COALESCE(AVG(response_time_ms), 0) FROM ai_messages WHERE sender_type = 'ai' AND response_time_ms > 0"
         );
 
         // Model usage breakdown

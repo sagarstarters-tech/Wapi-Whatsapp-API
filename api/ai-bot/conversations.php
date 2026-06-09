@@ -31,6 +31,41 @@ $dateTo   = sanitize($_GET['date_to'] ?? '');
 try {
     $db = Database::getInstance();
 
+    // If conversation_id is requested, return conversation messages instead
+    $conversationId = sanitizeInt($_GET['conversation_id'] ?? 0);
+    if ($conversationId > 0) {
+        $conv = $db->fetch(
+            "SELECT c.* FROM ai_conversations c 
+             JOIN ai_bots b ON c.bot_id = b.id 
+             WHERE c.id = ? AND b.user_id = ?",
+            [$conversationId, $userId]
+        );
+        
+        if (!$conv) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Conversation not found']);
+            exit;
+        }
+
+        $messages = $db->fetchAll(
+            "SELECT id, direction, sender_type, content, created_at 
+             FROM ai_messages 
+             WHERE conversation_id = ? 
+             ORDER BY created_at ASC",
+            [$conversationId]
+        );
+
+        echo json_encode([
+            'success' => true,
+            'data'    => [
+                'conversation' => $conv,
+                'messages'     => $messages
+            ],
+            'message' => 'Messages retrieved successfully'
+        ]);
+        exit;
+    }
+
     // Build query conditions
     $conditions = ['c.user_id = ?'];
     $params     = [$userId];
@@ -41,7 +76,7 @@ try {
     }
 
     if (!empty($search)) {
-        $conditions[] = '(c.contact_name LIKE ? OR c.contact_phone LIKE ? OR c.last_message LIKE ?)';
+        $conditions[] = '(c.customer_name LIKE ? OR c.customer_phone LIKE ? OR (SELECT content FROM ai_messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) LIKE ?)';
         $searchTerm   = '%' . $search . '%';
         $params[]     = $searchTerm;
         $params[]     = $searchTerm;
@@ -76,9 +111,11 @@ try {
 
     // Fetch paginated results with bot name
     $conversations = $db->fetchAll(
-        "SELECT c.id, c.bot_id, c.contact_name, c.contact_phone, c.status, 
-                c.message_count, c.last_message, c.last_message_at,
-                c.resolution_status, c.created_at, c.updated_at,
+        "SELECT c.id, c.bot_id, c.customer_name AS contact_name, c.customer_phone AS contact_phone, c.status, 
+                c.messages_count AS message_count, 
+                (SELECT content FROM ai_messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) AS last_message, 
+                c.last_message_at,
+                c.status AS resolution_status, c.created_at, c.updated_at,
                 b.name AS bot_name
          FROM ai_conversations c
          LEFT JOIN ai_bots b ON c.bot_id = b.id
