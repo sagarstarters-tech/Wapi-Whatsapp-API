@@ -58,7 +58,7 @@ class AIOrchestrator
 
         // 2. Get or create conversation
         $conversation = $db->fetch(
-            "SELECT * FROM ai_conversations WHERE bot_id = ? AND customer_phone = ? AND status IN ('active', 'idle') ORDER BY updated_at DESC LIMIT 1",
+            "SELECT * FROM ai_conversations WHERE bot_id = ? AND customer_phone = ? LIMIT 1",
             [$botId, $customerPhone]
         );
 
@@ -92,12 +92,35 @@ class AIOrchestrator
                 ]);
             }
         } else {
-            // Update existing conversation
+            $isTestMode = ($phoneNumberId === 'test' || strpos($customerPhone, 'test_user_') === 0);
+
+            if ($conversation['status'] === 'handed_over' && !$isTestMode) {
+                // In production, if it's handed over, do not let AI process the message.
+                // Just save the message and return handover status.
+                $db->insert('ai_messages', [
+                    'conversation_id' => $conversation['id'],
+                    'bot_id' => $botId,
+                    'direction' => 'inbound',
+                    'sender_type' => 'customer',
+                    'content' => $messageText,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                return [
+                    'status' => 'handover',
+                    'message' => !empty($bot['handover_message']) ? $bot['handover_message'] : "I'm connecting you with a human agent. Please wait a moment.",
+                ];
+            }
+
+            // Update existing conversation and set/keep status as active
             $db->update('ai_conversations', [
                 'last_message_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
                 'status' => 'active',
             ], 'id = ?', [$conversation['id']]);
+
+            // Update local conversation array status to active
+            $conversation['status'] = 'active';
         }
 
         $conversationId = $conversation['id'];
