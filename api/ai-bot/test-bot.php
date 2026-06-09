@@ -69,43 +69,31 @@ try {
         exit;
     }
 
-    // Process message with test flag — returns AI response without sending via WhatsApp
-    $response = AIOrchestrator::processMessage([
-        'bot_id'    => $botId,
-        'user_id'   => $userId,
-        'message'   => $message,
-        'sender'    => 'test_user_' . $userId,
-        'test_mode' => true
-    ]);
+    // Process message with test parameters — returns AI response without sending via WhatsApp
+    $result = AIOrchestrator::processMessage(
+        $botId,
+        'test_user_' . $userId,
+        'Test User',
+        $message,
+        'test',
+        'test'
+    );
 
-    if (!$response || !isset($response['content'])) {
-        echo json_encode([
-            'success' => true,
-            'data'    => [
-                'response'     => $response['content'] ?? 'No response generated. Check your bot configuration and knowledge base.',
-                'model_used'   => $response['model'] ?? $bot['ai_model'] ?? 'unknown',
-                'tokens_used'  => $response['tokens_used'] ?? null,
-                'kb_sources'   => $response['kb_sources'] ?? [],
-                'processing_ms'=> $response['processing_ms'] ?? null,
-                'test_mode'    => true
-            ],
-            'message' => 'Test response generated'
-        ]);
-        exit;
-    }
+    $reply = $result['message'] ?? 'No response generated. Check your bot configuration.';
+    $success = ($result['status'] === 'success' || $result['status'] === 'handover');
 
     echo json_encode([
-        'success' => true,
+        'success' => $success,
+        'reply'   => $reply,
         'data'    => [
-            'response'      => $response['content'],
-            'model_used'    => $response['model'] ?? $bot['ai_model'] ?? 'unknown',
-            'tokens_used'   => $response['tokens_used'] ?? null,
-            'kb_sources'    => $response['kb_sources'] ?? [],
-            'processing_ms' => $response['processing_ms'] ?? null,
-            'confidence'    => $response['confidence'] ?? null,
+            'response'      => $reply,
+            'status'        => $result['status'] ?? 'unknown',
+            'model_used'    => $result['model'] ?? $bot['ai_model'] ?? 'unknown',
+            'tokens_used'   => $result['tokens_used'] ?? 0,
+            'processing_ms' => $result['response_time_ms'] ?? 0,
             'test_mode'     => true
         ],
-        'message' => 'Test response generated successfully'
+        'message' => $result['status'] === 'error' ? ($result['error'] ?? 'Error') : 'Test response generated successfully'
     ]);
 } catch (Exception $e) {
     error_log("AI Bot test-bot error: " . $e->getMessage());
