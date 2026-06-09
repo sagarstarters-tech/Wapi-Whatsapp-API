@@ -3,20 +3,22 @@ require_once __DIR__ . '/../config/config.php';
 
 $db = Database::getInstance();
 
-echo "ai_conversations: ";
+echo "ai_conversations columns:\n";
 try {
     $columns = $db->fetchAll("SHOW COLUMNS FROM `ai_conversations`");
-    $names = array_map(function($col) { return $col['Field'] ?? $col['field']; }, $columns);
-    echo implode(', ', $names);
+    foreach ($columns as $col) {
+        echo "- " . ($col['Field'] ?? $col['field']) . "\n";
+    }
 } catch (Exception $e) {
-    echo "Error: " . $e->getMessage();
+    echo "Error: " . $e->getMessage() . "\n";
 }
 
-echo "\n\nai_credits: ";
+echo "\nai_credits columns:\n";
 try {
     $columns = $db->fetchAll("SHOW COLUMNS FROM `ai_credits`");
-    $names = array_map(function($col) { return $col['Field'] ?? $col['field']; }, $columns);
-    echo implode(', ', $names);
+    foreach ($columns as $col) {
+        echo "- " . ($col['Field'] ?? $col['field']) . "\n";
+    }
 } catch (Exception $e) {
-    echo "Error: " . $e->getMessage();
+    echo "Error: " . $e->getMessage() . "\n";
 }
