@@ -63,43 +63,41 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php'); ?>" class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-lg"></i> Create New Bot
+                <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php'); ?>" class="btn btn-ai btn-sm" style="border-radius: 10px; padding: 0.5rem 1.25rem;">
+                    <i class="bi bi-plus-lg me-1"></i> Create New Bot
                 </a>
             </div>
         </div>
 
         <!-- Plan Usage Indicator -->
-        <div class="card mb-4" style="border-radius: var(--border-radius);">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="d-flex align-items-center gap-2 flex-grow-1">
-                    <i class="bi bi-robot text-primary" style="font-size: 1.25rem;"></i>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span style="font-size: 0.875rem; font-weight: 600;"><?= $botsUsed; ?> / <?= $botsLimit > 0 ? $botsLimit : '∞'; ?> AI Bots used</span>
-                            <?php if ($botsLimit > 0): ?>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);"><?= $botsLimit > 0 ? round(($botsUsed / $botsLimit) * 100) : 0; ?>%</span>
-                            <?php endif; ?>
-                        </div>
-                        <div style="background: var(--border-color); border-radius: 4px; height: 6px; overflow: hidden;">
-                            <div style="background: linear-gradient(90deg, var(--primary), #00d2ff); height: 100%; width: <?= $botsLimit > 0 ? min(100, ($botsUsed / $botsLimit) * 100) : 0; ?>%; border-radius: 4px; transition: width 0.3s;"></div>
-                        </div>
-                    </div>
+        <div class="plan-usage-bar">
+            <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, rgba(102,126,234,0.12), rgba(118,75,162,0.12)); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="bi bi-robot" style="font-size: 1.25rem; color: #667eea;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="usage-label"><?= $botsUsed; ?> / <?= $botsLimit > 0 ? $botsLimit : '∞'; ?> AI Bots</span>
+                    <?php if ($botsLimit > 0): ?>
+                    <span class="usage-count"><?= round(($botsUsed / $botsLimit) * 100); ?>%</span>
+                    <?php endif; ?>
+                </div>
+                <div class="usage-progress">
+                    <div class="usage-progress-fill" style="width: <?= $botsLimit > 0 ? min(100, ($botsUsed / $botsLimit) * 100) : 0; ?>%;"></div>
                 </div>
             </div>
         </div>
 
         <!-- Flash Messages -->
         <?php $flash = getFlash(); if ($flash): ?>
-            <div class="alert alert-<?= $flash['type']; ?> fade-in"><i class="bi bi-check-circle-fill"></i> <?= e($flash['message']); ?></div>
+            <div class="alert alert-<?= $flash['type']; ?> fade-in" style="border-radius: 10px;"><i class="bi bi-check-circle-fill me-1"></i> <?= e($flash['message']); ?></div>
         <?php endif; ?>
 
         <?php if ($migrationNeeded): ?>
-        <div class="alert alert-warning d-flex align-items-center gap-3" style="border-radius: var(--border-radius);">
-            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem;"></i>
+        <div class="alert alert-warning d-flex align-items-center gap-3" style="border-radius: 12px; border: 1px solid rgba(245,158,11,0.3); background: rgba(245,158,11,0.08);">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem; color: #f59e0b;"></i>
             <div>
                 <strong>Database Setup Required</strong><br>
-                <span style="font-size: 0.875rem;">AI ChatBot Builder tables have not been created yet. Please run the SQL migration: <code>database/ai_chatbot_schema.sql</code></span>
+                <span style="font-size: 0.875rem; opacity: 0.85;">AI ChatBot Builder tables have not been created yet. Please run the SQL migration: <code>database/ai_chatbot_schema.sql</code></span>
             </div>
         </div>
         <?php endif; ?>
@@ -109,24 +107,23 @@ include __DIR__ . '/../includes/header.php';
         <div class="row g-4">
             <?php foreach ($bots as $bot): ?>
             <div class="col-lg-4 col-md-6" id="bot-card-<?= $bot['id']; ?>">
-                <div class="card h-100" style="border-radius: var(--border-radius); border-top: 3px solid transparent; border-image: linear-gradient(90deg, var(--primary), #00d2ff) 1; overflow: visible;">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="d-inline-block rounded-circle" style="width: 10px; height: 10px; background: <?php
-                                    if ($bot['status'] === 'active') echo '#28a745';
-                                    elseif ($bot['status'] === 'suspended') echo '#dc3545';
-                                    else echo '#6c757d';
-                                ?>;"></span>
-                                <span class="status-badge status-<?= $bot['status'] === 'active' ? 'active' : ($bot['status'] === 'suspended' ? 'inactive' : 'inactive'); ?>">
-                                    <?= ucfirst(e($bot['status'])); ?>
-                                </span>
-                            </div>
+                <div class="ai-bot-card <?= $bot['status'] === 'active' ? 'bot-active' : ($bot['status'] === 'suspended' ? 'bot-suspended' : ''); ?>">
+                    <div class="bot-header">
+                        <div class="bot-icon">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="status-dot <?= $bot['status']; ?>"></span>
+                            <span style="font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: <?php
+                                if ($bot['status'] === 'active') echo '#10b981';
+                                elseif ($bot['status'] === 'suspended') echo '#ef4444';
+                                else echo '#9ca3af';
+                            ?>;"><?= ucfirst(e($bot['status'])); ?></span>
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" style="border-radius: 8px; padding: 4px 8px;">
-                                    <i class="bi bi-three-dots-vertical"></i>
+                                <button class="btn btn-sm" data-bs-toggle="dropdown" style="border-radius: 8px; padding: 2px 6px; background: transparent; border: 1px solid var(--border-color);">
+                                    <i class="bi bi-three-dots-vertical" style="font-size: 0.75rem;"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end" style="border-radius: 10px;">
+                                <ul class="dropdown-menu dropdown-menu-end" style="border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.12); border: 1px solid var(--border-color);">
                                     <li><a class="dropdown-item" href="<?= baseUrl('dashboard/ai-chatbot-editor.php?id=' . $bot['id']); ?>"><i class="bi bi-pencil me-2"></i>Edit</a></li>
                                     <li><a class="dropdown-item" href="javascript:void(0)" onclick="cloneBot(<?= $bot['id']; ?>, '<?= e(addslashes($bot['name'])); ?>')"><i class="bi bi-copy me-2"></i>Clone</a></li>
                                     <li><hr class="dropdown-divider"></li>
@@ -140,37 +137,56 @@ include __DIR__ . '/../includes/header.php';
                                 </ul>
                             </div>
                         </div>
+                    </div>
 
-                        <h5 class="fw-bold mb-2" style="font-size: 1.0625rem;"><?= e($bot['name']); ?></h5>
-                        <p class="text-muted mb-3" style="font-size: 0.8125rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                            <?= e($bot['description'] ?? 'No description'); ?>
-                        </p>
+                    <div class="bot-name"><?= e($bot['name']); ?></div>
+                    <div class="bot-desc"><?= e($bot['description'] ?? 'No description provided'); ?></div>
 
-                        <div class="d-flex flex-wrap gap-2 mb-3">
-                            <?php if (!empty($bot['wa_phone'])): ?>
-                            <span class="badge-custom" style="background: rgba(21,163,98,0.1); color: #15a362; font-size: 0.75rem;">
-                                <i class="bi bi-whatsapp me-1"></i><?= e($bot['wa_phone']); ?>
-                            </span>
-                            <?php endif; ?>
-                            <?php if (!empty($bot['ai_model'])): ?>
-                            <span class="badge-custom" style="background: var(--primary-bg); color: var(--primary); font-size: 0.75rem;">
-                                <i class="bi bi-cpu me-1"></i><?= e(strtoupper($bot['ai_model'])); ?>
-                            </span>
-                            <?php endif; ?>
+                    <div class="bot-meta">
+                        <?php if (!empty($bot['wa_phone'])): ?>
+                        <span class="bot-meta-item" style="color: #15a362;">
+                            <i class="bi bi-whatsapp"></i><?= e($bot['wa_phone']); ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if (!empty($bot['ai_model'])): ?>
+                        <?php
+                            $modelClass = 'custom';
+                            if (strpos($bot['ai_model'], 'gpt') !== false) $modelClass = 'gpt';
+                            elseif ($bot['ai_model'] === 'gemini') $modelClass = 'gemini';
+                            elseif ($bot['ai_model'] === 'claude') $modelClass = 'claude';
+                        ?>
+                        <span class="model-badge <?= $modelClass; ?>">
+                            <i class="bi bi-cpu me-1"></i><?= e(strtoupper($bot['ai_model'])); ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if (!empty($bot['language']) && $bot['language'] !== 'English'): ?>
+                        <span class="bot-meta-item">
+                            <i class="bi bi-translate"></i><?= e($bot['language']); ?>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="bot-stats">
+                        <div class="bot-stat">
+                            <div class="bot-stat-value"><?= formatNumber($bot['total_conversations']); ?></div>
+                            <div class="bot-stat-label">Conversations</div>
                         </div>
-
-                        <div class="d-flex justify-content-between align-items-center pt-3" style="border-top: 1px solid var(--border-color);">
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">
-                                <i class="bi bi-chat-dots me-1"></i><?= formatNumber($bot['total_conversations']); ?> conversations
-                            </div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">
-                                <i class="bi bi-calendar3 me-1"></i><?= formatDate($bot['created_at']); ?>
-                            </div>
+                        <div class="bot-stat">
+                            <div class="bot-stat-value"><?= formatNumber($bot['total_messages_processed'] ?? 0); ?></div>
+                            <div class="bot-stat-label">Messages</div>
+                        </div>
+                        <div class="bot-stat">
+                            <div class="bot-stat-value"><?= formatNumber($bot['total_leads_captured'] ?? 0); ?></div>
+                            <div class="bot-stat-label">Leads</div>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top p-3">
-                        <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php?id=' . $bot['id']); ?>" class="btn btn-outline-primary btn-sm w-100">
-                            <i class="bi bi-pencil-square me-1"></i> Edit Bot
+
+                    <div class="bot-actions">
+                        <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php?id=' . $bot['id']); ?>" class="btn btn-ai-outline btn-sm flex-grow-1" style="border-radius: 8px;">
+                            <i class="bi bi-pencil-square me-1"></i>Edit
+                        </a>
+                        <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php?id=' . $bot['id']); ?>#pane-test" class="btn btn-ai btn-sm flex-grow-1" style="border-radius: 8px;">
+                            <i class="bi bi-chat-dots me-1"></i>Test
                         </a>
                     </div>
                 </div>
@@ -180,18 +196,39 @@ include __DIR__ . '/../includes/header.php';
 
         <?php else: ?>
         <!-- Empty State -->
-        <div class="card" style="border-radius: var(--border-radius);">
-            <div class="card-body text-center py-5">
-                <div style="width: 100px; height: 100px; background: var(--primary-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
-                    <i class="bi bi-robot" style="font-size: 3rem; color: var(--primary);"></i>
+        <div class="ai-empty-state">
+            <div class="empty-icon">
+                <i class="bi bi-robot"></i>
+            </div>
+            <h4>No AI Bots Yet</h4>
+            <p>Create your first AI-powered chatbot to automate WhatsApp conversations, handle customer queries, and generate leads 24/7.</p>
+            <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php'); ?>" class="btn btn-ai" style="border-radius: 10px; padding: 0.625rem 1.75rem;">
+                <i class="bi bi-plus-lg me-1"></i> Create Your First AI Bot
+            </a>
+
+            <!-- Feature Highlights -->
+            <div class="row g-3 mt-4" style="max-width: 700px; margin: 0 auto;">
+                <div class="col-md-4">
+                    <div style="padding: 1.25rem; border-radius: 12px; background: rgba(102,126,234,0.05); border: 1px solid rgba(102,126,234,0.1);">
+                        <i class="bi bi-lightning-charge" style="font-size: 1.5rem; color: #667eea;"></i>
+                        <div style="font-size: 0.8125rem; font-weight: 600; margin-top: 0.5rem; color: var(--text-primary);">Auto Replies</div>
+                        <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.25rem;">AI handles customer queries instantly, 24/7</div>
+                    </div>
                 </div>
-                <h4 class="fw-bold mb-2">No AI Bots Yet</h4>
-                <p class="text-muted mb-4" style="max-width: 400px; margin: 0 auto;">
-                    Create your first AI-powered chatbot to automate WhatsApp conversations, handle customer queries, and generate leads 24/7.
-                </p>
-                <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php'); ?>" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i> Create Your First AI Bot
-                </a>
+                <div class="col-md-4">
+                    <div style="padding: 1.25rem; border-radius: 12px; background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.1);">
+                        <i class="bi bi-people" style="font-size: 1.5rem; color: #10b981;"></i>
+                        <div style="font-size: 0.8125rem; font-weight: 600; margin-top: 0.5rem; color: var(--text-primary);">Lead Capture</div>
+                        <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.25rem;">Automatically collect customer info & leads</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="padding: 1.25rem; border-radius: 12px; background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.1);">
+                        <i class="bi bi-person-check" style="font-size: 1.5rem; color: #f59e0b;"></i>
+                        <div style="font-size: 0.8125rem; font-weight: 600; margin-top: 0.5rem; color: var(--text-primary);">Human Handover</div>
+                        <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.25rem;">Smart transfer to live agent when needed</div>
+                    </div>
+                </div>
             </div>
         </div>
         <?php endif; ?>
