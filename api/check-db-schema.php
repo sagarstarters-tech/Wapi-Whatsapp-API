@@ -7,6 +7,9 @@ $db = Database::getInstance();
 $response = [];
 
 try {
+    $bot = $db->fetch("SELECT * FROM ai_bots WHERE id = 1");
+    $response['bot'] = $bot;
+
     $conversation = $db->fetch(
         "SELECT * FROM ai_conversations WHERE customer_phone = 'test_user_9' LIMIT 1"
     );
