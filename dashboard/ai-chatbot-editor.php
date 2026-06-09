@@ -98,12 +98,12 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Tab Navigation -->
         <ul class="nav nav-pills mb-4 flex-wrap gap-2" id="botEditorTabs" role="tablist" style="overflow-x: auto; flex-wrap: nowrap !important; white-space: nowrap; -webkit-overflow-scrolling: touch;">
-            <li class="nav-item"><a class="nav-link active btn-sm" id="tab-general" data-bs-toggle="pill" href="#pane-general" style="border-radius: 8px;"><i class="bi bi-gear me-1"></i>General</a></li>
-            <li class="nav-item"><a class="nav-link btn-sm" id="tab-knowledge" data-bs-toggle="pill" href="#pane-knowledge" style="border-radius: 8px;"><i class="bi bi-book me-1"></i>Knowledge Base</a></li>
-            <li class="nav-item"><a class="nav-link btn-sm" id="tab-personality" data-bs-toggle="pill" href="#pane-personality" style="border-radius: 8px;"><i class="bi bi-stars me-1"></i>AI Personality</a></li>
-            <li class="nav-item"><a class="nav-link btn-sm" id="tab-model" data-bs-toggle="pill" href="#pane-model" style="border-radius: 8px;"><i class="bi bi-cpu me-1"></i>Model Selection</a></li>
-            <li class="nav-item"><a class="nav-link btn-sm" id="tab-handover" data-bs-toggle="pill" href="#pane-handover" style="border-radius: 8px;"><i class="bi bi-person-check me-1"></i>Human Handover</a></li>
-            <li class="nav-item"><a class="nav-link btn-sm" id="tab-test" data-bs-toggle="pill" href="#pane-test" style="border-radius: 8px;"><i class="bi bi-chat-dots me-1"></i>Test Bot</a></li>
+            <li class="nav-item"><a class="nav-link active btn-sm" id="tab-general" data-bs-toggle="pill" data-bs-target="#pane-general" href="#pane-general" style="border-radius: 8px;"><i class="bi bi-gear me-1"></i>General</a></li>
+            <li class="nav-item"><a class="nav-link btn-sm" id="tab-knowledge" data-bs-toggle="pill" data-bs-target="#pane-knowledge" href="#pane-knowledge" style="border-radius: 8px;"><i class="bi bi-book me-1"></i>Knowledge Base</a></li>
+            <li class="nav-item"><a class="nav-link btn-sm" id="tab-personality" data-bs-toggle="pill" data-bs-target="#pane-personality" href="#pane-personality" style="border-radius: 8px;"><i class="bi bi-stars me-1"></i>AI Personality</a></li>
+            <li class="nav-item"><a class="nav-link btn-sm" id="tab-model" data-bs-toggle="pill" data-bs-target="#pane-model" href="#pane-model" style="border-radius: 8px;"><i class="bi bi-cpu me-1"></i>Model Selection</a></li>
+            <li class="nav-item"><a class="nav-link btn-sm" id="tab-handover" data-bs-toggle="pill" data-bs-target="#pane-handover" href="#pane-handover" style="border-radius: 8px;"><i class="bi bi-person-check me-1"></i>Human Handover</a></li>
+            <li class="nav-item"><a class="nav-link btn-sm" id="tab-test" data-bs-toggle="pill" data-bs-target="#pane-test" href="#pane-test" style="border-radius: 8px;"><i class="bi bi-chat-dots me-1"></i>Test Bot</a></li>
         </ul>
 
         <form id="botEditorForm">
@@ -400,8 +400,9 @@ include __DIR__ . '/../includes/header.php';
 
 <script>
 const botId = <?= $botId; ?>;
-const csrfToken = '<?= CSRF::token(); ?>';
+const csrfToken = '<?= CSRF::generateToken(); ?>';
 const baseUrl = '<?= APP_URL; ?>/';
+window.APP_BASE = '<?= baseUrl(); ?>';
 
 // Model card selection
 document.querySelectorAll('.model-radio').forEach(radio => {

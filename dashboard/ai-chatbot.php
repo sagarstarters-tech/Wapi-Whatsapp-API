@@ -237,6 +237,8 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
+window.APP_BASE = '<?= baseUrl(); ?>';
+
 // Delete Bot
 function deleteBot(botId, botName) {
     Swal.fire({
@@ -252,7 +254,7 @@ function deleteBot(botId, botName) {
         if (result.isConfirmed) {
             fetch('<?= baseUrl('api/ai-bot/delete.php'); ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= CSRF::token(); ?>' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= CSRF::generateToken(); ?>' },
                 body: JSON.stringify({ bot_id: botId })
             })
             .then(r => r.json())
@@ -275,7 +277,7 @@ function toggleBotStatus(botId, currentStatus) {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     fetch('<?= baseUrl('api/ai-bot/toggle-status.php'); ?>', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= CSRF::token(); ?>' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= CSRF::generateToken(); ?>' },
         body: JSON.stringify({ bot_id: botId, status: newStatus })
     })
     .then(r => r.json())
@@ -303,7 +305,7 @@ function cloneBot(botId, botName) {
         if (result.isConfirmed) {
             fetch('<?= baseUrl('api/ai-bot/clone.php'); ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= CSRF::token(); ?>' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= CSRF::generateToken(); ?>' },
                 body: JSON.stringify({ bot_id: botId })
             })
             .then(r => r.json())
