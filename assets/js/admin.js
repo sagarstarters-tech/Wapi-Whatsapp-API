@@ -4,51 +4,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    initSidebar();
+    // Sidebar is initialized by app.js (initDashboardSidebar) — no duplicate init here
     initCharts();
     initDataTables();
 });
 
-// ===== Sidebar Toggle =====
-function initSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const toggle = document.getElementById('sidebarToggle');
-    const mobileToggle = document.getElementById('mobileSidebarToggle');
-    const overlay = document.getElementById('sidebarOverlay');
-
-    if (toggle) {
-        toggle.addEventListener('click', function() {
-            if (window.innerWidth >= 992) {
-                sidebar.classList.toggle('collapsed');
-                document.body.classList.toggle('sidebar-collapsed', sidebar.classList.contains('collapsed'));
-                localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
-            } else {
-                sidebar.classList.toggle('mobile-open');
-                overlay.classList.toggle('show');
-            }
-        });
-    }
-
-    if (mobileToggle) {
-        mobileToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('mobile-open');
-            overlay.classList.toggle('show');
-        });
-    }
-
-    if (overlay) {
-        overlay.addEventListener('click', function() {
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('show');
-        });
-    }
-
-    // Restore sidebar state
-    if (window.innerWidth >= 992 && localStorage.getItem('sidebar_collapsed') === 'true') {
-        sidebar.classList.add('collapsed');
-        document.body.classList.add('sidebar-collapsed');
-    }
-}
 
 // ===== Charts =====
 function initCharts() {
