@@ -71,6 +71,9 @@ include __DIR__ . '/../includes/header.php';
                 <h1 class="dash-title">Connect to WhatsApp API <i class="bi bi-whatsapp text-success"></i></h1>
                 <div class="dash-breadcrumb"><a href="<?= baseUrl('dashboard/'); ?>">Dashboard</a><i class="bi bi-chevron-right"></i><span>WhatsApp Setup</span></div>
             </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            </div>
         </div>
 
         <!-- Cloud API Section -->
