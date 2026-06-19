@@ -590,6 +590,15 @@ document.getElementById('sendMessageForm').addEventListener('submit', async func
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     toggleMediaField();
+
+    // Pre-fill recipient phone number from URL parameter (e.g. from Contacts page "Send Message" action)
+    const urlParams = new URLSearchParams(window.location.search);
+    const toParam = urlParams.get('to');
+    if (toParam) {
+        const msgToInput = document.getElementById('msgTo');
+        msgToInput.value = toParam;
+        document.getElementById('previewName').textContent = toParam;
+    }
 });
 </script>
 
