@@ -342,6 +342,11 @@ include __DIR__ . '/../includes/header.php';
                                         elseif ($msgType === 'document') echo '📄 ' . ($preview !== '[Document]' ? e($preview) : 'Document');
                                         elseif ($msgType === 'sticker') echo '🏷️ Sticker';
                                         elseif ($msgType === 'location') echo '📍 Location';
+                                        elseif ($msgType === 'unsupported') echo '⚠️ Unsupported message';
+                                        elseif ($msgType === 'reaction') echo '😊 Reaction';
+                                        elseif ($msgType === 'order') echo '🛒 Order';
+                                        elseif ($msgType === 'contacts') echo '👤 Contact';
+                                        elseif (strpos($c['content'] ?? '', '[UNSUPPORTED') === 0) echo '⚠️ Unsupported message';
                                         else echo e($preview);
                                     ?>
                                 </div>
@@ -427,61 +432,8 @@ include __DIR__ . '/../includes/header.php';
         fetch('<?= baseUrl('api/chat-history.php'); ?>?phone=' + phone)
             .then(r => r.json())
             .then(data => {
-                let html = '';
-                data.forEach(m => {
-                    const bubbleClass = m.direction === 'inbound' ? 'msg-in' : 'msg-out';
-                    let contentHtml = '';
-                    const proxyBase = '<?= baseUrl('api/media-proxy.php'); ?>?url=';
-
-                    if (m.media_url && ['image', 'sticker'].includes(m.type)) {
-                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
-                        contentHtml = `<div class="msg-media">
-                            <img src="${proxiedUrl}" alt="Image" style="max-width: 100%; max-height: 300px; border-radius: 8px; cursor: pointer; display: block;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                            <span style="display:none; opacity:0.7; font-size:0.8rem;">⚠️ Image could not be loaded</span>
-                        </div>`;
-                        if (m.content && m.content !== '[Image]' && m.content !== '[Sticker]') {
-                            contentHtml += `<div style="margin-top: 6px;">${escapeHtml(m.content)}</div>`;
-                        }
-                    } else if (m.media_url && m.type === 'video') {
-                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
-                        contentHtml = `<div class="msg-media">
-                            <video controls style="max-width: 100%; max-height: 300px; border-radius: 8px;" preload="metadata">
-                                <source src="${proxiedUrl}">
-                                Your browser does not support video playback.
-                            </video>
-                        </div>`;
-                        if (m.content && m.content !== '[Video]') {
-                            contentHtml += `<div style="margin-top: 6px;">${escapeHtml(m.content)}</div>`;
-                        }
-                    } else if (m.media_url && (m.type === 'audio' || m.type === 'voice')) {
-                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
-                        contentHtml = `<div class="msg-media">
-                            <audio controls style="max-width: 100%;" preload="metadata">
-                                <source src="${proxiedUrl}">
-                                Your browser does not support audio playback.
-                            </audio>
-                        </div>`;
-                    } else if (m.media_url && m.type === 'document') {
-                        const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
-                        const fileName = m.content && m.content !== '[Document]' ? m.content : 'Document';
-                        contentHtml = `<div class="msg-media">
-                            <a href="${proxiedUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; color:${m.direction === 'inbound' ? '#6C63FF' : '#fff'}; text-decoration:none; word-break:break-all;">
-                                <i class="bi bi-file-earmark-arrow-down" style="font-size:1.3rem;"></i>
-                                <span>${escapeHtml(fileName)}</span>
-                            </a>
-                        </div>`;
-                    } else {
-                        // Text or fallback for media without URL
-                        contentHtml = escapeHtml(m.content || '');
-                    }
-
-                    html += `<div class="msg-bubble ${bubbleClass}">
-                        ${contentHtml}
-                        <div style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right;">${m.time}</div>
-                    </div>`;
-                });
-                document.getElementById('chatMessages').innerHTML = html;
-                scrollToBottom();
+                lastMessageCount = data.length;
+                renderMessages(data);
             });
     }
 
@@ -571,6 +523,151 @@ include __DIR__ . '/../includes/header.php';
     window.addEventListener('popstate', function(e) {
         if (isMobileView() && document.querySelector('.chat-container.chat-open')) {
             goBackToList();
+        }
+    });
+
+    // ===== Auto-Refresh: Poll for new messages every 5 seconds =====
+    let lastMessageCount = 0;
+    let pollInterval = null;
+
+    function startPolling() {
+        if (pollInterval) return;
+        pollInterval = setInterval(() => {
+            if (!currentChat) return;
+
+            // Refresh messages for the active chat
+            fetch('<?= baseUrl('api/chat-history.php'); ?>?phone=' + encodeURIComponent(currentChat))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !Array.isArray(data)) return;
+                    // Only re-render if message count changed (new message arrived)
+                    if (data.length !== lastMessageCount) {
+                        lastMessageCount = data.length;
+                        renderMessages(data);
+                    }
+                })
+                .catch(() => {});
+
+            // Also refresh sidebar conversation list
+            refreshSidebar();
+        }, 5000);
+    }
+
+    function renderMessages(data) {
+        let html = '';
+        const proxyBase = '<?= baseUrl('api/media-proxy.php'); ?>?url=';
+        data.forEach(m => {
+            const bubbleClass = m.direction === 'inbound' ? 'msg-in' : 'msg-out';
+            let contentHtml = '';
+
+            if (m.media_url && ['image', 'sticker'].includes(m.type)) {
+                const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                contentHtml = `<div class="msg-media">
+                    <img src="${proxiedUrl}" alt="Image" style="max-width: 100%; max-height: 300px; border-radius: 8px; cursor: pointer; display: block;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span style="display:none; opacity:0.7; font-size:0.8rem;">⚠️ Image could not be loaded</span>
+                </div>`;
+                if (m.content && m.content !== '[Image]' && m.content !== '[Sticker]') {
+                    contentHtml += `<div style="margin-top: 6px;">${escapeHtml(m.content)}</div>`;
+                }
+            } else if (m.media_url && m.type === 'video') {
+                const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                contentHtml = `<div class="msg-media">
+                    <video controls style="max-width: 100%; max-height: 300px; border-radius: 8px;" preload="metadata">
+                        <source src="${proxiedUrl}">
+                        Your browser does not support video playback.
+                    </video>
+                </div>`;
+                if (m.content && m.content !== '[Video]') {
+                    contentHtml += `<div style="margin-top: 6px;">${escapeHtml(m.content)}</div>`;
+                }
+            } else if (m.media_url && (m.type === 'audio' || m.type === 'voice')) {
+                const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                contentHtml = `<div class="msg-media">
+                    <audio controls style="max-width: 100%;" preload="metadata">
+                        <source src="${proxiedUrl}">
+                        Your browser does not support audio playback.
+                    </audio>
+                </div>`;
+            } else if (m.media_url && m.type === 'document') {
+                const proxiedUrl = proxyBase + encodeURIComponent(m.media_url);
+                const fileName = m.content && m.content !== '[Document]' ? m.content : 'Document';
+                contentHtml = `<div class="msg-media">
+                    <a href="${proxiedUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; color:${m.direction === 'inbound' ? '#6C63FF' : '#fff'}; text-decoration:none; word-break:break-all;">
+                        <i class="bi bi-file-earmark-arrow-down" style="font-size:1.3rem;"></i>
+                        <span>${escapeHtml(fileName)}</span>
+                    </a>
+                </div>`;
+            } else if (m.type === 'button') {
+                // OTP / Quick-reply button messages from Facebook etc.
+                let parts = (m.content || '').split('\n');
+                let mainText = parts[0] || '';
+                let btnLabel = '';
+                for (let i = 1; i < parts.length; i++) {
+                    let line = parts[i].trim();
+                    if (line.startsWith('[') && line.endsWith(']')) {
+                        btnLabel = line.slice(1, -1);
+                    } else if (line) {
+                        mainText += '\n' + line;
+                    }
+                }
+                contentHtml = escapeHtml(mainText).replace(/\n/g, '<br>');
+                if (btnLabel) {
+                    contentHtml += `<div style="margin-top:8px; padding:6px 12px; border:1px solid ${m.direction==='inbound'?'#d1d5db':'rgba(255,255,255,0.4)'}; border-radius:8px; font-size:0.8rem; text-align:center; opacity:0.85; cursor:default;">${escapeHtml(btnLabel)}</div>`;
+                }
+            } else if (m.type === 'unsupported' || (m.content && m.content.startsWith('[UNSUPPORTED'))) {
+                // Show a clean notice for unsupported WhatsApp message types (also catches old DB records)
+                contentHtml = `<div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:${m.direction==='inbound'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.15)'}; border-radius:8px; font-size:0.82rem; opacity:0.85;">
+                    <span style="font-size:1.1rem;">⚠️</span>
+                    <span>This message type isn't supported in the chat viewer yet</span>
+                </div>`;
+            } else {
+                // Text or fallback for media without URL
+                contentHtml = escapeHtml(m.content || '').replace(/\n/g, '<br>');
+            }
+
+            html += `<div class="msg-bubble ${bubbleClass}">
+                ${contentHtml}
+                <div style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right;">${m.time}</div>
+            </div>`;
+        });
+        document.getElementById('chatMessages').innerHTML = html;
+        scrollToBottom();
+    }
+
+    function refreshSidebar() {
+        fetch('<?= baseUrl('api/chat-list.php'); ?>')
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !Array.isArray(data) || data.length === 0) return;
+                const chatList = document.querySelector('.chat-list');
+                if (!chatList) return;
+                let html = '';
+                data.forEach(c => {
+                    const isActive = currentChat === c.phone;
+                    html += `<div class="chat-item${isActive ? ' active' : ''}" onclick="loadMessages('${c.phone}', this)">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-bold">${escapeHtml(c.name || c.phone)}</span>
+                            <small class="text-muted">${c.time}</small>
+                        </div>
+                        <div class="text-muted text-truncate mini-msg" style="font-size: 0.75rem;">
+                            ${c.direction === 'outbound' ? '✓ ' : ''}${escapeHtml(c.preview)}
+                        </div>
+                    </div>`;
+                });
+                chatList.innerHTML = html;
+            })
+            .catch(() => {});
+    }
+
+    // Start polling when page loads
+    startPolling();
+
+    // Pause polling when tab is not visible to save resources
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        } else {
+            startPolling();
         }
     });
 </script>

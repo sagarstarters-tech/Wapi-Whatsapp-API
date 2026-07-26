@@ -395,12 +395,9 @@ class WhatsApp {
                 break;
 
             case 'unsupported':
-                $unsupportedType = $msg['unsupported']['type'] ?? '';
-                $errorMsg = $msg['errors'][0]['message'] ?? $msg['errors'][0]['error_data']['details'] ?? '';
-                $text = '[UNSUPPORTED message' . ($unsupportedType ? ' type: ' . $unsupportedType : '') . ']';
-                if (!empty($errorMsg)) {
-                    $text .= ' (Reason: ' . $errorMsg . ')';
-                }
+                // WhatsApp Cloud API sends 'unsupported' for newer features
+                // (polls, channels, edited messages, etc.) - show a friendly notice
+                $text = '⚠️ This message type isn\'t supported in the chat viewer yet.';
                 break;
 
             case 'template':
@@ -408,12 +405,28 @@ class WhatsApp {
                 $text = '[Template: ' . $templateName . ']';
                 break;
 
+            case 'order':
+                $text = '🛒 [Order received]';
+                break;
+
+            case 'request_welcome':
+                $text = '👋 Customer opened the chat';
+                break;
+
+            case 'ephemeral':
+                $text = $msg['ephemeral']['text']['body'] ?? '[Disappearing message]';
+                break;
+
             default:
                 // Fallback: try common sub-fields, then dump raw
-                $text = $msg[$msgType]['body']    ??
-                        $msg[$msgType]['caption']  ??
-                        $msg[$msgType]['text']     ??
-                        '[' . strtoupper($msgType) . ' message]';
+                if (isset($msg[$msgType]) && is_array($msg[$msgType])) {
+                    $text = $msg[$msgType]['body']    ??
+                            $msg[$msgType]['caption']  ??
+                            $msg[$msgType]['text']     ??
+                            '📩 [' . ucfirst($msgType) . ' message]';
+                } else {
+                    $text = '📩 [' . ucfirst($msgType) . ' message]';
+                }
                 break;
         }
 
@@ -436,16 +449,22 @@ class WhatsApp {
             $mediaUrl = $this->getMediaUrl($mediaId, $phoneNumberId, $userId);
         }
 
+        // Resolve contact_id and whatsapp_account_id for the incoming message
+        $contactId = $this->db->fetchColumn("SELECT id FROM contacts WHERE user_id = ? AND phone = ?", [$userId, $from]) ?: null;
+        $waAccountId = $this->db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE phone_number_id = ? AND user_id = ?", [$phoneNumberId, $userId]) ?: null;
+
         // Save incoming message
         $this->db->insert('messages', [
-            'user_id'    => $userId,
-            'message_id' => $msg['id'] ?? null,
-            'to_number'  => $from,
-            'type'       => $msgType,
-            'content'    => $text,
-            'media_url'  => $mediaUrl,
-            'status'     => 'delivered',
-            'direction'  => 'inbound'
+            'user_id'              => $userId,
+            'whatsapp_account_id'  => $waAccountId,
+            'contact_id'           => $contactId,
+            'message_id'           => $msg['id'] ?? null,
+            'to_number'            => $from,
+            'type'                 => $msgType,
+            'content'              => $text,
+            'media_url'            => $mediaUrl,
+            'status'               => 'delivered',
+            'direction'            => 'inbound'
         ]);
     }
 
