@@ -36,10 +36,12 @@ foreach ($conversations as $c) {
     elseif ($msgType === 'location') $preview = '📍 Location';
     elseif ($msgType === 'button') $preview = '🔑 ' . $preview;
     elseif ($msgType === 'unsupported') $preview = '⚠️ Unsupported message';
+    elseif ($msgType === 'unknown') $preview = '⚠️ Unsupported message';
     elseif ($msgType === 'reaction') $preview = '😊 Reaction';
     elseif ($msgType === 'order') $preview = '🛒 Order';
     elseif ($msgType === 'contacts') $preview = '👤 Contact';
     elseif (strpos($c['content'] ?? '', '[UNSUPPORTED') === 0) $preview = '⚠️ Unsupported message';
+    elseif (strpos($c['content'] ?? '', '⚠️') === 0) $preview = '⚠️ Unsupported message';
 
     $response[] = [
         'phone' => $c['to_number'],

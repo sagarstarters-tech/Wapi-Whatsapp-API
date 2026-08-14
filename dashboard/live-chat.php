@@ -614,7 +614,7 @@ include __DIR__ . '/../includes/header.php';
                 if (btnLabel) {
                     contentHtml += `<div style="margin-top:8px; padding:6px 12px; border:1px solid ${m.direction==='inbound'?'#d1d5db':'rgba(255,255,255,0.4)'}; border-radius:8px; font-size:0.8rem; text-align:center; opacity:0.85; cursor:default;">${escapeHtml(btnLabel)}</div>`;
                 }
-            } else if (m.type === 'unsupported' || (m.content && m.content.startsWith('[UNSUPPORTED'))) {
+            } else if (m.type === 'unsupported' || m.type === 'unknown' || (m.content && (m.content.startsWith('[UNSUPPORTED') || m.content.startsWith('⚠️')))) {
                 // Show a clean notice for unsupported WhatsApp message types (also catches old DB records)
                 contentHtml = `<div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:${m.direction==='inbound'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.15)'}; border-radius:8px; font-size:0.82rem; opacity:0.85;">
                     <span style="font-size:1.1rem;">⚠️</span>
