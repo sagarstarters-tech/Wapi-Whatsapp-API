@@ -108,27 +108,8 @@ include __DIR__ . '/../includes/header.php';
                                 <div class="fw-semibold"><?= e($msg['contact_name'] ?? $msg['to_number']); ?></div>
                                 <div style="font-size: 0.75rem; color: var(--text-muted);"><?= e($msg['to_number']); ?></div>
                             </td>
-                            <td>
-                                <?php 
-                                $typeLabel = ucfirst($msg['type']);
-                                $typeBg    = 'var(--primary-bg)';
-                                $typeColor = 'var(--primary)';
-                                if (in_array($msg['type'], ['unknown', 'unsupported'])) {
-                                    $typeLabel = 'Unsupported';
-                                    $typeBg    = 'rgba(245,158,11,0.1)';
-                                    $typeColor = '#b45309';
-                                }
-                                ?>
-                                <span class="badge-custom" style="background: <?= $typeBg ?>; color: <?= $typeColor ?>;"><?= $typeLabel ?></span>
-                            </td>
-                            <?php
-                            $contentPreview = $msg['content'] ?? '';
-                            // Replace raw Meta error strings with a clean label
-                            if (in_array($msg['type'], ['unknown', 'unsupported']) || strpos($contentPreview, '[UNSUPPORTED') !== false) {
-                                $contentPreview = '⚠️ Unsupported message type';
-                            }
-                            ?>
-                            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem;"><?= e(substr($contentPreview, 0, 60)); ?><?= strlen($contentPreview) > 60 ? '...' : ''; ?></td>
+                            <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"><?= ucfirst($msg['type']); ?></span></td>
+                            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem;"><?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?></td>
                             <td><span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span></td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap;"><?= timeAgo($msg['created_at']); ?></td>
                             <td>

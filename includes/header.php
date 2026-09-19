@@ -11,6 +11,8 @@ if (!defined('APP_ROOT')) {
 $settings = new Settings();
 $siteName = $settings->get('site_name', 'WAPI');
 $siteLogo = $settings->get('site_logo', '');
+$logoHeight = (int)$settings->get('logo_height', 48);
+if ($logoHeight <= 0) $logoHeight = 48;
 $primaryColor = $settings->get('primary_color', '#6c63ff');
 $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
 ?>
@@ -57,6 +59,19 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <style>
         :root {
             --primary: <?= e($primaryColor); ?>;
+            --logo-height: <?= (int)$logoHeight; ?>px;
+        }
+        .navbar-brand img {
+            height: <?= (int)$logoHeight; ?>px !important;
+            max-height: <?= (int)$logoHeight; ?>px !important;
+            width: auto !important;
+            object-fit: contain;
+        }
+        @media (max-width: 768px) {
+            .navbar-brand img {
+                height: <?= min((int)$logoHeight, 44); ?>px !important;
+                max-height: <?= min((int)$logoHeight, 44); ?>px !important;
+            }
         }
     </style>
     
@@ -86,7 +101,7 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
                     $logoPath = str_replace('/wapi/', '', $siteLogo);
                     $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
                 ?>
-                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="max-height: 48px;">
+                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="height: <?= (int)$logoHeight; ?>px; max-height: <?= (int)$logoHeight; ?>px; width: auto; object-fit: contain;">
                 <?php endif; ?>
                 <span class="brand"><?= e($siteName); ?></span>
             </a>

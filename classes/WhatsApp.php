@@ -397,22 +397,7 @@ class WhatsApp {
             case 'unsupported':
                 // WhatsApp Cloud API sends 'unsupported' for newer features
                 // (polls, channels, edited messages, etc.) - show a friendly notice
-                $text = '⚠️ Unsupported message (poll, channel post, etc.)';
-                break;
-
-            case 'unknown':
-                // Meta sends type 'unknown' with an errors array for message types
-                // the Cloud API cannot parse (e.g. ads-click-to-WhatsApp, story replies).
-                // Extract a friendly label from the errors array if present.
-                $errTitle   = $msg['errors'][0]['title']   ?? '';
-                $errDetails = $msg['errors'][0]['details'] ?? '';
-                if (!empty($errTitle)) {
-                    $text = '⚠️ ' . $errTitle;
-                } elseif (!empty($errDetails)) {
-                    $text = '⚠️ ' . $errDetails;
-                } else {
-                    $text = '⚠️ Unknown message type received';
-                }
+                $text = '⚠️ This message type isn\'t supported in the chat viewer yet.';
                 break;
 
             case 'template':
@@ -433,16 +418,12 @@ class WhatsApp {
                 break;
 
             default:
-                // Fallback: try common sub-fields, then show a clean label
+                // Fallback: try common sub-fields, then dump raw
                 if (isset($msg[$msgType]) && is_array($msg[$msgType])) {
                     $text = $msg[$msgType]['body']    ??
                             $msg[$msgType]['caption']  ??
                             $msg[$msgType]['text']     ??
                             '📩 [' . ucfirst($msgType) . ' message]';
-                } elseif (!empty($msg['errors'])) {
-                    // Some unknown types carry an errors array — use its title
-                    $errTitle = $msg['errors'][0]['title'] ?? '';
-                    $text = $errTitle ? '⚠️ ' . $errTitle : '⚠️ Unknown message type';
                 } else {
                     $text = '📩 [' . ucfirst($msgType) . ' message]';
                 }

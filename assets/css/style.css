@@ -308,7 +308,10 @@ h5 { font-size: 1.125rem; }
 }
 
 .navbar-brand img {
-    height: 48px;
+    height: var(--logo-height, 48px);
+    max-height: var(--logo-height, 48px);
+    width: auto;
+    object-fit: contain;
 }
 
 .nav-link {

@@ -24,6 +24,20 @@ try {
             echo "Database check: 'unsupported' value already exists in messages table type ENUM.\n";
         }
     }
+
+    // 3. Ensure logo_height setting exists
+    $logoHeightSetting = $db->fetch("SELECT id FROM settings WHERE setting_key = 'logo_height'");
+    if (!$logoHeightSetting) {
+        $db->insert('settings', [
+            'setting_key' => 'logo_height',
+            'setting_value' => '48',
+            'setting_group' => 'general',
+            'setting_type' => 'number'
+        ]);
+        echo "Database updated: Added 'logo_height' setting.\n";
+    } else {
+        echo "Database check: 'logo_height' setting already exists.\n";
+    }
 } catch (Exception $e) {
     echo "Error updating database: " . $e->getMessage() . "\n";
 }

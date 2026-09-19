@@ -415,6 +415,7 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `setting_group`, `settin
 ('site_tagline', 'Powerful WhatsApp Business API for your business', 'general', 'text'),
 ('site_description', 'Complete WhatsApp Business API solution for sending messages, managing contacts, and tracking communication.', 'general', 'textarea'),
 ('site_logo', '/assets/images/logo.png', 'general', 'image'),
+('logo_height', '48', 'general', 'number'),
 ('site_favicon', '/assets/images/favicon.png', 'general', 'image'),
 ('primary_color', '#6c63ff', 'theme', 'color'),
 ('secondary_color', '#3f3d56', 'theme', 'color'),

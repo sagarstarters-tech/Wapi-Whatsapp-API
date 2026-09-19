@@ -123,10 +123,48 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Site Logo</label>
-                            <input type="file" name="site_logo" class="form-control" accept="image/*">
+                            <input type="file" name="site_logo" id="siteLogoInput" class="form-control" accept="image/*">
                             <?php if (!empty($allSettings['site_logo'])): ?>
                             <small class="text-muted d-block mt-1">Current: <?= e($allSettings['site_logo']); ?></small>
                             <?php endif; ?>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label d-flex justify-content-between align-items-center">
+                                <span>Logo Size / Height (px)</span>
+                                <span class="badge bg-primary px-2 py-1" id="logoHeightBadge"><?= (int)($allSettings['logo_height'] ?? 48); ?>px</span>
+                            </label>
+                            <div class="d-flex align-items-center gap-3">
+                                <input type="range" class="form-range flex-grow-1" id="logoHeightRange" min="20" max="150" step="2" 
+                                       value="<?= (int)($allSettings['logo_height'] ?? 48); ?>" 
+                                       oninput="syncLogoHeight(this.value)">
+                                <div class="input-group" style="width: 105px;">
+                                    <input type="number" name="settings[logo_height]" id="logoHeightInput" class="form-control" 
+                                           min="20" max="250" value="<?= (int)($allSettings['logo_height'] ?? 48); ?>" 
+                                           oninput="syncLogoHeight(this.value)">
+                                    <span class="input-group-text px-2 text-muted" style="font-size: 0.8rem;">px</span>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1">Navbar aur header logo ki height control karein (Default: 48px, Recommended: 36px - 80px).</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Logo Live Preview</label>
+                            <div class="p-3 border rounded-3 d-flex flex-wrap align-items-center gap-3" style="background: var(--card-bg, #f8f9fa);">
+                                <?php 
+                                    $currLogo = $allSettings['site_logo'] ?? '/assets/images/logo.png';
+                                    $currLogoPath = str_replace('/wapi/', '', $currLogo);
+                                    $previewLogoUrl = (strpos($currLogoPath, 'http') === 0) ? $currLogoPath : baseUrl($currLogoPath);
+                                    $currLogoHeight = (int)($allSettings['logo_height'] ?? 48);
+                                    if ($currLogoHeight <= 0) $currLogoHeight = 48;
+                                ?>
+                                <div class="d-flex align-items-center gap-2 p-2 px-3 rounded border bg-white shadow-sm" id="logoPreviewBox">
+                                    <img id="logoPreviewImg" src="<?= e($previewLogoUrl); ?>" alt="Logo Preview" 
+                                         style="height: <?= $currLogoHeight; ?>px; max-height: <?= $currLogoHeight; ?>px; width: auto; object-fit: contain; transition: height 0.1s ease;">
+                                    <span class="fw-bold fs-5 text-dark" id="logoPreviewBrand"><?= e($allSettings['site_name'] ?? 'WAPI'); ?></span>
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i> Slider drag karke ya pixel type karke size adjust karein. Niche <strong>Save Settings</strong> par click karna na bhoolein.
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Favicon</label>
@@ -300,5 +338,41 @@ include __DIR__ . '/../includes/header.php';
         </form>
     </main>
 </div>
+
+<script>
+function syncLogoHeight(val) {
+    val = parseInt(val) || 48;
+    if (val < 15) val = 15;
+    const badge = document.getElementById('logoHeightBadge');
+    const range = document.getElementById('logoHeightRange');
+    const input = document.getElementById('logoHeightInput');
+    const previewImg = document.getElementById('logoPreviewImg');
+    
+    if (badge) badge.textContent = val + 'px';
+    if (range && range.value != val) range.value = val;
+    if (input && input.value != val) input.value = val;
+    if (previewImg) {
+        previewImg.style.height = val + 'px';
+        previewImg.style.maxHeight = val + 'px';
+    }
+}
+
+document.getElementById('siteLogoInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const previewImg = document.getElementById('logoPreviewImg');
+            if (previewImg) previewImg.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.querySelector('input[name="settings[site_name]"]')?.addEventListener('input', function(e) {
+    const brand = document.getElementById('logoPreviewBrand');
+    if (brand) brand.textContent = e.target.value || 'WAPI';
+});
+</script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
