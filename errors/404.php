@@ -30,7 +30,7 @@ include __DIR__ . '/../includes/header.php';
                     <a href="<?= baseUrl(); ?>" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
                         <i class="bi bi-house-door-fill me-1"></i> Back to Home
                     </a>
-                    <?php if (Auth::check()): ?>
+                    <?php if (Auth::isLoggedIn()): ?>
                     <a href="<?= baseUrl('dashboard/'); ?>" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
                         <i class="bi bi-grid-1x2-fill me-1"></i> Dashboard
                     </a>
