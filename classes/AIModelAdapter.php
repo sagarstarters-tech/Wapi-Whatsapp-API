@@ -50,6 +50,46 @@ class AIModelAdapter
     }
 
     /**
+     * Test connection to an AI provider
+     *
+     * @param string $provider (gemini, openai, claude)
+     * @param string|null $apiKey Optional key to test, or uses saved key from settings
+     * @return array
+     * @throws Exception
+     */
+    public static function testProvider(string $provider, ?string $apiKey = null): array
+    {
+        $settings = new Settings();
+        $testMessages = [['role' => 'user', 'content' => 'Hello! Please confirm you are working in one short sentence.']];
+
+        switch ($provider) {
+            case 'gemini':
+                $key = !empty($apiKey) ? $apiKey : $settings->get('ai_gemini_api_key');
+                if (empty($key)) {
+                    throw new Exception('Gemini API key is missing. Please enter an API key first.');
+                }
+                return self::callGemini('You are a helpful assistant. Reply briefly.', $testMessages, 60, $key);
+
+            case 'openai':
+                $key = !empty($apiKey) ? $apiKey : $settings->get('ai_openai_api_key');
+                if (empty($key)) {
+                    throw new Exception('OpenAI API key is missing. Please enter an API key first.');
+                }
+                return self::callOpenAI('gpt-4o', 'You are a helpful assistant. Reply briefly.', $testMessages, 60, $key);
+
+            case 'claude':
+                $key = !empty($apiKey) ? $apiKey : $settings->get('ai_claude_api_key');
+                if (empty($key)) {
+                    throw new Exception('Claude API key is missing. Please enter an API key first.');
+                }
+                return self::callClaude('You are a helpful assistant. Reply briefly.', $testMessages, 60, $key);
+
+            default:
+                throw new Exception("Unknown AI provider: {$provider}");
+        }
+    }
+
+    /**
      * Call OpenAI API (GPT-4o, GPT-4.1)
      *
      * @param string $model
@@ -59,10 +99,10 @@ class AIModelAdapter
      * @return array
      * @throws Exception
      */
-    private static function callOpenAI(string $model, string $systemPrompt, array $messages, int $maxTokens): array
+    private static function callOpenAI(string $model, string $systemPrompt, array $messages, int $maxTokens, ?string $overrideKey = null): array
     {
         $settings = new Settings();
-        $apiKey = $settings->get('ai_openai_api_key');
+        $apiKey = !empty($overrideKey) ? $overrideKey : $settings->get('ai_openai_api_key');
 
         if (empty($apiKey)) {
             throw new Exception('OpenAI API key is not configured. Please set it in Admin Settings.');
@@ -142,10 +182,10 @@ class AIModelAdapter
      * @return array
      * @throws Exception
      */
-    private static function callGemini(string $systemPrompt, array $messages, int $maxTokens): array
+    private static function callGemini(string $systemPrompt, array $messages, int $maxTokens, ?string $overrideKey = null): array
     {
         $settings = new Settings();
-        $apiKey = $settings->get('ai_gemini_api_key');
+        $apiKey = !empty($overrideKey) ? $overrideKey : $settings->get('ai_gemini_api_key');
 
         if (empty($apiKey)) {
             throw new Exception('Gemini API key is not configured. Please set it in Admin Settings.');
@@ -187,9 +227,17 @@ class AIModelAdapter
             'Content-Type: application/json',
         ];
 
+        $usedModel = 'gemini-2.0-flash';
         $response = self::makeCurlRequest($url, $headers, $payload);
-
         $data = json_decode($response, true);
+
+        // Fallback to gemini-1.5-flash if 2.0-flash is not available on this API key/region
+        if (isset($data['error']) && (strpos($data['error']['message'] ?? '', 'gemini-2.0-flash') !== false || ($data['error']['code'] ?? 0) === 404)) {
+            $fallbackUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . urlencode($apiKey);
+            $response = self::makeCurlRequest($fallbackUrl, $headers, $payload);
+            $data = json_decode($response, true);
+            $usedModel = 'gemini-1.5-flash';
+        }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new Exception('Failed to parse Gemini response: ' . json_last_error_msg());
@@ -220,7 +268,7 @@ class AIModelAdapter
             'content' => $data['candidates'][0]['content']['parts'][0]['text'],
             'tokens_used' => $tokensUsed,
             'finish_reason' => $finishReasonMap[$finishReason] ?? strtolower($finishReason),
-            'model' => 'gemini-2.0-flash',
+            'model' => $usedModel,
         ];
     }
 
@@ -230,13 +278,14 @@ class AIModelAdapter
      * @param string $systemPrompt
      * @param array  $messages
      * @param int    $maxTokens
+     * @param string|null $overrideKey
      * @return array
      * @throws Exception
      */
-    private static function callClaude(string $systemPrompt, array $messages, int $maxTokens): array
+    private static function callClaude(string $systemPrompt, array $messages, int $maxTokens, ?string $overrideKey = null): array
     {
         $settings = new Settings();
-        $apiKey = $settings->get('ai_claude_api_key');
+        $apiKey = !empty($overrideKey) ? $overrideKey : $settings->get('ai_claude_api_key');
 
         if (empty($apiKey)) {
             throw new Exception('Claude API key is not configured. Please set it in Admin Settings.');

@@ -11,6 +11,38 @@ $db = Database::getInstance();
 $settings = new Settings();
 $hideNav = true;
 
+// Handle AJAX Test Connection
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'test_connection') {
+    header('Content-Type: application/json');
+    if (!CSRF::validateToken()) {
+        echo json_encode(['success' => false, 'message' => 'CSRF security token expired. Please refresh the page.']);
+        exit;
+    }
+
+    $provider = sanitize($_POST['provider'] ?? '');
+    $apiKey = trim($_POST['api_key'] ?? '');
+
+    try {
+        $startTime = microtime(true);
+        $result = AIModelAdapter::testProvider($provider, $apiKey);
+        $durationMs = round((microtime(true) - $startTime) * 1000);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Connected successfully!',
+            'model' => $result['model'] ?? $provider,
+            'reply' => $result['content'] ?? '',
+            'latency_ms' => $durationMs,
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
 // Handle POST - Save settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     $aiSettings = [
@@ -150,6 +182,14 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <div class="form-text">Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></div>
                         </div>
+                        <div class="col-12 pt-2 border-top">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div id="openaiTestResult" class="flex-grow-1"></div>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="btnTestOpenai" onclick="testAIProvider('openai')">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> Test OpenAI Connection
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -173,6 +213,14 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <div class="form-text">Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a></div>
                         </div>
+                        <div class="col-12 pt-2 border-top">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div id="geminiTestResult" class="flex-grow-1"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnTestGemini" onclick="testAIProvider('gemini')">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> Test Gemini Connection
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -195,6 +243,14 @@ include __DIR__ . '/../includes/header.php';
                                 <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('claudeKey')"><i class="bi bi-eye"></i></button>
                             </div>
                             <div class="form-text">Get your API key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></div>
+                        </div>
+                        <div class="col-12 pt-2 border-top">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div id="claudeTestResult" class="flex-grow-1"></div>
+                                <button type="button" class="btn btn-sm btn-outline-warning" id="btnTestClaude" onclick="testAIProvider('claude')">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> Test Claude Connection
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -261,6 +317,59 @@ include __DIR__ . '/../includes/header.php';
 function togglePassword(id) {
     const input = document.getElementById(id);
     input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function testAIProvider(provider) {
+    const keyInput = document.getElementById(provider + 'Key');
+    const resultDiv = document.getElementById(provider + 'TestResult');
+    const btn = document.getElementById('btnTest' + provider.charAt(0).toUpperCase() + provider.slice(1));
+    
+    if (!keyInput || !resultDiv || !btn) return;
+    
+    const apiKey = keyInput.value.trim();
+    if (!apiKey) {
+        resultDiv.innerHTML = '<span class="text-danger small"><i class="bi bi-exclamation-circle-fill me-1"></i> Please enter an API key first.</span>';
+        return;
+    }
+    
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Testing...';
+    resultDiv.innerHTML = '<span class="text-muted small"><i class="bi bi-hourglass-split me-1"></i> Connecting to ' + provider.toUpperCase() + ' servers...</span>';
+    
+    const formData = new FormData();
+    formData.append('action', 'test_connection');
+    formData.append('provider', provider);
+    formData.append('api_key', apiKey);
+    formData.append('csrf_token', '<?= CSRF::getToken(); ?>');
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success py-2 px-3 mb-0 d-inline-block border-0 shadow-sm" style="font-size: 0.85rem; border-radius: 8px;">
+                    <div class="fw-bold text-success"><i class="bi bi-check-circle-fill me-1"></i> Connection Successful! (${data.latency_ms}ms)</div>
+                    <div class="text-secondary small mt-1"><strong>Model:</strong> ${data.model} | <strong>Reply:</strong> "${data.reply}"</div>
+                </div>`;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger py-2 px-3 mb-0 d-inline-block border-0 shadow-sm" style="font-size: 0.85rem; border-radius: 8px;">
+                    <div class="fw-bold text-danger"><i class="bi bi-x-circle-fill me-1"></i> Connection Failed!</div>
+                    <div class="text-danger small mt-1">${data.message}</div>
+                </div>`;
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        resultDiv.innerHTML = '<span class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i> Network error: ' + err.message + '</span>';
+    });
 }
 </script>
 
