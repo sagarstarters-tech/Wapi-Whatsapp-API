@@ -14,9 +14,9 @@ $hideNav = true;
 $migrationNeeded = false;
 
 $enableAIChatbot = $settings->get('enable_ai_chatbot_builder', '1') === '1';
-if (!$enableAIChatbot && !Auth::isAdmin()) {
-    setFlash('warning', 'AI ChatBot Builder module is currently disabled by administrator.');
-    redirect('dashboard/');
+$userAIPref = $settings->get("user_{$userId}_ai_chatbot_builder", null);
+if ($userAIPref !== null) {
+    $enableAIChatbot = ($userAIPref === '1');
 }
 
 // Fetch user's AI bots (wrapped in try-catch for pre-migration state)
@@ -54,17 +54,15 @@ include __DIR__ . '/../includes/header.php';
     <?php include __DIR__ . '/../includes/sidebar.php'; ?>
 
     <main class="main-content">
-        <?php if (!$enableAIChatbot): ?>
-        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 p-3 rounded-3" style="border-left: 4px solid #f59e0b;">
+        <div id="aiDisabledNotice" class="alert alert-warning d-flex justify-content-between align-items-center mb-4 p-3 rounded-3" style="<?= $enableAIChatbot ? 'display: none !important;' : ''; ?> border-left: 4px solid #f59e0b;">
             <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-exclamation-triangle-fill fs-5 text-warning"></i>
+                <i class="bi bi-pause-circle-fill fs-5 text-warning"></i>
                 <div>
-                    <strong>Admin Notice:</strong> AI ChatBot Builder is currently disabled globally for regular users.
+                    <strong>Notice:</strong> AI ChatBot responses are currently <strong>PAUSED</strong> for incoming WhatsApp messages.
                 </div>
             </div>
-            <a href="<?= baseUrl('admin/settings.php?tab=automations'); ?>" class="btn btn-warning btn-sm">Enable in Settings</a>
+            <button class="btn btn-warning btn-sm fw-semibold" onclick="document.querySelector('.module-quick-toggle[data-module=\'ai_chatbot_builder\']')?.click()">Turn ON Responses</button>
         </div>
-        <?php endif; ?>
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">🤖 AI ChatBot Builder</h1>
@@ -74,8 +72,20 @@ include __DIR__ . '/../includes/header.php';
                     <span>AI ChatBot Builder</span>
                 </div>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex align-items-center gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+                
+                <!-- Master AI Bot Status Switch -->
+                <div class="d-flex align-items-center gap-2 bg-white px-3 py-1 rounded-pill border shadow-sm" title="Toggle AI Bot Responses">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #555;">AI Bot Status:</span>
+                    <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                        <input class="form-check-input module-quick-toggle" type="checkbox" role="switch" data-module="ai_chatbot_builder" <?= $enableAIChatbot ? 'checked' : ''; ?> style="width: 2.3rem; height: 1.2rem; cursor: pointer; margin: 0;">
+                    </div>
+                    <span class="badge rounded-pill" id="headerAIChatbotBadge" style="font-size: 0.68rem; <?= $enableAIChatbot ? 'background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;' : 'background: #6c757d; color: #fff;'; ?>">
+                        <?= $enableAIChatbot ? 'ACTIVE' : 'DISABLED'; ?>
+                    </span>
+                </div>
+
                 <a href="<?= baseUrl('dashboard/ai-chatbot-editor.php'); ?>" class="btn btn-ai btn-sm" style="border-radius: 10px; padding: 0.5rem 1.25rem;">
                     <i class="bi bi-plus-lg me-1"></i> Create New Bot
                 </a>

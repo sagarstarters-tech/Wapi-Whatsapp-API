@@ -45,6 +45,29 @@ $waAccount = $db->fetch("SELECT * FROM whatsapp_accounts WHERE user_id = ? LIMIT
 $isEmailVerified = !empty($user['email_verified']);
 $isWaVerified = !empty($waAccount['phone_number_id']);
 
+// Automation Module Status & Counts
+$userFlowsCount = (int)$db->count('chatbot_flows', 'user_id = ? AND is_active = 1', [$userId]);
+$totalFlowsCount = (int)$db->count('chatbot_flows', 'user_id = ?', [$userId]);
+
+$userAIBotsCount = 0;
+$totalAIBotsCount = 0;
+try {
+    $userAIBotsCount = (int)$db->count('ai_bots', "user_id = ? AND status = 'active'", [$userId]);
+    $totalAIBotsCount = (int)$db->count('ai_bots', 'user_id = ?', [$userId]);
+} catch (Exception $e) {}
+
+$enableChatbot = $settings->get('enable_chatbot_builder', '1') === '1';
+$userChatbotPref = $settings->get("user_{$userId}_chatbot_builder", null);
+if ($userChatbotPref !== null) {
+    $enableChatbot = ($userChatbotPref === '1');
+}
+
+$enableAIChatbot = $settings->get('enable_ai_chatbot_builder', '1') === '1';
+$userAIPref = $settings->get("user_{$userId}_ai_chatbot_builder", null);
+if ($userAIPref !== null) {
+    $enableAIChatbot = ($userAIPref === '1');
+}
+
 $pageTitle = 'Dashboard';
 $extraCss = [asset('assets/css/dashboard.css')];
 $extraJs = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', asset('assets/js/admin.js')];
@@ -138,6 +161,100 @@ include __DIR__ . '/../includes/header.php';
                 <p class="mt-2 mb-0"><a href="<?= baseUrl('dashboard/subscription.php'); ?>">👉 View Pricing & Upgrade Now</a></p>
             </div>
             <button class="close-btn" onclick="this.parentElement.style.display='none'">&times;</button>
+        </div>
+
+        <!-- Automations & Bot Control Center -->
+        <div class="card mb-4 border-0 shadow-sm" style="border-radius: var(--border-radius); background: linear-gradient(135deg, #ffffff 0%, #f9fbfd 100%); border: 1px solid rgba(0,0,0,0.06) !important;">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.14); display: flex; align-items: center; justify-content: center; color: #128c7e;">
+                            <i class="bi bi-cpu-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0" style="font-size: 1.05rem;">Automations & Bot Control Center</h5>
+                            <p class="text-muted mb-0" style="font-size: 0.78rem;">Turn your automated WhatsApp responses and AI chatbots ON or OFF with a single click.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem;">
+                            <i class="bi bi-broadcast text-success me-1"></i> Webhook Active
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Chatbot Flow Builder Card -->
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded-3 border h-100 d-flex flex-column justify-content-between" style="background: #ffffff; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #4B6EAF, #2575fc); display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 3px 8px rgba(37, 117, 252, 0.25);">
+                                            <i class="bi bi-robot fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0" style="font-size: 0.95rem;">Chatbot Builder</h6>
+                                            <span class="badge rounded-pill <?= $enableChatbot ? 'bg-success' : 'bg-secondary'; ?>" id="badgeChatbotStatus" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                                <i class="bi <?= $enableChatbot ? 'bi-check-circle-fill' : 'bi-dash-circle'; ?> me-1"></i><?= $enableChatbot ? 'ACTIVE' : 'DISABLED'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch m-0" title="Enable or Disable Chatbot Builder">
+                                        <input class="form-check-input module-quick-toggle" type="checkbox" role="switch" id="dashToggleChatbot" data-module="chatbot_builder" <?= $enableChatbot ? 'checked' : ''; ?> style="width: 2.8rem; height: 1.45rem; cursor: pointer;">
+                                    </div>
+                                </div>
+                                <p class="text-secondary mb-3" style="font-size: 0.8125rem; line-height: 1.4;">
+                                    Visual flowchart node builder with keyword triggers, quick replies, buttons, and custom response logic for incoming WhatsApp messages.
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-auto">
+                                <span class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="bi bi-bezier2 me-1 text-primary"></i> <strong><?= $userFlowsCount; ?></strong> Active Flows / <?= $totalFlowsCount; ?> Total
+                                </span>
+                                <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="btn btn-sm btn-outline-primary px-3 fw-medium" style="font-size: 0.78rem; border-radius: 8px;">
+                                    Open Flow Builder <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI ChatBot Builder Card -->
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded-3 border h-100 d-flex flex-column justify-content-between" style="background: #ffffff; border-color: rgba(0,0,0,0.08) !important; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 3px 8px rgba(118, 75, 162, 0.25);">
+                                            <i class="bi bi-stars fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0" style="font-size: 0.95rem;">AI ChatBot Builder</h6>
+                                            <span class="badge rounded-pill" id="badgeAIChatbotStatus" style="font-size: 0.65rem; letter-spacing: 0.5px; <?= $enableAIChatbot ? 'background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;' : 'background: #6c757d; color: #fff;'; ?>">
+                                                <i class="bi <?= $enableAIChatbot ? 'bi-stars' : 'bi-dash-circle'; ?> me-1"></i><?= $enableAIChatbot ? 'ACTIVE' : 'DISABLED'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch m-0" title="Enable or Disable AI ChatBot Builder">
+                                        <input class="form-check-input module-quick-toggle" type="checkbox" role="switch" id="dashToggleAIChatbot" data-module="ai_chatbot_builder" <?= $enableAIChatbot ? 'checked' : ''; ?> style="width: 2.8rem; height: 1.45rem; cursor: pointer;">
+                                    </div>
+                                </div>
+                                <p class="text-secondary mb-3" style="font-size: 0.8125rem; line-height: 1.4;">
+                                    Autonomous AI assistant trained on website URLs, documents and custom FAQs. Powered by OpenAI, Gemini and Claude.
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-auto">
+                                <span class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="bi bi-cpu me-1" style="color: #764ba2;"></i> <strong><?= $userAIBotsCount; ?></strong> Active AI Bots / <?= $totalAIBotsCount; ?> Total
+                                </span>
+                                <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="btn btn-sm btn-outline-dark px-3 fw-medium" style="font-size: 0.78rem; border-radius: 8px; border-color: #764ba2; color: #764ba2;">
+                                    Manage AI Bots <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Stats Row -->

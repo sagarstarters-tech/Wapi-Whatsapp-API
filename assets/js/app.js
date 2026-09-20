@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== Dashboard Sidebar Toggle =====
     initDashboardSidebar();
+
+    // ===== Automation Module Quick Toggles =====
+    initModuleQuickToggles();
 });
 
 // ===== Dashboard Sidebar Toggle =====
@@ -329,4 +332,126 @@ function togglePassword(btn) {
         input.type = 'password';
         icon.className = 'bi bi-eye';
     }
+}
+
+// ===== Universal Automation Module Quick Toggles =====
+function initModuleQuickToggles() {
+    if (window._moduleQuickTogglesInitialized) return;
+    window._moduleQuickTogglesInitialized = true;
+
+    function showToast(message, isSuccess) {
+        let container = document.getElementById('wapiToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'wapiToastContainer';
+            container.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.style.cssText = 'background: ' + (isSuccess ? '#10b981' : '#ef4444') + '; color: #ffffff; padding: 12px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; align-items: center; gap: 10px; pointer-events: auto; opacity: 0; transform: translateY(-10px); transition: all 0.3s ease;';
+        toast.innerHTML = '<i class="bi ' + (isSuccess ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill') + '" style="font-size: 1.1rem;"></i> <span>' + message + '</span>';
+        container.appendChild(toast);
+        setTimeout(function() {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        }, 10);
+        setTimeout(function() {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 3200);
+    }
+
+    function syncVisuals(moduleName, isEnabled) {
+        document.querySelectorAll('.module-quick-toggle[data-module="' + moduleName + '"]').forEach(function(el) {
+            el.checked = !!isEnabled;
+        });
+
+        if (moduleName === 'chatbot_builder') {
+            const badges = [
+                document.getElementById('badgeChatbotStatus'),
+                document.getElementById('dashBadgeChatbot'),
+                document.getElementById('topbarChatbotBadge'),
+                document.getElementById('badgeChatbotBuilder')
+            ];
+            badges.forEach(function(badge) {
+                if (badge) {
+                    if (isEnabled) {
+                        badge.className = 'badge rounded-pill bg-success';
+                        badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>ACTIVE';
+                    } else {
+                        badge.className = 'badge rounded-pill bg-secondary';
+                        badge.innerHTML = '<i class="bi bi-dash-circle me-1"></i>DISABLED';
+                    }
+                }
+            });
+            const notice = document.getElementById('builderDisabledNotice');
+            if (notice) notice.style.display = isEnabled ? 'none' : 'flex';
+        } else if (moduleName === 'ai_chatbot_builder') {
+            const badges = [
+                document.getElementById('badgeAIChatbotStatus'),
+                document.getElementById('dashBadgeAIChatbot'),
+                document.getElementById('headerAIChatbotBadge'),
+                document.getElementById('badgeAIChatbotBuilder')
+            ];
+            badges.forEach(function(badge) {
+                if (badge) {
+                    if (isEnabled) {
+                        badge.className = 'badge rounded-pill text-white';
+                        badge.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+                        badge.innerHTML = '<i class="bi bi-stars me-1"></i>ACTIVE';
+                    } else {
+                        badge.className = 'badge rounded-pill bg-secondary text-white';
+                        badge.style.background = '#6c757d';
+                        badge.innerHTML = '<i class="bi bi-dash-circle me-1"></i>DISABLED';
+                    }
+                }
+            });
+            const notice = document.getElementById('aiDisabledNotice');
+            if (notice) notice.style.display = isEnabled ? 'none' : 'flex';
+        }
+    }
+
+    document.addEventListener('change', function(e) {
+        const toggle = e.target.closest('.module-quick-toggle');
+        if (!toggle) return;
+
+        const moduleName = toggle.getAttribute('data-module');
+        const isChecked = toggle.checked ? 1 : 0;
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfInput = document.querySelector('input[name="csrf_token"]') || document.querySelector('input[name="_csrf_token"]');
+        const csrfToken = (csrfMeta ? csrfMeta.getAttribute('content') : '') || (csrfInput ? csrfInput.value : '');
+
+        syncVisuals(moduleName, isChecked);
+
+        const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : (window.location.origin + (window.location.pathname.startsWith('/wapi') ? '/wapi/' : '/'));
+        const apiUrl = baseUrl.replace(/\/?$/, '/') + 'api/toggle-module.php';
+
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({
+                module: moduleName,
+                status: isChecked,
+                _csrf_token: csrfToken
+            })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.success) {
+                showToast(data.message || 'Module status updated successfully.', true);
+            } else {
+                syncVisuals(moduleName, isChecked ? 0 : 1);
+                showToast(data.message || 'Failed to update module status.', false);
+            }
+        })
+        .catch(function(err) {
+            console.error('Toggle error:', err);
+            syncVisuals(moduleName, isChecked ? 0 : 1);
+            showToast('Network error while updating module status.', false);
+        });
+    });
 }

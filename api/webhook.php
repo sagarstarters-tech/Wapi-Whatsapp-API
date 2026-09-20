@@ -254,10 +254,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Check global automation module toggles
+            // Check global & user automation module toggles
             $settings = new Settings();
-            $chatbotModuleEnabled = $settings->get('enable_chatbot_builder', '1') === '1';
-            $aiChatbotModuleEnabled = $settings->get('enable_ai_chatbot_builder', '1') === '1';
+            $globalChatbot = $settings->get('enable_chatbot_builder', '1') === '1';
+            $userChatbotPref = $settings->get("user_{$userId}_chatbot_builder", null);
+            $chatbotModuleEnabled = ($userChatbotPref !== null) ? ($userChatbotPref === '1') : $globalChatbot;
+
+            $globalAIChatbot = $settings->get('enable_ai_chatbot_builder', '1') === '1';
+            $userAIPref = $settings->get("user_{$userId}_ai_chatbot_builder", null);
+            $aiChatbotModuleEnabled = ($userAIPref !== null) ? ($userAIPref === '1') : $globalAIChatbot;
 
             // Helper to pass message to AI Bot if active
             $tryAIBot = function($msgText) use ($db, $phoneNumberId, $userId, $from, $profileName, $accessToken, $aiChatbotModuleEnabled) {

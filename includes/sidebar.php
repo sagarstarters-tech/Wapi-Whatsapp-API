@@ -74,11 +74,22 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         <!-- Automations -->
         <?php 
         $sidebarSettings = isset($settings) ? $settings : new Settings();
+        $sidebarUserId = $_SESSION['user_id'] ?? 0;
+        
         $enableChatbot = $sidebarSettings->get('enable_chatbot_builder', '1') === '1';
+        $userChatbotPref = $sidebarSettings->get("user_{$sidebarUserId}_chatbot_builder", null);
+        if ($userChatbotPref !== null) {
+            $enableChatbot = ($userChatbotPref === '1');
+        }
+
         $enableAIChatbot = $sidebarSettings->get('enable_ai_chatbot_builder', '1') === '1';
+        $userAIPref = $sidebarSettings->get("user_{$sidebarUserId}_ai_chatbot_builder", null);
+        if ($userAIPref !== null) {
+            $enableAIChatbot = ($userAIPref === '1');
+        }
+
         $isUserAdmin = Auth::isAdmin();
         ?>
-        <?php if ($enableChatbot || $enableAIChatbot || $isUserAdmin): ?>
         <div class="sidebar-section">
             <div class="sidebar-section-title d-flex justify-content-between align-items-center">
                 <span>Automations</span>
@@ -88,31 +99,29 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
                     </a>
                 <?php endif; ?>
             </div>
-            <?php if ($enableChatbot || $isUserAdmin): ?>
-            <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="sidebar-link <?= $currentPage === 'chatbot-builder' ? 'active' : ''; ?>" style="<?= !$enableChatbot ? 'opacity: 0.55;' : ''; ?>">
-                <i class="bi bi-robot"></i>
-                <span>Chatbot Builder</span>
-                <?php if (!$enableChatbot): ?>
-                    <span class="badge rounded-pill bg-secondary ms-auto" style="font-size: 0.6rem;">OFF</span>
-                <?php else: ?>
-                    <span class="badge rounded-pill bg-primary ms-auto" style="font-size: 0.6rem;">NEW</span>
-                <?php endif; ?>
-            </a>
-            <?php endif; ?>
 
-            <?php if ($enableAIChatbot || $isUserAdmin): ?>
-            <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-chatbot' || $currentPage === 'ai-chatbot-editor' ? 'active' : ''; ?>" style="<?= !$enableAIChatbot ? 'opacity: 0.55;' : ''; ?>">
-                <i class="bi bi-stars"></i>
-                <span>AI ChatBot Builder</span>
-                <?php if (!$enableAIChatbot): ?>
-                    <span class="badge rounded-pill bg-secondary ms-auto" style="font-size: 0.6rem;">OFF</span>
-                <?php else: ?>
-                    <span class="badge rounded-pill ms-auto" style="font-size: 0.6rem; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">AI</span>
-                <?php endif; ?>
-            </a>
-            <?php endif; ?>
+            <!-- Chatbot Builder with Quick Switch -->
+            <div class="sidebar-toggle-item d-flex align-items-center justify-content-between pe-2 mb-1" style="border-radius: var(--border-radius-sm); transition: var(--transition-fast);">
+                <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="sidebar-link flex-grow-1 <?= $currentPage === 'chatbot-builder' ? 'active' : ''; ?>" style="<?= !$enableChatbot ? 'opacity: 0.65;' : ''; ?> padding-right: 4px;">
+                    <i class="bi bi-robot"></i>
+                    <span>Chatbot Builder</span>
+                </a>
+                <div class="form-check form-switch m-0 p-0 d-flex align-items-center" title="Toggle Chatbot Builder">
+                    <input class="form-check-input module-quick-toggle" type="checkbox" role="switch" data-module="chatbot_builder" <?= $enableChatbot ? 'checked' : ''; ?> style="width: 2rem; height: 1.05rem; cursor: pointer; margin: 0;">
+                </div>
+            </div>
+
+            <!-- AI ChatBot Builder with Quick Switch -->
+            <div class="sidebar-toggle-item d-flex align-items-center justify-content-between pe-2 mb-1" style="border-radius: var(--border-radius-sm); transition: var(--transition-fast);">
+                <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="sidebar-link flex-grow-1 <?= ($currentPage === 'ai-chatbot' || $currentPage === 'ai-chatbot-editor') ? 'active' : ''; ?>" style="<?= !$enableAIChatbot ? 'opacity: 0.65;' : ''; ?> padding-right: 4px;">
+                    <i class="bi bi-stars"></i>
+                    <span>AI ChatBot Builder</span>
+                </a>
+                <div class="form-check form-switch m-0 p-0 d-flex align-items-center" title="Toggle AI ChatBot Builder">
+                    <input class="form-check-input module-quick-toggle" type="checkbox" role="switch" data-module="ai_chatbot_builder" <?= $enableAIChatbot ? 'checked' : ''; ?> style="width: 2rem; height: 1.05rem; cursor: pointer; margin: 0;">
+                </div>
+            </div>
         </div>
-        <?php endif; ?>
 
         <!-- CRM & Contacts -->
         <div class="sidebar-section">
@@ -184,3 +193,123 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         </a>
     </div>
 </aside>
+
+<script>
+(function() {
+    function showModuleToast(message, isSuccess) {
+        let container = document.getElementById('wapiToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'wapiToastContainer';
+            container.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.style.cssText = 'background: ' + (isSuccess ? '#10b981' : '#ef4444') + '; color: #ffffff; padding: 12px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; align-items: center; gap: 10px; pointer-events: auto; opacity: 0; transform: translateY(-10px); transition: all 0.3s ease;';
+        toast.innerHTML = '<i class="bi ' + (isSuccess ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill') + '" style="font-size: 1.1rem;"></i> <span>' + message + '</span>';
+        container.appendChild(toast);
+        setTimeout(function() {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        }, 10);
+        setTimeout(function() {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 3200);
+    }
+
+    function updateModuleVisuals(moduleName, isEnabled) {
+        // Sync all switches on the current page
+        document.querySelectorAll('.module-quick-toggle[data-module="' + moduleName + '"]').forEach(function(el) {
+            el.checked = !!isEnabled;
+        });
+
+        // Update badges
+        if (moduleName === 'chatbot_builder') {
+            const badges = [
+                document.getElementById('badgeChatbotStatus'),
+                document.getElementById('dashBadgeChatbot'),
+                document.getElementById('topbarChatbotBadge'),
+                document.getElementById('badgeChatbotBuilder')
+            ];
+            badges.forEach(function(badge) {
+                if (badge) {
+                    if (isEnabled) {
+                        badge.className = 'badge rounded-pill bg-success';
+                        badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>ACTIVE';
+                    } else {
+                        badge.className = 'badge rounded-pill bg-secondary';
+                        badge.innerHTML = '<i class="bi bi-dash-circle me-1"></i>DISABLED';
+                    }
+                }
+            });
+        } else if (moduleName === 'ai_chatbot_builder') {
+            const badges = [
+                document.getElementById('badgeAIChatbotStatus'),
+                document.getElementById('dashBadgeAIChatbot'),
+                document.getElementById('headerAIChatbotBadge'),
+                document.getElementById('badgeAIChatbotBuilder')
+            ];
+            badges.forEach(function(badge) {
+                if (badge) {
+                    if (isEnabled) {
+                        badge.className = 'badge rounded-pill text-white';
+                        badge.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+                        badge.innerHTML = '<i class="bi bi-stars me-1"></i>ACTIVE';
+                    } else {
+                        badge.className = 'badge rounded-pill bg-secondary text-white';
+                        badge.style.background = '#6c757d';
+                        badge.innerHTML = '<i class="bi bi-dash-circle me-1"></i>DISABLED';
+                    }
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.module-quick-toggle').forEach(function(toggle) {
+            toggle.addEventListener('change', function(e) {
+                const moduleName = this.getAttribute('data-module');
+                const isChecked = this.checked ? 1 : 0;
+                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                const csrfInput = document.querySelector('input[name="csrf_token"]') || document.querySelector('input[name="_csrf_token"]');
+                const csrfToken = (csrfMeta ? csrfMeta.getAttribute('content') : '') || (csrfInput ? csrfInput.value : '');
+
+                updateModuleVisuals(moduleName, isChecked);
+
+                const apiUrl = '<?= baseUrl("api/toggle-module.php"); ?>';
+
+                fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        module: moduleName,
+                        status: isChecked,
+                        _csrf_token: csrfToken
+                    })
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.success) {
+                        showModuleToast(data.message || 'Module status updated successfully.', true);
+                    } else {
+                        // Revert visual state
+                        updateModuleVisuals(moduleName, isChecked ? 0 : 1);
+                        showModuleToast(data.message || 'Failed to update module status.', false);
+                    }
+                })
+                .catch(function(err) {
+                    console.error('Module toggle error:', err);
+                    updateModuleVisuals(moduleName, isChecked ? 0 : 1);
+                    showModuleToast('Network error while updating module status.', false);
+                });
+            });
+        });
+    });
+})();
+</script>
+

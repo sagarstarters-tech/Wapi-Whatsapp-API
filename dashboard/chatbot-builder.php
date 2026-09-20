@@ -8,10 +8,11 @@ require_once __DIR__ . '/../config/session.php';
 Auth::requireLogin();
 
 $settings = new Settings();
+$userId = $_SESSION['user_id'];
 $enableChatbot = $settings->get('enable_chatbot_builder', '1') === '1';
-if (!$enableChatbot && !Auth::isAdmin()) {
-    setFlash('warning', 'Chatbot Builder module is currently disabled by administrator.');
-    redirect('dashboard/');
+$userChatbotPref = $settings->get("user_{$userId}_chatbot_builder", null);
+if ($userChatbotPref !== null) {
+    $enableChatbot = ($userChatbotPref === '1');
 }
 
 $pageTitle = 'Chatbot Flow Builder';
@@ -32,12 +33,10 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="builder-wrapper">
-    <?php if (!$enableChatbot): ?>
-    <div class="alert alert-warning py-1 px-3 mb-0 rounded-0 d-flex justify-content-between align-items-center" style="font-size: 0.8rem; z-index: 1000; border-bottom: 1px solid #ffeeba;">
-        <span><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Admin Notice:</strong> Chatbot Builder is currently disabled globally for regular users.</span>
-        <a href="<?= baseUrl('admin/settings.php?tab=automations'); ?>" class="btn btn-warning btn-sm py-0 px-2" style="font-size: 0.75rem;">Enable in Settings</a>
+    <div id="builderDisabledNotice" class="alert alert-warning py-1 px-3 mb-0 rounded-0 d-flex justify-content-between align-items-center" style="<?= $enableChatbot ? 'display: none !important;' : ''; ?> font-size: 0.8rem; z-index: 1000; border-bottom: 1px solid #ffeeba;">
+        <span><i class="bi bi-pause-circle-fill me-1"></i><strong>Notice:</strong> Chatbot automated responses are currently <strong>PAUSED</strong> for incoming WhatsApp messages.</span>
+        <button class="btn btn-warning btn-sm py-0 px-2 fw-semibold" style="font-size: 0.75rem;" onclick="document.querySelector('.module-quick-toggle[data-module=\'chatbot_builder\']')?.click()">Turn ON Responses</button>
     </div>
-    <?php endif; ?>
     <!-- Top Palette Toolbar -->
     <header class="top-palette align-items-center bg-light border-bottom px-3 py-2 d-flex justify-content-between">
         <div class="d-flex align-items-center gap-2 drag-items-row">
@@ -96,6 +95,17 @@ include __DIR__ . '/../includes/header.php';
             <!-- Flow Name Input -->
             <input type="text" id="flowNameInput" class="form-control form-control-sm text-center mx-2" value="Demo_bot" style="width: 150px; font-weight: 500;">
             
+            <!-- Bot Status Switch -->
+            <div class="d-flex align-items-center gap-2 bg-white px-2 py-1 rounded-pill border shadow-sm mx-1" title="Toggle Chatbot Auto-Replies">
+                <span style="font-size: 0.75rem; font-weight: 600; color: #555;">Bot Status:</span>
+                <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                    <input class="form-check-input module-quick-toggle" type="checkbox" role="switch" data-module="chatbot_builder" <?= $enableChatbot ? 'checked' : ''; ?> style="width: 2.2rem; height: 1.15rem; cursor: pointer; margin: 0;">
+                </div>
+                <span class="badge rounded-pill <?= $enableChatbot ? 'bg-success' : 'bg-secondary'; ?>" id="topbarChatbotBadge" style="font-size: 0.65rem;">
+                    <?= $enableChatbot ? 'ACTIVE' : 'DISABLED'; ?>
+                </span>
+            </div>
+
             <!-- My Flows Button -->
             <button class="btn btn-sm btn-outline-primary d-flex align-items-center px-3" onclick="openFlowsPanel()" style="font-weight: 500;">
                 <i class="bi bi-collection me-2"></i> My Flows
