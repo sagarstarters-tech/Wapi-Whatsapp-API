@@ -15,6 +15,13 @@ class CSRF {
     }
 
     /**
+     * Get CSRF token string (alias)
+     */
+    public static function getToken() {
+        return self::generateToken();
+    }
+
+    /**
      * Get hidden input field with CSRF token
      */
     public static function tokenField() {
@@ -27,7 +34,7 @@ class CSRF {
      */
     public static function validateToken($token = null) {
         if ($token === null) {
-            $token = $_POST[CSRF_TOKEN_NAME] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+            $token = $_POST[CSRF_TOKEN_NAME] ?? $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         }
 
         if (empty($_SESSION[CSRF_TOKEN_NAME]) || empty($token)) {

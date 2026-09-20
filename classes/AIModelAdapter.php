@@ -508,23 +508,30 @@ class AIModelAdapter
         }
 
         // Handle HTTP errors
-        if ($httpCode === 401) {
-            throw new Exception('API authentication failed. Please check your API key.');
-        }
-        if ($httpCode === 429) {
-            throw new Exception('API rate limit exceeded. Please try again later.');
-        }
-        if ($httpCode === 500 || $httpCode === 502 || $httpCode === 503) {
-            throw new Exception("AI API server error (HTTP {$httpCode}). Please try again later.");
-        }
         if ($httpCode < 200 || $httpCode >= 300) {
-            // Try to extract error message from response
             $errorData = json_decode($response, true);
-            $errorMsg = $errorData['error']['message'] ?? $errorData['error'] ?? "HTTP {$httpCode}";
-            if (is_array($errorMsg)) {
-                $errorMsg = json_encode($errorMsg);
+            $errorMsg = '';
+            if (!empty($errorData['error'])) {
+                if (is_string($errorData['error'])) {
+                    $errorMsg = $errorData['error'];
+                } elseif (isset($errorData['error']['message'])) {
+                    $errorMsg = $errorData['error']['message'];
+                }
             }
-            throw new Exception("AI API request failed: {$errorMsg}");
+            if (empty($errorMsg)) {
+                if ($httpCode === 401) {
+                    $errorMsg = 'API authentication failed (HTTP 401). Please verify your API key.';
+                } elseif ($httpCode === 429) {
+                    $errorMsg = 'API rate limit exceeded (HTTP 429). Please try again later.';
+                } elseif ($httpCode === 404) {
+                    $errorMsg = 'Model not found (HTTP 404). This model may not be supported by your key.';
+                } elseif ($httpCode >= 500) {
+                    $errorMsg = "AI API server error (HTTP {$httpCode}). Please try again later.";
+                } else {
+                    $errorMsg = "API request failed with HTTP code {$httpCode}.";
+                }
+            }
+            throw new Exception($errorMsg);
         }
 
         return $response;

@@ -13,6 +13,9 @@ $hideNav = true;
 
 // Handle AJAX Test Connection
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'test_connection') {
+    if (ob_get_level()) {
+        ob_clean();
+    }
     header('Content-Type: application/json');
     if (!CSRF::validateToken()) {
         echo json_encode(['success' => false, 'message' => 'CSRF security token expired. Please refresh the page.']);
@@ -324,7 +327,10 @@ function testAIProvider(provider) {
     const resultDiv = document.getElementById(provider + 'TestResult');
     const btn = document.getElementById('btnTest' + provider.charAt(0).toUpperCase() + provider.slice(1));
     
-    if (!keyInput || !resultDiv || !btn) return;
+    if (!keyInput || !resultDiv || !btn) {
+        console.error('Test provider elements missing for:', provider);
+        return;
+    }
     
     const apiKey = keyInput.value.trim();
     if (!apiKey) {
@@ -337,17 +343,33 @@ function testAIProvider(provider) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Testing...';
     resultDiv.innerHTML = '<span class="text-muted small"><i class="bi bi-hourglass-split me-1"></i> Connecting to ' + provider.toUpperCase() + ' servers...</span>';
     
+    // Retrieve CSRF token from page DOM or fallback to PHP helper
+    const csrfInput = document.querySelector('input[name="<?= CSRF_TOKEN_NAME; ?>"]') || document.querySelector('input[name="csrf_token"]');
+    const csrfVal = csrfInput ? csrfInput.value : '<?= CSRF::getToken(); ?>';
+
     const formData = new FormData();
     formData.append('action', 'test_connection');
     formData.append('provider', provider);
     formData.append('api_key', apiKey);
-    formData.append('csrf_token', '<?= CSRF::getToken(); ?>');
+    formData.append('<?= CSRF_TOKEN_NAME; ?>', csrfVal);
+    formData.append('csrf_token', csrfVal);
     
     fetch(window.location.href, {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
-    .then(r => r.json())
+    .then(async response => {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Non-JSON response from server:', text);
+            throw new Error('Server error: ' + (text.substring(0, 150) || response.statusText));
+        }
+    })
     .then(data => {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
@@ -368,7 +390,7 @@ function testAIProvider(provider) {
     .catch(err => {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
-        resultDiv.innerHTML = '<span class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i> Network error: ' + err.message + '</span>';
+        resultDiv.innerHTML = '<span class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i> ' + err.message + '</span>';
     });
 }
 </script>
