@@ -71,9 +71,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                 'form_subtitle'    => sanitize($_POST['extra']['form_subtitle'] ?? ''),
             ];
         } elseif ($slug === 'about') {
+            $imageUrl = trim($_POST['extra']['image_url'] ?? 'uploads/cms/wapi-team.jpg');
+
+            // Handle direct file upload from user computer
+            if (isset($_FILES['about_image']) && $_FILES['about_image']['error'] === UPLOAD_ERR_OK) {
+                $uploadRes = uploadFile($_FILES['about_image'], 'cms', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+                if ($uploadRes['success']) {
+                    $imageUrl = $uploadRes['path'];
+                } else {
+                    setFlash('warning', 'Image upload issue: ' . $uploadRes['message']);
+                }
+            }
+
             $extraData = [
                 'headline'      => sanitize($_POST['extra']['headline'] ?? 'Empowering Modern Business Communication'),
-                'image_url'     => trim($_POST['extra']['image_url'] ?? 'assets/img/hero-image.png'),
+                'image_url'     => $imageUrl,
                 'vision_title'  => sanitize($_POST['extra']['vision_title'] ?? 'Our Vision'),
                 'vision_icon'   => sanitize($_POST['extra']['vision_icon'] ?? 'bi-eye-fill'),
                 'vision_desc'   => sanitize($_POST['extra']['vision_desc'] ?? ''),
@@ -232,7 +244,7 @@ include __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </div>
 
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <?= CSRF::tokenField(); ?>
             <input type="hidden" name="action" value="save">
             <input type="hidden" name="slug" value="<?= $activeSlug; ?>">
@@ -403,8 +415,34 @@ include __DIR__ . '/../includes/header.php';
                                     <input type="text" name="extra[headline]" class="form-control" value="<?= e($extra['headline'] ?? 'Empowering Modern Business Communication'); ?>" required>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-semibold">About Us Image (Asset path or URL)</label>
-                                    <input type="text" name="extra[image_url]" class="form-control" value="<?= e($extra['image_url'] ?? 'assets/img/hero-image.png'); ?>">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <label class="form-label fw-bold mb-2"><i class="bi bi-image text-primary me-1"></i> WAPI Team / Hero Image</label>
+                                        
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-md-5">
+                                                <div class="position-relative border rounded-3 overflow-hidden bg-white text-center p-2" style="background: #f1f5f9;">
+                                                    <?php 
+                                                    $currentImg = !empty($extra['image_url']) ? $extra['image_url'] : 'uploads/cms/wapi-team.jpg';
+                                                    $currentImgSrc = (strpos($currentImg, 'http') === 0) ? $currentImg : baseUrl(ltrim($currentImg, '/'));
+                                                    ?>
+                                                    <img id="teamImgPreview" src="<?= e($currentImgSrc); ?>" alt="WAPI Team Preview" class="img-fluid rounded" style="max-height: 180px; width: 100%; object-fit: cover;" onerror="this.src='https://placehold.co/600x400/6366f1/white?text=WAPI+Team'">
+                                                    <div class="small text-muted mt-2" id="imgStatusText">Current Team Image</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-7">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold mb-1"><i class="bi bi-upload text-success me-1"></i> Upload New Team Image</label>
+                                                    <input type="file" name="about_image" id="aboutImgFile" class="form-control" accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml" onchange="previewTeamImage(this)">
+                                                    <small class="text-muted d-block mt-1">Computer se image choose karein (JPG, PNG, WEBP - Max 10MB)</small>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label fw-semibold mb-1"><i class="bi bi-link-45deg text-secondary me-1"></i> Or Custom Image URL / Path</label>
+                                                    <input type="text" name="extra[image_url]" id="aboutImgUrl" class="form-control form-control-sm" value="<?= e($extra['image_url'] ?? 'uploads/cms/wapi-team.jpg'); ?>" oninput="updatePreviewFromUrl(this.value)">
+                                                    <small class="text-muted">Direct external URL ya path (e.g. <code>uploads/cms/wapi-team.jpg</code>)</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label fw-semibold">Company Story / Description (HTML Supported)</label>
@@ -653,6 +691,32 @@ function openPreviewModal() {
     if (!el) return;
     document.getElementById('previewBody').innerHTML = el.value;
     new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function previewTeamImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('teamImgPreview');
+            if (preview) {
+                preview.src = e.target.result;
+            }
+            const status = document.getElementById('imgStatusText');
+            if (status) {
+                status.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> New image selected! (Click "Save Changes" to save)</span>';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function updatePreviewFromUrl(url) {
+    if (url && url.trim().length > 0) {
+        const preview = document.getElementById('teamImgPreview');
+        if (preview) {
+            preview.src = (url.indexOf('http') === 0) ? url : '<?= baseUrl(); ?>/' + url.replace(/^\/+/, '');
+        }
+    }
 }
 </script>
 

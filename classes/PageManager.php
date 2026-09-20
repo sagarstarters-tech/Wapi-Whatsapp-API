@@ -199,7 +199,7 @@ class PageManager {
                     'meta_description' => 'Learn about WAPI, our vision, mission, and how we empower businesses worldwide with cutting-edge WhatsApp Business API automation.',
                     'extra_data'       => [
                         'headline'      => 'Empowering Modern Business Communication',
-                        'image_url'     => 'assets/img/hero-image.png',
+                        'image_url'     => 'uploads/cms/wapi-team.jpg',
                         'vision_title'  => 'Our Vision',
                         'vision_icon'   => 'bi-eye-fill',
                         'vision_desc'   => 'To become the global standard for business-to-customer messaging and engagement.',

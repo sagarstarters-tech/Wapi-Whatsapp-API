@@ -29,10 +29,14 @@ include __DIR__ . '/includes/header.php';
             <div class="col-lg-6">
                 <div class="p-4 bg-white shadow-sm rounded-4 text-center">
                     <?php 
-                    $aboutImg = !empty($extra['image_url']) ? $extra['image_url'] : 'assets/img/hero-image.png';
-                    $aboutImgSrc = (strpos($aboutImg, 'http') === 0 || strpos($aboutImg, '/') === 0) ? $aboutImg : asset($aboutImg);
+                    $aboutImg = !empty($extra['image_url']) ? $extra['image_url'] : 'uploads/cms/wapi-team.jpg';
+                    if (strpos($aboutImg, 'http://') === 0 || strpos($aboutImg, 'https://') === 0) {
+                        $aboutImgSrc = $aboutImg;
+                    } else {
+                        $aboutImgSrc = baseUrl(ltrim($aboutImg, '/'));
+                    }
                     ?>
-                    <img src="<?= e($aboutImgSrc); ?>" alt="<?= e($pageData['title']); ?>" class="img-fluid rounded" onerror="this.src='https://placehold.co/600x400/6366f1/white?text=WAPI+Team'">
+                    <img src="<?= e($aboutImgSrc); ?>" alt="<?= e($pageData['title']); ?>" class="img-fluid rounded-4 shadow-sm" style="max-height: 400px; width: 100%; object-fit: cover;" onerror="this.src='https://placehold.co/600x400/6366f1/white?text=WAPI+Team'">
                 </div>
             </div>
         </div>
