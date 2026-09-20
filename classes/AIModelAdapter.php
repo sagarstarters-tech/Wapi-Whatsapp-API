@@ -225,6 +225,7 @@ class AIModelAdapter
 
         $headers = [
             'Content-Type: application/json',
+            'x-goog-api-key: ' . $apiKey,
         ];
 
         $usedModel = 'gemini-2.0-flash';
