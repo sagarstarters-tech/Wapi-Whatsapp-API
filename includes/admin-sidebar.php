@@ -86,6 +86,10 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
                 <i class="bi bi-file-earmark-text-fill"></i>
                 <span>CMS</span>
             </a>
+            <a href="<?= baseUrl('admin/pages.php'); ?>" class="sidebar-link <?= $currentPage === 'pages' ? 'active' : ''; ?>">
+                <i class="bi bi-layout-text-window-reverse"></i>
+                <span>Pages Customizer</span>
+            </a>
             <a href="<?= baseUrl('admin/templates.php'); ?>" class="sidebar-link <?= $currentPage === 'templates' ? 'active' : ''; ?>">
                 <i class="bi bi-file-earmark-code-fill"></i>
                 <span>Templates</span>

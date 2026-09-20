@@ -100,10 +100,11 @@ include __DIR__ . '/../includes/header.php';
         <?php endif; ?>
 
         <!-- Section Tabs -->
-        <ul class="nav nav-pills mb-4 gap-2">
+        <ul class="nav nav-pills mb-4 gap-2 align-items-center">
             <li><a class="nav-link <?= $section === 'features' ? 'active' : ''; ?> btn-sm" href="?section=features" style="border-radius: 8px;">Features</a></li>
             <li><a class="nav-link <?= $section === 'faqs' ? 'active' : ''; ?> btn-sm" href="?section=faqs" style="border-radius: 8px;">FAQs</a></li>
             <li><a class="nav-link <?= $section === 'testimonials' ? 'active' : ''; ?> btn-sm" href="?section=testimonials" style="border-radius: 8px;">Testimonials</a></li>
+            <li class="ms-auto"><a class="btn btn-outline-primary btn-sm" href="<?= baseUrl('admin/pages.php'); ?>" style="border-radius: 8px;"><i class="bi bi-layout-text-window-reverse me-1"></i> Pages Customizer (Contact, About, Policies) &rarr;</a></li>
         </ul>
 
         <!-- Add New Item -->

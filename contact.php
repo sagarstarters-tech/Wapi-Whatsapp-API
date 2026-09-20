@@ -1,11 +1,17 @@
 <?php
 /**
  * WAPI SaaS - Contact Us
+ * Dynamically customized via Super Admin Pages Customizer
  */
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/session.php';
 
-$pageTitle = 'Contact Us';
+$pageData = PageManager::getPage('contact');
+$extra = $pageData['extra_data'] ?? [];
+
+$pageTitle = !empty($pageData['meta_title']) ? $pageData['meta_title'] : (!empty($pageData['title']) ? $pageData['title'] : 'Contact Us');
+$metaDescription = $pageData['meta_description'] ?? '';
+
 include __DIR__ . '/includes/header.php';
 ?>
 
@@ -13,37 +19,75 @@ include __DIR__ . '/includes/header.php';
     <div class="container py-5">
         <div class="row align-items-center">
             <div class="col-lg-5">
-                <h1 class="display-4 fw-bold mb-4">Chat With Us</h1>
+                <h1 class="display-4 fw-bold mb-4"><?= e($extra['headline'] ?? 'Chat With Us'); ?></h1>
+                <?php if (!empty($pageData['subtitle'])): ?>
                 <p class="lead text-secondary mb-5">
-                    Have questions or feedback? We'd love to hear from you. 
+                    <?= nl2br(e($pageData['subtitle'])); ?>
                 </p>
+                <?php endif; ?>
                 
                 <div class="d-flex flex-column gap-4">
+                    <?php if (!empty($extra['hq_address'])): ?>
                     <div class="bg-white p-4 rounded-4 shadow-sm">
                         <div class="d-flex align-items-center gap-3">
                             <div class="feature-icon" style="width: 48px; height: 48px;"><i class="bi bi-geo-alt-fill"></i></div>
                             <div>
-                                <h6 class="fw-bold mb-1">Our Headquarters</h6>
-                                <p class="mb-0 text-secondary">Mumbai, India</p>
+                                <h6 class="fw-bold mb-1"><?= e($extra['hq_title'] ?? 'Our Headquarters'); ?></h6>
+                                <p class="mb-0 text-secondary"><?= e($extra['hq_address']); ?></p>
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
+
+                    <?php 
+                    $contactDisplayEmail = !empty($extra['email']) ? $extra['email'] : $settings->get('contact_email', 'wapiwhatsappapi@gmail.com');
+                    if (!empty($contactDisplayEmail)): 
+                    ?>
                     <div class="bg-white p-4 rounded-4 shadow-sm">
                         <div class="d-flex align-items-center gap-3">
                             <div class="feature-icon" style="width: 48px; height: 48px;"><i class="bi bi-envelope-fill"></i></div>
                             <div>
-                                <h6 class="fw-bold mb-1">Email Support</h6>
-                                <p class="mb-0 text-secondary"><?= e($settings->get('contact_email', 'support@wapi.com')); ?></p>
+                                <h6 class="fw-bold mb-1"><?= e($extra['email_title'] ?? 'Email Support'); ?></h6>
+                                <p class="mb-0 text-secondary"><a href="mailto:<?= e($contactDisplayEmail); ?>" class="text-decoration-none text-secondary"><?= e($contactDisplayEmail); ?></a></p>
                             </div>
                         </div>
                     </div>
-                    <?php if ($settings->get('contact_phone')): ?>
+                    <?php endif; ?>
+
+                    <?php 
+                    $contactDisplayPhone = !empty($extra['phone']) ? $extra['phone'] : $settings->get('contact_phone', '');
+                    if (!empty($contactDisplayPhone)): 
+                    ?>
                     <div class="bg-white p-4 rounded-4 shadow-sm">
                         <div class="d-flex align-items-center gap-3">
                             <div class="feature-icon" style="width: 48px; height: 48px;"><i class="bi bi-telephone-fill"></i></div>
                             <div>
-                                <h6 class="fw-bold mb-1">Call Us</h6>
-                                <p class="mb-0 text-secondary"><?= e($settings->get('contact_phone')); ?></p>
+                                <h6 class="fw-bold mb-1"><?= e($extra['phone_title'] ?? 'Call Us'); ?></h6>
+                                <p class="mb-0 text-secondary"><a href="tel:<?= e($contactDisplayPhone); ?>" class="text-decoration-none text-secondary"><?= e($contactDisplayPhone); ?></a></p>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($extra['hours_enabled']) && !empty($extra['hours'])): ?>
+                    <div class="bg-white p-4 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon" style="width: 48px; height: 48px;"><i class="bi bi-clock-fill"></i></div>
+                            <div>
+                                <h6 class="fw-bold mb-1"><?= e($extra['hours_title'] ?? 'Business Hours'); ?></h6>
+                                <p class="mb-0 text-secondary"><?= e($extra['hours']); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($extra['whatsapp_enabled']) && !empty($extra['whatsapp_number'])): ?>
+                    <div class="bg-white p-4 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon" style="width: 48px; height: 48px; background: rgba(37,211,102,0.1); color: #25D366;"><i class="bi bi-whatsapp"></i></div>
+                            <div>
+                                <h6 class="fw-bold mb-1"><?= e($extra['whatsapp_title'] ?? 'Quick WhatsApp Chat'); ?></h6>
+                                <p class="mb-0"><a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $extra['whatsapp_number']); ?>?text=<?= urlencode('Hello WAPI Support, I have a question:'); ?>" target="_blank" class="text-decoration-none text-success fw-semibold">Chat on WhatsApp &rarr;</a></p>
                             </div>
                         </div>
                     </div>
@@ -52,7 +96,13 @@ include __DIR__ . '/includes/header.php';
             </div>
             <div class="col-lg-7">
                 <div class="bg-white p-5 rounded-4 shadow-sm">
-                    <h3 class="fw-bold mb-4">Send Message</h3>
+                    <h3 class="fw-bold mb-2"><?= e($extra['form_title'] ?? 'Send Message'); ?></h3>
+                    <?php if (!empty($extra['form_subtitle'])): ?>
+                    <p class="text-secondary mb-4"><?= e($extra['form_subtitle']); ?></p>
+                    <?php else: ?>
+                    <div class="mb-4"></div>
+                    <?php endif; ?>
+
                     <!-- Alert placeholder -->
                     <div id="contactAlert" class="d-none"></div>
                     <form action="api/contact.php" method="POST" id="contactForm">
@@ -126,6 +176,16 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </div>
         </div>
+
+        <?php if (!empty($extra['map_enabled']) && !empty($extra['map_embed_url'])): ?>
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="bg-white p-3 rounded-4 shadow-sm">
+                    <iframe src="<?= e($extra['map_embed_url']); ?>" width="100%" height="360" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </section>
 
