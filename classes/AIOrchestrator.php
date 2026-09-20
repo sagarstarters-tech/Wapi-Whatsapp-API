@@ -95,22 +95,41 @@ class AIOrchestrator
         } else {
             $isTestMode = ($phoneNumberId === 'test' || strpos($customerPhone, 'test_user_') === 0);
 
-            if ($conversation['status'] === 'handed_over' && !$isTestMode) {
-                // In production, if it's handed over, do not let AI process the message.
-                // Just save the message and return handover status.
-                $db->insert('ai_messages', [
-                    'conversation_id' => $conversation['id'],
-                    'bot_id' => $botId,
-                    'direction' => 'inbound',
-                    'sender_type' => 'customer',
-                    'content' => $messageText,
-                    'created_at' => date('Y-m-d H:i:s'),
-                ]);
+            $greetings = ['hi', 'hello', 'hey', 'namaste', 'good morning', 'good afternoon', 'good evening', 'hii', 'hola', 'start', 'restart', 'menu'];
+            $isGreeting = in_array(strtolower(trim($messageText)), $greetings);
+            $handoverTimeout = 1800; // 30 minutes
+            $lastMsgTime = !empty($conversation['last_message_at']) ? strtotime($conversation['last_message_at']) : 0;
+            $isTimedOut = (time() - $lastMsgTime) > $handoverTimeout;
+            $handoverDisabled = empty($bot['handover_enabled']);
 
-                return [
-                    'status' => 'handover',
-                    'message' => !empty($bot['handover_message']) ? $bot['handover_message'] : "I'm connecting you with a human agent. Please wait a moment.",
-                ];
+            if ($conversation['status'] === 'handed_over' && !$isTestMode) {
+                if ($isGreeting || $isTimedOut || $handoverDisabled) {
+                    // Re-activate conversation so AI bot can respond!
+                    $db->update('ai_conversations', [
+                        'status' => 'active',
+                        'last_message_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ], 'id = ?', [$conversation['id']]);
+                    $conversation['status'] = 'active';
+                } else {
+                    // In production, if genuinely handed over to human, save inbound message and notify customer
+                    $db->insert('ai_messages', [
+                        'conversation_id' => $conversation['id'],
+                        'bot_id' => $botId,
+                        'direction' => 'inbound',
+                        'sender_type' => 'customer',
+                        'content' => $messageText,
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+
+                    $handoverNotice = !empty($bot['handover_message']) ? $bot['handover_message'] : "I'm connecting you with a human agent. Please wait a moment.";
+                    self::sendWhatsAppMessage($phoneNumberId, $accessToken, $customerPhone, $handoverNotice);
+
+                    return [
+                        'status' => 'handover',
+                        'message' => $handoverNotice,
+                    ];
+                }
             }
 
             // Update existing conversation and set/keep status as active
@@ -329,25 +348,19 @@ class AIOrchestrator
             return false;
         }
 
-        // Standard greetings should never be accidentally triggered as handover keywords
-        $greetings = ['hi', 'hello', 'hey', 'namaste', 'good morning', 'good afternoon', 'good evening', 'hii', 'hola'];
+        // Standard greetings should NEVER trigger human handover
+        $greetings = ['hi', 'hello', 'hey', 'namaste', 'good morning', 'good afternoon', 'good evening', 'hii', 'hola', 'start', 'restart', 'menu'];
         if (in_array($textLower, $greetings)) {
-            // Only trigger if this exact greeting was explicitly typed as a keyword
-            $explicit = false;
-            foreach ($keywords as $kw) {
-                if (strtolower(trim($kw)) === $textLower) {
-                    $explicit = true;
-                    break;
-                }
-            }
-            if (!$explicit) {
-                return false;
-            }
+            return false;
         }
 
         foreach ($keywords as $keyword) {
             $keyword = strtolower(trim($keyword));
             if (empty($keyword) || strlen($keyword) < 2) {
+                continue;
+            }
+            // Do not treat greetings as handover keywords even if configured
+            if (in_array($keyword, $greetings)) {
                 continue;
             }
 
