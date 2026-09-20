@@ -77,7 +77,12 @@ function sendImage($phone, $imageUrl, $caption = '', $phoneId = null, $token = n
         'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $phone, 'type' => 'image',
         'image' => $media
     ];
-    return sendRequest($payload, $phoneId, $token);
+    $res = sendRequest($payload, $phoneId, $token);
+    if (!$res && !empty($caption)) {
+        // Fallback: send as text message if image download failed
+        $res = sendText($phone, $caption, $phoneId, $token);
+    }
+    return $res;
 }
 
 function sendAudio($phone, $audioUrl, $phoneId = null, $token = null) {
@@ -102,12 +107,9 @@ function sendVideo($phone, $videoUrl, $caption = '', $phoneId = null, $token = n
     return sendRequest($payload, $phoneId, $token);
 }
 
-function sendDocument($phone, $docUrl, $filename = '', $caption = '', $phoneId = null, $token = null) {
-    if (empty($docUrl)) return false;
-    $media = ['link' => $docUrl];
-    if (trim($filename) !== '') {
-        $media['filename'] = $filename;
-    }
+function sendDocument($phone, $documentUrl, $filename = 'document', $caption = '', $phoneId = null, $token = null) {
+    if (empty($documentUrl)) return false;
+    $media = ['link' => $documentUrl, 'filename' => $filename];
     if (trim($caption) !== '') {
         $media['caption'] = $caption;
     }
@@ -198,7 +200,18 @@ function sendInteractiveButtons($phone, $bodyText, $footerText, $imageUrl, $butt
         'type' => 'interactive',
         'interactive' => $interactive
     ];
-    return sendRequest($payload, $phoneId, $token);
+    
+    $res = sendRequest($payload, $phoneId, $token);
+    
+    // Auto-fallback: if Meta rejected the message due to media download error, retry without image header
+    if (!$res && !empty($imageUrl)) {
+        unset($interactive['header']);
+        $payload['interactive'] = $interactive;
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] sendInteractiveButtons failed with image link, retrying without image header...\n", FILE_APPEND);
+        $res = sendRequest($payload, $phoneId, $token);
+    }
+    
+    return $res;
 }
 
 
@@ -236,7 +249,18 @@ function sendCtaUrl($phone, $text, $btnText, $url, $imageUrl = '', $footerText =
         'type'              => 'interactive',
         'interactive'       => $interactive
     ];
-    return sendRequest($payload, $phoneId, $token);
+    
+    $res = sendRequest($payload, $phoneId, $token);
+    
+    // Auto-fallback: if Meta rejected the message due to media download error, retry without image header
+    if (!$res && !empty($imageUrl)) {
+        unset($interactive['header']);
+        $payload['interactive'] = $interactive;
+        file_put_contents(__DIR__ . '/webhook_debug.log', "[" . date('Y-m-d H:i:s') . "] sendCtaUrl failed with image link, retrying without image header...\n", FILE_APPEND);
+        $res = sendRequest($payload, $phoneId, $token);
+    }
+    
+    return $res;
 }
 
 

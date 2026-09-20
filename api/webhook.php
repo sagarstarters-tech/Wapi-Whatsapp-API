@@ -120,71 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // -----------------------------------------------
-            // AI Bot Check — Route to AI before rule-based chatbot
-            // -----------------------------------------------
-            try {
-                $waAccountId = $db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE phone_number_id = ? AND user_id = ? LIMIT 1", [$phoneNumberId, $userId]);
-                $aiBot = $waAccountId ? $db->fetch("SELECT id, status FROM ai_bots WHERE whatsapp_account_id = ? AND status = 'active' LIMIT 1", [$waAccountId]) : null;
-
-                if ($aiBot) {
-                    // Extract text from message for AI processing
-                    $aiMessageText = '';
-                    switch ($type) {
-                        case 'text':
-                            $aiMessageText = $msg['text']['body'] ?? '';
-                            break;
-                        case 'image':
-                            $aiMessageText = $msg['image']['caption'] ?? '[Image received]';
-                            break;
-                        case 'document':
-                            $aiMessageText = $msg['document']['caption'] ?? '[Document received]';
-                            break;
-                        case 'interactive':
-                            if (isset($msg['interactive']['button_reply'])) {
-                                $aiMessageText = $msg['interactive']['button_reply']['title'] ?? '';
-                                // Don't intercept chatbot flow button clicks
-                                $replyId = $msg['interactive']['button_reply']['id'] ?? '';
-                                if (strpos($replyId, 'flow_btn_') === 0) {
-                                    $aiMessageText = ''; // Let existing chatbot handle it
-                                }
-                            } elseif (isset($msg['interactive']['list_reply'])) {
-                                $aiMessageText = $msg['interactive']['list_reply']['title'] ?? '';
-                            }
-                            break;
-                        default:
-                            $aiMessageText = "[{$type} message received]";
-                            break;
-                    }
-
-                    if (!empty($aiMessageText)) {
-                        // Route to AI Orchestrator
-                        $aiResult = AIOrchestrator::processMessage(
-                            $aiBot['id'],
-                            $from,
-                            $profileName,
-                            $aiMessageText,
-                            $phoneNumberId,
-                            $accessToken
-                        );
-
-                        file_put_contents(__DIR__ . '/../logs/ai_webhook.log',
-                            "[" . date('Y-m-d H:i:s') . "] AI Bot #{$aiBot['id']} processed message from $from: " . json_encode($aiResult) . "\n",
-                            FILE_APPEND
-                        );
-
-                        // Skip the rule-based chatbot engine — AI handled it
-                        continue;
-                    }
-                }
-            } catch (Exception $aiEx) {
-                file_put_contents(__DIR__ . '/../logs/ai_webhook.log',
-                    "[" . date('Y-m-d H:i:s') . "] AI Error for $from: " . $aiEx->getMessage() . "\n",
-                    FILE_APPEND
-                );
-                // Fall through to rule-based chatbot on AI error
-            }
-
-            // -----------------------------------------------
             // A. Interactive button reply (chatbot flow nav)
             // -----------------------------------------------
             if ($type === 'interactive' && isset($msg['interactive']['button_reply'])) {
@@ -319,6 +254,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Helper to pass message to AI Bot if active
+            $tryAIBot = function($msgText) use ($db, $phoneNumberId, $userId, $from, $profileName, $accessToken) {
+                if (empty(trim($msgText))) return false;
+                try {
+                    $waAccountId = $db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE phone_number_id = ? AND user_id = ? LIMIT 1", [$phoneNumberId, $userId]);
+                    $aiBot = $waAccountId ? $db->fetch("SELECT id, status FROM ai_bots WHERE whatsapp_account_id = ? AND status = 'active' LIMIT 1", [$waAccountId]) : null;
+
+                    if ($aiBot) {
+                        $aiResult = AIOrchestrator::processMessage(
+                            $aiBot['id'],
+                            $from,
+                            $profileName,
+                            $msgText,
+                            $phoneNumberId,
+                            $accessToken
+                        );
+
+                        file_put_contents(__DIR__ . '/../logs/ai_webhook.log',
+                            "[" . date('Y-m-d H:i:s') . "] AI Bot #{$aiBot['id']} processed message from $from: " . json_encode($aiResult) . "\n",
+                            FILE_APPEND
+                        );
+                        return true;
+                    }
+                } catch (Exception $aiEx) {
+                    file_put_contents(__DIR__ . '/../logs/ai_webhook.log',
+                        "[" . date('Y-m-d H:i:s') . "] AI Error for $from: " . $aiEx->getMessage() . "\n",
+                        FILE_APPEND
+                    );
+                }
+                return false;
+            };
+
             // Load ALL active flows for this user
             $activeFlows = $db->fetchAll(
                 "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY updated_at DESC",
@@ -326,7 +293,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             if (empty($activeFlows)) {
-                file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No active chatbot flows found for user $userId\n", FILE_APPEND);
+                file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No active chatbot flows found for user $userId. Checking AI Bot...\n", FILE_APPEND);
+                if ($tryAIBot($textBody)) {
+                    continue;
+                }
                 continue;
             }
 
@@ -335,6 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 1. Check for Trigger Keywords in ALL active flows
             if (!empty($textBody)) {
+                $cleanTextBody = preg_replace('/[[:punct:]]+$/u', '', $textBody);
                 foreach ($activeFlows as $f) {
                     $nodes = $getNodes($f['flow_json']);
                     if (empty($nodes)) continue;
@@ -345,8 +316,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $rawKeywords = strtolower(trim($nData['data']['keywords'] ?? ''));
                         
                         // Build and sanitize keyword array
-                        // Strip leading/trailing non-word characters (e.g. semicolons, commas, dots)
-                        // from each individual keyword after splitting on comma
                         if (!empty($rawKeywords)) {
                             $keywordArr = array_values(array_filter(
                                 array_map(function($kw) {
@@ -363,14 +332,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         if ($matchType === 'contains') {
                             foreach ($keywordArr as $kw) {
-                                if ($kw !== '' && strpos($textBody, $kw) !== false) {
+                                if ($kw !== '' && (strpos($textBody, $kw) !== false || strpos($cleanTextBody, $kw) !== false)) {
                                     $isMatch = true;
                                     break;
                                 }
                             }
                         } else {
-                            // Exact match: incoming text must equal one of the keywords exactly
-                            $isMatch = in_array($textBody, $keywordArr, true);
+                            // Exact match: incoming text (or cleaned) must equal one of the keywords
+                            $isMatch = in_array($textBody, $keywordArr, true) || in_array($cleanTextBody, $keywordArr, true);
                             if (!$isMatch) {
                                 file_put_contents(__DIR__ . '/../logs/webhook_root.log',
                                     "[" . date('H:i:s') . "] EXACT MATCH MISS: textBody='{$textBody}' vs keywords=[" . implode(', ', $keywordArr) . "]\n",
@@ -405,6 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // 3. No keyword trigger found: Is there an existing Active Session?
                 require_once __DIR__ . '/../chatbot-engine/functions.php'; // Ensure functions are available
+                $handledBySession = false;
                 if (function_exists('getSession')) {
                     $session = getSession($from, $userId);
                     if ($session && ($session['state'] ?? '') === 'active' && !empty($session['current_node_id'])) {
@@ -414,13 +384,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $activeFlowIds = array_column($activeFlows, 'id');
                         if (in_array($sessionFlowId, $activeFlowIds)) {
                             file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Unmatched message received during active session for flow '$sessionFlowId' at node: " . $session['current_node_id'] . ". Logging only.\n", FILE_APPEND);
+                            $handledBySession = true;
                         } else {
                             file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Session exists but flow '$sessionFlowId' is no longer active.\n", FILE_APPEND);
                         }
-                    } else {
-                        // 4. No trigger and no session: Log and do not auto-start
-                        file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No trigger match and no active session for type '$type' with text '$textBody'\n", FILE_APPEND);
                     }
+                }
+
+                if (!$handledBySession) {
+                    // 4. No flow trigger and no active flow session: Route to AI Bot if active!
+                    if ($tryAIBot($textBody)) {
+                        continue;
+                    }
+
+                    // 5. If AI Bot is not active either, log unhandled message
+                    file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No flow trigger match, no active session, and AI bot inactive for type '$type' with text '$textBody'\n", FILE_APPEND);
                 }
             }
         }

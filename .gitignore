@@ -1,6 +1,10 @@
 .env
 logs/
-uploads/
+uploads/*
+!uploads/chatbot/
+!uploads/chatbot/*
+!uploads/cms/
+!uploads/cms/*
 vendor/
 .DS_Store
 .git/

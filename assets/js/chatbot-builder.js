@@ -857,7 +857,7 @@ function updateNodePreview(nodeId) {
             const imgContainer = nodeEl.querySelector('.node-image-container');
             if (imgContainer) {
                 if (node.data.image) {
-                    imgContainer.innerHTML = `<img src="${node.data.image}" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
+                    imgContainer.innerHTML = `<img src="${node.data.image}" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;\\'><i class=\\'bi bi-image\\' style=\\'font-size:24px; color:#94a3b8;\\'></i></div>';" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
                 } else {
                     imgContainer.innerHTML = `<div style="background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
                 }
@@ -919,7 +919,7 @@ function updateNodePreview(nodeId) {
             const imgContainer = nodeEl.querySelector('.interactive-header-img');
             if (imgContainer) {
                 if (node.data.image) {
-                    imgContainer.innerHTML = `<img src="${node.data.image}" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
+                    imgContainer.innerHTML = `<img src="${node.data.image}" onerror="this.onerror=null; this.parentElement.style.display='none';" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
                     imgContainer.style.display = 'block';
                 } else {
                     imgContainer.innerHTML = '';
