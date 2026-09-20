@@ -23,12 +23,20 @@ if (!$plan || $plan['monthly_price'] > 0) {
     redirect('dashboard/subscription.php');
 }
 
+// Check if user has already used this free plan
+$alreadyUsed = $db->fetch("SELECT id FROM subscriptions WHERE user_id = ? AND plan_id = ?", [$userId, $planId]);
+if ($alreadyUsed) {
+    setFlash('warning', 'You have already redeemed this free trial. Please select a paid plan to continue enjoying WAPI.');
+    redirect('dashboard/subscription.php');
+}
+
 // Cancel existing active subscriptions
 $db->update('subscriptions', ['status' => 'cancelled'], "user_id = ? AND status = 'active'", [$userId]);
 
 // Calculate dates
 $startsAt = date('Y-m-d H:i:s');
-$expiryPeriod = ($plan['slug'] === 'trial') ? '+14 days' : '+1 month';
+$isTrial = ($plan['slug'] === 'trial' || $plan['slug'] === '14-days-trial' || stripos($plan['name'], 'trial') !== false);
+$expiryPeriod = $isTrial ? '+14 days' : '+1 month';
 $expiresAt = date('Y-m-d H:i:s', strtotime($expiryPeriod));
 
 // Create subscription

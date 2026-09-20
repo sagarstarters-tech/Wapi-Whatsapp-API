@@ -32,6 +32,10 @@ if ($latestSub) {
 // Payment history
 $payments = $db->fetchAll("SELECT p.*, pl.name as plan_name FROM payments p LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 10", [$userId]);
 
+// All plan IDs user has ever subscribed to
+$usedPlanRows = $db->fetchAll("SELECT DISTINCT plan_id FROM subscriptions WHERE user_id = ?", [$userId]);
+$usedPlanIds = array_column($usedPlanRows, 'plan_id');
+
 $pageTitle = 'Subscription';
 $extraCss = [asset('assets/css/dashboard.css')];
 $extraJs = [asset('assets/js/admin.js')];
@@ -116,6 +120,7 @@ include __DIR__ . '/../includes/header.php';
                 }
                 $isCurrentPlan = $currentSub && $currentSub['plan_id'] == $plan['id'];
                 $isExpiredPlan = $expiredSub && $expiredSub['plan_id'] == $plan['id'];
+                $hasUsedThisPlan = in_array((int)$plan['id'], array_map('intval', $usedPlanIds));
             ?>
             <div class="col-lg-4 col-md-6">
                 <div class="pricing-card <?= $plan['is_popular'] ? 'popular' : ''; ?> <?= $isCurrentPlan ? '' : ''; ?>" style="text-align:left;">
@@ -180,7 +185,8 @@ include __DIR__ . '/../includes/header.php';
 
                     <?php if ($isCurrentPlan): ?>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary w-100" disabled>Current Plan</button>
+                            <button class="btn btn-outline-primary w-100" disabled><i class="bi bi-check2-circle"></i> Current Plan</button>
+                            <?php if ($plan['monthly_price'] > 0): ?>
                             <button class="btn btn-primary w-100 btn-razorpay" 
                                     data-plan-id="<?= $plan['id']; ?>" 
                                     data-plan-name="<?= e($plan['name']); ?>">
@@ -193,6 +199,14 @@ include __DIR__ . '/../includes/header.php';
                                 <i class="bi bi-phone"></i> Renew via UPI
                             </button>
                             <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php elseif ($isExpiredPlan && $plan['monthly_price'] == 0): ?>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-secondary w-100" disabled>
+                                <i class="bi bi-clock-history me-1"></i> Trial Expired
+                            </button>
+                            <small class="text-center text-muted">Please upgrade to a paid plan</small>
                         </div>
                     <?php elseif ($isExpiredPlan): ?>
                         <div class="d-grid gap-2">
@@ -210,7 +224,15 @@ include __DIR__ . '/../includes/header.php';
                             <?php endif; ?>
                         </div>
                     <?php elseif ($plan['monthly_price'] == 0): ?>
-                        <button class="btn btn-outline-primary w-100" onclick="activateFreePlan(<?= $plan['id']; ?>)">Activate</button>
+                        <?php if ($hasUsedThisPlan): ?>
+                            <button class="btn btn-outline-secondary w-100" disabled title="Free trial can only be used once per account">
+                                <i class="bi bi-check-circle-fill text-muted me-1"></i> Trial Claimed
+                            </button>
+                        <?php else: ?>
+                            <button class="btn btn-outline-primary w-100" onclick="activateFreePlan(<?= $plan['id']; ?>)">
+                                <i class="bi bi-lightning-charge me-1"></i> Activate Free Trial
+                            </button>
+                        <?php endif; ?>
                     <?php else: ?>
                         <div class="d-grid gap-2">
                             <button class="btn btn-primary w-100 btn-razorpay" 

@@ -60,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                         if ($plan) {
                             $initialCredits = $plan['message_limit'];
                             $startsAt = date('Y-m-d H:i:s');
-                            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+                            $isTrial = ($plan['slug'] === 'trial' || $plan['slug'] === '14-days-trial' || stripos($plan['name'], 'trial') !== false);
+                            $expiresAt = date('Y-m-d H:i:s', strtotime($isTrial ? '+14 days' : '+1 month'));
                             
                             $db->insert('subscriptions', [
                                 'user_id' => $newUserId,
@@ -149,7 +150,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
                             $plan = $db->fetch("SELECT * FROM plans WHERE id = ?", [$planId]);
                             if ($plan) {
                                 $startsAt = date('Y-m-d H:i:s');
-                                $expiresAt = date('Y-m-d H:i:s', strtotime('+1 month'));
+                                $isTrial = ($plan['slug'] === 'trial' || $plan['slug'] === '14-days-trial' || stripos($plan['name'], 'trial') !== false);
+                                $expiresAt = date('Y-m-d H:i:s', strtotime($isTrial ? '+14 days' : '+1 month'));
                                 
                                 $db->insert('subscriptions', [
                                     'user_id' => $userId,

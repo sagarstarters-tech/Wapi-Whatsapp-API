@@ -99,9 +99,42 @@ class Auth {
                 'email_verify_token' => $verifyToken
             ]);
 
-            $initialCredits = 0;
+            // Auto-assign Free Trial plan if available
+            $trialPlan = null;
+            if (!empty($planSlug)) {
+                $trialPlan = $this->db->fetch("SELECT * FROM plans WHERE slug = ? AND is_active = 1", [$planSlug]);
+            }
+            if (!$trialPlan) {
+                $trialPlan = $this->db->fetch("SELECT * FROM plans WHERE (slug = 'trial' OR slug = '14-days-trial' OR LOWER(name) LIKE '%trial%') AND monthly_price = 0 AND is_active = 1 LIMIT 1");
+            }
 
-            // Initialize credits (0 if no plan selected)
+            $initialCredits = 0;
+            if ($trialPlan && (float)$trialPlan['monthly_price'] == 0) {
+                $initialCredits = (int)$trialPlan['message_limit'];
+                $startsAt = date('Y-m-d H:i:s');
+                $isTrial = ($trialPlan['slug'] === 'trial' || $trialPlan['slug'] === '14-days-trial' || stripos($trialPlan['name'], 'trial') !== false);
+                $expiresAt = date('Y-m-d H:i:s', strtotime($isTrial ? '+14 days' : '+1 month'));
+
+                $subId = $this->db->insert('subscriptions', [
+                    'user_id' => $userId,
+                    'plan_id' => $trialPlan['id'],
+                    'billing_cycle' => 'monthly',
+                    'amount' => 0,
+                    'status' => 'active',
+                    'starts_at' => $startsAt,
+                    'expires_at' => $expiresAt
+                ]);
+
+                $this->db->insert('payments', [
+                    'user_id' => $userId,
+                    'subscription_id' => $subId,
+                    'amount' => 0,
+                    'status' => 'success',
+                    'payment_method' => 'free'
+                ]);
+            }
+
+            // Initialize credits
             $this->db->insert('credits', [
                 'user_id' => $userId,
                 'total_credits' => $initialCredits,
