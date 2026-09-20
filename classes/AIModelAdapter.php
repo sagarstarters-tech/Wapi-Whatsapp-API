@@ -242,14 +242,16 @@ class AIModelAdapter
             } catch (Exception $e) {
                 $lastException = $e;
                 $msg = $e->getMessage();
-                // If model is not found / deprecated, continue to next candidate
+                // If model is not found / deprecated / preview has limit:0 / quota exceeded on this specific model, try next candidate
                 if (stripos($msg, 'no longer available') !== false ||
                     stripos($msg, 'not found') !== false ||
                     stripos($msg, '404') !== false ||
-                    stripos($msg, 'is not supported') !== false) {
+                    stripos($msg, 'is not supported') !== false ||
+                    stripos($msg, 'limit: 0') !== false ||
+                    stripos($msg, 'Quota exceeded for metric') !== false) {
                     continue;
                 }
-                // For authentication errors, rate limits, or billing errors, throw immediately
+                // For authentication errors, throw immediately
                 throw $e;
             }
         }
@@ -329,6 +331,12 @@ class AIModelAdapter
                         $methods = $m['supportedGenerationMethods'] ?? [];
                         if (in_array('generateContent', $methods)) {
                             $rawName = str_replace('models/', '', $m['name']);
+
+                            // Discard non-chat models (image, embedding, audio, tts, stt, realtime, etc.)
+                            if (preg_match('/(image|embedding|audio|tts|stt|realtime|vision|imagen|bison)/i', $rawName)) {
+                                continue;
+                            }
+
                             $found[] = [
                                 'name' => $rawName,
                                 'version' => $apiVersion,
@@ -338,18 +346,32 @@ class AIModelAdapter
                     }
 
                     if (!empty($found)) {
-                        // Prioritize: 1) Flash models, 2) 1.5, 3) deprioritize preview/exp
+                        // Prioritize stable chat models with highest quota
                         usort($found, function ($a, $b) {
                             $scoreA = 0;
                             $scoreB = 0;
-                            if (stripos($a['name'], 'flash') !== false) $scoreA += 20;
-                            if (stripos($b['name'], 'flash') !== false) $scoreB += 20;
-                            if (stripos($a['name'], '1.5') !== false) $scoreA += 10;
-                            if (stripos($b['name'], '1.5') !== false) $scoreB += 10;
-                            if (stripos($a['name'], '2.5') !== false) $scoreA += 5;
-                            if (stripos($b['name'], '2.5') !== false) $scoreB += 5;
-                            if (stripos($a['name'], 'exp') !== false) $scoreA -= 10;
-                            if (stripos($b['name'], 'exp') !== false) $scoreB -= 10;
+
+                            if ($a['name'] === 'gemini-1.5-flash') $scoreA += 100;
+                            if ($b['name'] === 'gemini-1.5-flash') $scoreB += 100;
+
+                            if ($a['name'] === 'gemini-1.5-flash-latest') $scoreA += 90;
+                            if ($b['name'] === 'gemini-1.5-flash-latest') $scoreB += 90;
+
+                            if ($a['name'] === 'gemini-1.5-flash-8b') $scoreA += 80;
+                            if ($b['name'] === 'gemini-1.5-flash-8b') $scoreB += 80;
+
+                            if ($a['name'] === 'gemini-1.5-pro') $scoreA += 70;
+                            if ($b['name'] === 'gemini-1.5-pro') $scoreB += 70;
+
+                            if (stripos($a['name'], 'flash') !== false) $scoreA += 40;
+                            if (stripos($b['name'], 'flash') !== false) $scoreB += 40;
+
+                            if (stripos($a['name'], 'preview') !== false) $scoreA -= 30;
+                            if (stripos($b['name'], 'preview') !== false) $scoreB -= 30;
+
+                            if (stripos($a['name'], 'exp') !== false) $scoreA -= 40;
+                            if (stripos($b['name'], 'exp') !== false) $scoreB -= 40;
+
                             return $scoreB <=> $scoreA;
                         });
                         return $found;
