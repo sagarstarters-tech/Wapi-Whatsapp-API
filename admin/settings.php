@@ -153,9 +153,26 @@ include __DIR__ . '/../includes/header.php';
                             <label class="form-label fw-semibold">Logo Live Preview</label>
                             <div class="p-3 border rounded-3 d-flex flex-wrap align-items-center gap-3" style="background: var(--card-bg, #f8f9fa);">
                                 <?php 
-                                    $currLogo = $allSettings['site_logo'] ?? '/assets/images/logo.png';
-                                    $currLogoPath = str_replace('/wapi/', '', $currLogo);
-                                    $previewLogoUrl = (strpos($currLogoPath, 'http') === 0) ? $currLogoPath : baseUrl($currLogoPath);
+                                    $currLogo = $allSettings['site_logo'] ?? '';
+                                    $previewLogoUrl = '';
+                                    if (!empty($currLogo)) {
+                                        $currLogoPath = str_replace('/wapi/', '', $currLogo);
+                                        if (strpos($currLogoPath, 'http') === 0) {
+                                            $previewLogoUrl = $currLogoPath;
+                                        } else {
+                                            $cleanCurrPath = ltrim($currLogoPath, '/');
+                                            if (file_exists(APP_ROOT . '/' . $cleanCurrPath)) {
+                                                $previewLogoUrl = baseUrl($cleanCurrPath);
+                                            }
+                                        }
+                                    }
+                                    if (empty($previewLogoUrl)) {
+                                        if (file_exists(APP_ROOT . '/assets/img/logo.png')) {
+                                            $previewLogoUrl = baseUrl('assets/img/logo.png');
+                                        } elseif (file_exists(APP_ROOT . '/assets/images/logo.png')) {
+                                            $previewLogoUrl = baseUrl('assets/images/logo.png');
+                                        }
+                                    }
                                     $currLogoHeight = (int)($allSettings['logo_height'] ?? 48);
                                     if ($currLogoHeight <= 0) $currLogoHeight = 48;
                                 ?>

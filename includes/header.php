@@ -31,11 +31,26 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     <!-- Favicon -->
     <?php 
     $siteFavicon = $settings->get('site_favicon', '');
-    if ($siteFavicon) {
-        $siteFaviconPath = str_replace('/wapi/', '', $siteFavicon);
-        $siteFaviconUrl = (strpos($siteFaviconPath, 'http') === 0) ? $siteFaviconPath : baseUrl($siteFaviconPath);
-    } else {
-        $siteFaviconUrl = baseUrl('assets/img/favicon.png');
+    $siteFaviconUrl = '';
+    if (!empty($siteFavicon)) {
+        $faviconPath = str_replace('/wapi/', '', $siteFavicon);
+        if (strpos($faviconPath, 'http') === 0) {
+            $siteFaviconUrl = $faviconPath;
+        } else {
+            $cleanFavPath = ltrim($faviconPath, '/');
+            if (file_exists(APP_ROOT . '/' . $cleanFavPath)) {
+                $siteFaviconUrl = baseUrl($cleanFavPath);
+            }
+        }
+    }
+    if (empty($siteFaviconUrl)) {
+        if (file_exists(APP_ROOT . '/assets/img/favicon.png')) {
+            $siteFaviconUrl = baseUrl('assets/img/favicon.png');
+        } elseif (file_exists(APP_ROOT . '/assets/images/favicon.png')) {
+            $siteFaviconUrl = baseUrl('assets/images/favicon.png');
+        } elseif (file_exists(APP_ROOT . '/uploads/settings/1774500972_80fd155e.png')) {
+            $siteFaviconUrl = baseUrl('uploads/settings/1774500972_80fd155e.png');
+        }
     }
     ?>
     <link rel="icon" href="<?= e($siteFaviconUrl); ?>">
@@ -103,11 +118,26 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
             <a class="navbar-brand d-flex align-items-center gap-2" href="<?= baseUrl(); ?>">
                 <?php 
                 $logoUrl = '';
-                if ($siteLogo) {
+                if (!empty($siteLogo)) {
                     $logoPath = str_replace('/wapi/', '', $siteLogo);
-                    $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
-                } elseif (file_exists(APP_ROOT . '/assets/img/logo.png')) {
-                    $logoUrl = baseUrl('assets/img/logo.png');
+                    if (strpos($logoPath, 'http') === 0) {
+                        $logoUrl = $logoPath;
+                    } else {
+                        $cleanLogoPath = ltrim($logoPath, '/');
+                        if (file_exists(APP_ROOT . '/' . $cleanLogoPath)) {
+                            $logoUrl = baseUrl($cleanLogoPath);
+                        }
+                    }
+                }
+                
+                if (empty($logoUrl)) {
+                    if (file_exists(APP_ROOT . '/assets/img/logo.png')) {
+                        $logoUrl = baseUrl('assets/img/logo.png');
+                    } elseif (file_exists(APP_ROOT . '/assets/images/logo.png')) {
+                        $logoUrl = baseUrl('assets/images/logo.png');
+                    } elseif (file_exists(APP_ROOT . '/uploads/settings/1774500941_1c174636.png')) {
+                        $logoUrl = baseUrl('uploads/settings/1774500941_1c174636.png');
+                    }
                 }
                 ?>
                 <?php if (!empty($logoUrl)): ?>
