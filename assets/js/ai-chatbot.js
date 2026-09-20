@@ -538,9 +538,21 @@
                     if (data && data.success && data.data) {
                         const messages = data.data.messages || [];
                         if (messages.length === 0) {
-                            td.innerHTML = '<div class="p-4 text-center text-muted"><i class="bi bi-chat-square-dots me-2"></i> No messages recorded in this conversation yet.</div>';
+                            td.innerHTML = `<div class="p-3 text-center text-muted d-flex justify-content-center align-items-center gap-3">
+                                <span><i class="bi bi-chat-square-dots me-2"></i> No messages recorded in this conversation yet.</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:11px; border-radius:6px;" onclick="event.stopPropagation(); deleteSingleConversation(${convId})">
+                                    <i class="bi bi-trash me-1"></i>Delete Conversation
+                                </button>
+                            </div>`;
                         } else {
-                            let html = '<div class="conversation-thread p-3" style="background: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; max-height: 480px; overflow-y: auto;">';
+                            let html = `
+                                <div class="d-flex justify-content-between align-items-center px-3 py-2" style="background:#f1f5f9; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0;">
+                                    <span style="font-size:12px; font-weight:600; color:var(--text-muted);"><i class="bi bi-chat-left-text me-1"></i>Conversation Thread (${messages.length} messages)</span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:11px; border-radius:6px;" onclick="event.stopPropagation(); deleteSingleConversation(${convId})">
+                                        <i class="bi bi-trash me-1"></i>Delete Conversation
+                                    </button>
+                                </div>
+                                <div class="conversation-thread p-3" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; max-height: 480px; overflow-y: auto;">`;
                             messages.forEach(msg => {
                                 const isInbound = msg.direction === 'inbound';
                                 const isAI = msg.sender_type === 'ai';
@@ -582,6 +594,186 @@
             detail.style.display = 'none';
         }
     };
+
+    // ============================================
+    // AI Conversations Clear / Delete Handlers
+    // ============================================
+    window.toggleSelectAllConversations = function(masterCb) {
+        document.querySelectorAll('.conv-checkbox').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+        window.updateSelectedConversationsCount();
+    };
+
+    window.updateSelectedConversationsCount = function() {
+        const checkedBoxes = document.querySelectorAll('.conv-checkbox:checked');
+        const count = checkedBoxes.length;
+        const btnDeleteSelected = document.getElementById('btnDeleteSelected');
+        const btnCount = document.getElementById('btnSelectedCount');
+        const selectedBadge = document.getElementById('selectedBadge');
+        const selectedCount = document.getElementById('selectedCount');
+        const masterCb = document.getElementById('selectAllConvs');
+
+        if (btnCount) btnCount.textContent = count;
+        if (selectedCount) selectedCount.textContent = count;
+
+        if (count > 0) {
+            if (btnDeleteSelected) btnDeleteSelected.style.display = 'inline-flex';
+            if (selectedBadge) selectedBadge.style.display = 'inline-block';
+        } else {
+            if (btnDeleteSelected) btnDeleteSelected.style.display = 'none';
+            if (selectedBadge) selectedBadge.style.display = 'none';
+        }
+
+        if (masterCb) {
+            const allBoxes = document.querySelectorAll('.conv-checkbox');
+            masterCb.checked = allBoxes.length > 0 && count === allBoxes.length;
+            masterCb.indeterminate = count > 0 && count < allBoxes.length;
+        }
+    };
+
+    window.deleteSingleConversation = function(convId, label) {
+        const displayName = label ? String(label).trim() : ('ID #' + convId);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Delete Conversation?',
+                html: `Are you sure you want to delete conversation with <strong>${escapeHtml(displayName)}</strong>?<br><small class="text-danger">All messages in this conversation will be permanently deleted.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="bi bi-trash me-1"></i>Yes, Delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performDeleteConversation({ action: 'delete_single', conversation_id: convId });
+                }
+            });
+        } else if (confirm(`Are you sure you want to delete conversation with "${displayName}"?`)) {
+            performDeleteConversation({ action: 'delete_single', conversation_id: convId });
+        }
+    };
+
+    window.deleteSelectedConversations = function() {
+        const checkedBoxes = document.querySelectorAll('.conv-checkbox:checked');
+        const ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(id => id > 0);
+        if (ids.length === 0) {
+            showToast('No conversations selected', 'warning');
+            return;
+        }
+
+        const promptText = `Are you sure you want to delete the <strong>${ids.length}</strong> selected conversation(s)?<br><small class="text-danger">All messages in these conversations will be permanently deleted.</small>`;
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: `Delete ${ids.length} Conversation(s)?`,
+                html: promptText,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: `<i class="bi bi-trash me-1"></i>Delete Selected (${ids.length})`,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performDeleteConversation({ action: 'delete_batch', conversation_ids: ids });
+                }
+            });
+        } else if (confirm(`Delete ${ids.length} selected conversations?`)) {
+            performDeleteConversation({ action: 'delete_batch', conversation_ids: ids });
+        }
+    };
+
+    window.confirmClearConversations = function(botFilter, statusFilter, totalCount) {
+        let filterNotice = '';
+        if (botFilter > 0 || (statusFilter && statusFilter !== '')) {
+            filterNotice = '<div class="alert alert-warning py-2 small mb-3 text-start"><i class="bi bi-funnel-fill me-1"></i>Only conversations matching current filters will be cleared.</div>';
+        }
+
+        const promptHtml = `
+            ${filterNotice}
+            <p>Are you sure you want to clear <strong>${totalCount}</strong> conversation(s)?</p>
+            <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>This will permanently remove all messages, chat history, and handover logs. This cannot be undone!</p>
+        `;
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Clear Conversations?',
+                html: promptHtml,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="bi bi-trash3-fill me-1"></i>Yes, Clear All',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performDeleteConversation({
+                        action: 'clear_all',
+                        bot_id: botFilter,
+                        status: statusFilter
+                    });
+                }
+            });
+        } else if (confirm(`Are you sure you want to clear all ${totalCount} conversations? This cannot be undone.`)) {
+            performDeleteConversation({
+                action: 'clear_all',
+                bot_id: botFilter,
+                status: statusFilter
+            });
+        }
+    };
+
+    function performDeleteConversation(payload) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Clearing...',
+                text: 'Please wait a moment',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        apiRequest(window.APP_BASE + 'api/ai-bot/clear-conversations.php', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }).then(data => {
+            if (data && data.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Conversations deleted successfully.',
+                        timer: 1200,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
+                } else {
+                    alert(data.message || 'Conversations cleared.');
+                    location.reload();
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: (data && data.message) ? data.message : 'Failed to delete conversations.'
+                    });
+                } else {
+                    alert((data && data.message) ? data.message : 'Failed to delete conversations.');
+                }
+            }
+        }).catch(err => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Network Error',
+                    text: 'Unable to connect to server. Please try again.'
+                });
+            } else {
+                alert('Network error. Please try again.');
+            }
+        });
+    }
 
     // ============================================
     // Handover Threshold Slider

@@ -62,7 +62,7 @@ try {
 
 $pageTitle = 'AI Conversations';
 $extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
-$extraJs = [asset('assets/js/ai-chatbot.js?v=' . time())];
+$extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js?v=' . time())];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -126,25 +126,49 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Conversations Table -->
         <div class="data-table">
-            <div class="data-table-header">
-                <h5 class="data-table-title"><i class="bi bi-chat-dots me-2" style="color: #667eea;"></i>Conversations <span style="font-weight: 400; color: var(--text-muted); font-size: 0.875rem;">(<?= number_format($totalConversations); ?>)</span></h5>
+            <div class="data-table-header d-flex justify-content-between align-items-center flex-wrap gap-2 py-3 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="data-table-title mb-0">
+                        <i class="bi bi-chat-dots me-2" style="color: #667eea;"></i>Conversations 
+                        <span style="font-weight: 400; color: var(--text-muted); font-size: 0.875rem;">(<?= number_format($totalConversations); ?>)</span>
+                    </h5>
+                    <span id="selectedBadge" class="badge" style="display: none; background: rgba(102, 126, 234, 0.15); color: #667eea; font-weight: 600; font-size: 0.75rem; padding: 0.35rem 0.6rem; border-radius: 6px;">
+                        <span id="selectedCount">0</span> selected
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Delete selected button -->
+                    <button type="button" id="btnDeleteSelected" class="btn btn-danger btn-sm" style="display: none; border-radius: 8px; font-weight: 500; font-size: 0.8125rem;" onclick="deleteSelectedConversations()">
+                        <i class="bi bi-trash3 me-1"></i>Delete Selected (<span id="btnSelectedCount">0</span>)
+                    </button>
+                    
+                    <?php if ($totalConversations > 0): ?>
+                    <!-- Clear all / Clear filtered button -->
+                    <button type="button" class="btn btn-outline-danger btn-sm" style="border-radius: 8px; font-weight: 500; font-size: 0.8125rem;" onclick="confirmClearConversations(<?= $botFilter; ?>, '<?= e($statusFilter); ?>', <?= (int)$totalConversations; ?>)">
+                        <i class="bi bi-trash3 me-1"></i>Clear Conversations
+                    </button>
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="table-responsive">
-                <table class="table">
+                <table class="table align-middle">
                     <thead>
                         <tr>
+                            <th style="width: 38px;" class="text-center">
+                                <input type="checkbox" id="selectAllConvs" class="form-check-input" style="cursor: pointer;" onchange="toggleSelectAllConversations(this)" title="Select all on this page">
+                            </th>
                             <th>Customer</th>
                             <th>Bot</th>
                             <th>Messages</th>
                             <th>Status</th>
                             <th>Resolved By</th>
                             <th>Last Activity</th>
-                            <th></th>
+                            <th style="width: 80px;" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($conversations)): ?>
-                        <tr><td colspan="7" class="p-0" style="border: none;">
+                        <tr><td colspan="8" class="p-0" style="border: none;">
                             <div class="ai-empty-state" style="border: none; border-radius: 0;">
                                 <div class="empty-icon"><i class="bi bi-chat-square-dots"></i></div>
                                 <h4>No Conversations Yet</h4>
@@ -155,13 +179,16 @@ include __DIR__ . '/../includes/header.php';
                         <?php else: ?>
                         <?php foreach ($conversations as $conv): ?>
                         <tr style="cursor: pointer;" onclick="toggleConversation(<?= $conv['id']; ?>)">
+                            <td class="text-center" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="form-check-input conv-checkbox" value="<?= $conv['id']; ?>" onchange="updateSelectedConversationsCount()" style="cursor: pointer;">
+                            </td>
                             <td>
                                 <div class="fw-semibold"><?= e($conv['customer_name'] ?? 'Unknown'); ?></div>
                                 <div style="font-size: 0.75rem; color: var(--text-muted);"><?= e($conv['customer_phone']); ?></div>
                             </td>
                             <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary); font-size: 0.75rem;"><?= e($conv['bot_name']); ?></span></td>
                             <td>
-                                <span style="font-size: 0.8125rem;"><?= $conv['messages_count']; ?></span>
+                                <span style="font-size: 0.8125rem; font-weight: 500;"><?= $conv['messages_count']; ?></span>
                                 <span style="font-size: 0.6875rem; color: var(--text-muted);">
                                     (AI: <?= $conv['ai_messages_count']; ?>)
                                 </span>
@@ -181,10 +208,17 @@ include __DIR__ . '/../includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted);"><?= $conv['last_message_at'] ? timeAgo($conv['last_message_at']) : '—'; ?></td>
-                            <td><i class="bi bi-chevron-down" style="font-size: 0.75rem; color: var(--text-muted);"></i></td>
+                            <td class="text-end" onclick="event.stopPropagation();">
+                                <div class="d-flex align-items-center justify-content-end gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-danger p-1 px-2 border-0" style="border-radius: 6px;" title="Delete this conversation" onclick="deleteSingleConversation(<?= $conv['id']; ?>, '<?= e(addslashes($conv['customer_name'] ?? $conv['customer_phone'])); ?>')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <i class="bi bi-chevron-down" style="font-size: 0.75rem; color: var(--text-muted);"></i>
+                                </div>
+                            </td>
                         </tr>
                         <tr id="conv-detail-<?= $conv['id']; ?>" style="display: none;">
-                            <td colspan="7" class="p-0">
+                            <td colspan="8" class="p-0">
                                 <!-- Messages loaded via JS -->
                             </td>
                         </tr>

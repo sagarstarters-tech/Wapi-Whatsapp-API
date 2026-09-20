@@ -19,6 +19,12 @@ if (!Auth::isLoggedIn()) {
 
 $userId = $_SESSION['user_id'];
 
+// Forward DELETE or POST clear requests to clear-conversations.php
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE' || ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_REQUEST['action']))) {
+    require __DIR__ . '/clear-conversations.php';
+    exit;
+}
+
 // Read filter params from GET
 $botId    = sanitizeInt($_GET['bot_id'] ?? 0);
 $page     = max(1, sanitizeInt($_GET['page'] ?? 1));
