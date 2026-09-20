@@ -2,69 +2,44 @@
 require_once __DIR__ . '/../../config/config.php';
 $db = Database::getInstance();
 
-// Check uploads directory
-$uploadDir = dirname(__DIR__, 2) . '/uploads';
-$filesInUploads = [];
-if (is_dir($uploadDir)) {
-    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadDir));
-    foreach ($it as $file) {
-        if ($file->isFile()) {
-            $filesInUploads[] = str_replace($uploadDir, '', $file->getPathname());
-        }
-    }
-}
-$result = [];
 $aiBots = $db->fetchAll("SELECT id, user_id, whatsapp_account_id, name, status FROM ai_bots");
-$result['ai_bots'] = $aiBots;
-
 $waAccounts = $db->fetchAll("SELECT id, user_id, phone_number_id, phone_number, status FROM whatsapp_accounts");
-$result['wa_accounts'] = $waAccounts;
 
-$helloFlow = $db->fetch("SELECT * FROM chatbot_flows WHERE name LIKE '%hello%' OR name LIKE '%bot%' ORDER BY id DESC LIMIT 1");
+$helloFlow = $db->fetch("SELECT id, user_id, name, is_active, flow_json FROM chatbot_flows WHERE name LIKE '%hello%' OR name LIKE '%bot%' ORDER BY id DESC LIMIT 1");
+$startNode = null;
+$nodeSummaries = [];
+
 if ($helloFlow) {
     $data = json_decode($helloFlow['flow_json'], true);
     $nodes = $data['drawflow']['Home']['data'] ?? $data['drawflow']['home']['data'] ?? [];
-    $startNode = null;
     foreach ($nodes as $nId => $n) {
-        if (($n['name'] ?? '') === 'start') {
-            $startNode = ['id' => $nId, 'data' => $n['data'] ?? [], 'outputs' => $n['outputs'] ?? []];
-            break;
-        }
-    }
-    $result['start_node'] = $startNode;
-    $result['flow_id'] = $helloFlow['id'];
-    $result['flow_name'] = $helloFlow['name'];
-    $result['is_active'] = $helloFlow['is_active'];
-}
-if (!$helloFlow && !empty($flows)) {
-    $helloFlow = $db->fetch("SELECT * FROM chatbot_flows WHERE id = ?", [$flows[0]['id']]);
-}
-
-if ($helloFlow) {
-    $data = json_decode($helloFlow['flow_json'], true);
-    $nodes = $data['drawflow']['Home']['data'] ?? $data['drawflow']['home']['data'] ?? [];
-    $imageNodes = [];
-    foreach ($nodes as $nId => $node) {
-        $nData = $node['data'] ?? [];
-        $img = $nData['image'] ?? $nData['url'] ?? null;
-        if (!empty($img) || in_array($node['name'] ?? '', ['cta', 'interactive', 'image'])) {
-            $imageNodes[] = [
+        $name = $n['name'] ?? 'unknown';
+        if ($name === 'start') {
+            $startNode = [
                 'id' => $nId,
-                'name' => $node['name'] ?? '',
-                'image' => $img,
-                'full_data' => $nData
+                'data' => $n['data'] ?? [],
+                'outputs' => $n['outputs'] ?? []
             ];
         }
+        $nodeSummaries[$nId] = [
+            'name' => $name,
+            'image' => $n['data']['image'] ?? null,
+            'text' => substr($n['data']['text'] ?? $n['data']['body_text'] ?? '', 0, 40),
+            'conns' => count($n['outputs']['output_1']['connections'] ?? [])
+        ];
     }
-    $result['inspect_flow'] = [
-        'id' => $helloFlow['id'],
-        'name' => $helloFlow['name'],
-        'is_active' => $helloFlow['is_active'],
-        'node_count' => count($nodes),
-        'image_nodes' => $imageNodes
-    ];
 }
 
 header('Content-Type: application/json');
-echo json_encode($result, JSON_PRETTY_PRINT);
-
+echo json_encode([
+    'ai_bots' => $aiBots,
+    'wa_accounts' => $waAccounts,
+    'flow_meta' => [
+        'id' => $helloFlow['id'] ?? null,
+        'user_id' => $helloFlow['user_id'] ?? null,
+        'name' => $helloFlow['name'] ?? null,
+        'is_active' => $helloFlow['is_active'] ?? null,
+    ],
+    'start_node' => $startNode,
+    'nodes_summary' => $nodeSummaries
+], JSON_PRETTY_PRINT);
