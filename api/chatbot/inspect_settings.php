@@ -14,9 +14,14 @@ try {
         $settings[$r['setting_key']] = $r['setting_value'];
     }
 
+    $uploadsDir = __DIR__ . '/../../uploads/settings';
+    $files = is_dir($uploadsDir) ? scandir($uploadsDir) : [];
+
     echo json_encode([
         'settings' => $settings,
         'app_url' => defined('APP_URL') ? APP_URL : null,
+        'files_in_uploads_settings' => $files,
+        'logo_file_exists' => !empty($settings['site_logo']) ? file_exists(__DIR__ . '/../../' . $settings['site_logo']) : false,
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 } catch (Throwable $t) {
     echo json_encode(['error' => $t->getMessage()]);
