@@ -1,8 +1,19 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 $db = Database::getInstance();
-$flows = $db->fetchAll("SELECT id, user_id, name, is_active, LENGTH(flow_json) as json_len, updated_at FROM chatbot_flows ORDER BY id DESC");
-$result = ['flows' => $flows];
+
+// Check uploads directory
+$uploadDir = dirname(__DIR__, 2) . '/uploads';
+$filesInUploads = [];
+if (is_dir($uploadDir)) {
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploadDir));
+    foreach ($it as $file) {
+        if ($file->isFile()) {
+            $filesInUploads[] = str_replace($uploadDir, '', $file->getPathname());
+        }
+    }
+}
+$result = ['uploads_files' => $filesInUploads];
 
 $helloFlow = $db->fetch("SELECT * FROM chatbot_flows WHERE name LIKE '%hello%' OR name LIKE '%bot%' ORDER BY id DESC LIMIT 1");
 if (!$helloFlow && !empty($flows)) {
