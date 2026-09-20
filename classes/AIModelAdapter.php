@@ -226,31 +226,30 @@ class AIModelAdapter
             'x-goog-api-key: ' . $apiKey,
         ];
 
-        // List of candidate models in priority order.
-        // Google deprecated gemini-2.0-flash and instructs: "use models/gemini-2.5-flash"
-        $candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-exp'];
+        // Discover supported models directly from Google's API for this key
+        $modelCandidates = self::discoverGeminiModels($apiKey);
         $lastException = null;
         $response = null;
-        $usedModel = 'gemini-2.5-flash';
+        $usedModel = 'gemini-1.5-flash';
 
-        foreach ($candidateModels as $modelCandidate) {
-            $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $modelCandidate . ':generateContent?key=' . urlencode($apiKey);
+        foreach ($modelCandidates as $candidate) {
+            $url = $candidate['url'];
             try {
                 $response = self::makeCurlRequest($url, $headers, $payload);
-                $usedModel = $modelCandidate;
+                $usedModel = $candidate['name'];
                 $lastException = null;
                 break;
             } catch (Exception $e) {
                 $lastException = $e;
                 $msg = $e->getMessage();
-                // If model is deprecated / not found / not available, try next model candidate
+                // If model is not found / deprecated, continue to next candidate
                 if (stripos($msg, 'no longer available') !== false ||
                     stripos($msg, 'not found') !== false ||
                     stripos($msg, '404') !== false ||
                     stripos($msg, 'is not supported') !== false) {
                     continue;
                 }
-                // For other errors (invalid auth, quota, etc.), rethrow immediately
+                // For authentication errors, rate limits, or billing errors, throw immediately
                 throw $e;
             }
         }
@@ -291,6 +290,81 @@ class AIModelAdapter
             'tokens_used' => $tokensUsed,
             'finish_reason' => $finishReasonMap[$finishReason] ?? strtolower($finishReason),
             'model' => $usedModel,
+        ];
+    }
+
+    /**
+     * Discover supported Gemini models directly from Google's API for the given key
+     *
+     * @param string $apiKey
+     * @return array List of model descriptors with 'name', 'version', and 'url'
+     */
+    private static function discoverGeminiModels(string $apiKey): array
+    {
+        $headers = [
+            'Content-Type: application/json',
+            'x-goog-api-key: ' . $apiKey,
+        ];
+
+        // Check ListModels on v1 and v1beta to discover exact models supported by this project
+        foreach (['v1', 'v1beta'] as $apiVersion) {
+            $listUrl = "https://generativelanguage.googleapis.com/{$apiVersion}/models?key=" . urlencode($apiKey);
+            $ch = curl_init($listUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_HTTPGET => true,
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_SSL_VERIFYPEER => true,
+            ]);
+            $res = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $res) {
+                $data = json_decode($res, true);
+                if (!empty($data['models']) && is_array($data['models'])) {
+                    $found = [];
+                    foreach ($data['models'] as $m) {
+                        $methods = $m['supportedGenerationMethods'] ?? [];
+                        if (in_array('generateContent', $methods)) {
+                            $rawName = str_replace('models/', '', $m['name']);
+                            $found[] = [
+                                'name' => $rawName,
+                                'version' => $apiVersion,
+                                'url' => "https://generativelanguage.googleapis.com/{$apiVersion}/models/{$rawName}:generateContent?key=" . urlencode($apiKey),
+                            ];
+                        }
+                    }
+
+                    if (!empty($found)) {
+                        // Prioritize: 1) Flash models, 2) 1.5, 3) deprioritize preview/exp
+                        usort($found, function ($a, $b) {
+                            $scoreA = 0;
+                            $scoreB = 0;
+                            if (stripos($a['name'], 'flash') !== false) $scoreA += 20;
+                            if (stripos($b['name'], 'flash') !== false) $scoreB += 20;
+                            if (stripos($a['name'], '1.5') !== false) $scoreA += 10;
+                            if (stripos($b['name'], '1.5') !== false) $scoreB += 10;
+                            if (stripos($a['name'], '2.5') !== false) $scoreA += 5;
+                            if (stripos($b['name'], '2.5') !== false) $scoreB += 5;
+                            if (stripos($a['name'], 'exp') !== false) $scoreA -= 10;
+                            if (stripos($b['name'], 'exp') !== false) $scoreB -= 10;
+                            return $scoreB <=> $scoreA;
+                        });
+                        return $found;
+                    }
+                }
+            }
+        }
+
+        // Static fallback candidates across v1 and v1beta
+        return [
+            ['name' => 'gemini-1.5-flash', 'version' => 'v1', 'url' => 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' . urlencode($apiKey)],
+            ['name' => 'gemini-1.5-flash-latest', 'version' => 'v1beta', 'url' => 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' . urlencode($apiKey)],
+            ['name' => 'gemini-1.5-pro', 'version' => 'v1', 'url' => 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=' . urlencode($apiKey)],
+            ['name' => 'gemini-1.5-flash', 'version' => 'v1beta', 'url' => 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . urlencode($apiKey)],
+            ['name' => 'gemini-2.5-flash', 'version' => 'v1beta', 'url' => 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . urlencode($apiKey)],
         ];
     }
 
