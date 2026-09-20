@@ -141,11 +141,9 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
                 }
                 ?>
                 <?php if (!empty($logoUrl)): ?>
-                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="height: <?= (int)$logoHeight; ?>px; max-height: <?= (int)$logoHeight; ?>px; width: auto; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('navbarBrandFallback').style.display='inline-block';">
-                    <span class="brand" id="navbarBrandFallback" style="display: none;"><?= e($siteName); ?></span>
-                <?php else: ?>
-                    <span class="brand"><?= e($siteName); ?></span>
+                    <img src="<?= e($logoUrl); ?>" alt="" style="height: <?= (int)$logoHeight; ?>px; max-height: <?= (int)$logoHeight; ?>px; width: auto; object-fit: contain;" onerror="this.style.display='none';">
                 <?php endif; ?>
+                <span class="brand"><?= e($siteName); ?></span>
             </a>
             
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
