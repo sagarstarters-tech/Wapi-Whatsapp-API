@@ -13,7 +13,7 @@ $settings = new Settings();
 $hideNav = true; // Admin layout
 
 // Valid page slugs
-$validSlugs = ['contact', 'about', 'privacy', 'terms', 'cookies'];
+$validSlugs = ['contact', 'about', 'privacy', 'terms', 'cookies', 'gdpr', 'data-deletion'];
 $activeSlug = sanitize($_GET['page'] ?? 'contact');
 if (!in_array($activeSlug, $validSlugs)) {
     $activeSlug = 'contact';
@@ -21,11 +21,13 @@ if (!in_array($activeSlug, $validSlugs)) {
 
 // Page Display Names
 $pageNames = [
-    'contact' => ['name' => 'Contact Us', 'file' => 'contact.php', 'icon' => 'bi-telephone-fill'],
-    'about'   => ['name' => 'About Us', 'file' => 'about.php', 'icon' => 'bi-info-circle-fill'],
-    'privacy' => ['name' => 'Privacy Policy', 'file' => 'privacy.php', 'icon' => 'bi-shield-lock-fill'],
-    'terms'   => ['name' => 'Terms of Service', 'file' => 'terms.php', 'icon' => 'bi-file-earmark-text-fill'],
-    'cookies' => ['name' => 'Cookie Policy', 'file' => 'cookies.php', 'icon' => 'bi-cookie'],
+    'contact'       => ['name' => 'Contact Us', 'file' => 'contact.php', 'icon' => 'bi-telephone-fill'],
+    'about'         => ['name' => 'About Us', 'file' => 'about.php', 'icon' => 'bi-info-circle-fill'],
+    'privacy'       => ['name' => 'Privacy Policy', 'file' => 'privacy.php', 'icon' => 'bi-shield-lock-fill'],
+    'terms'         => ['name' => 'Terms of Service', 'file' => 'terms.php', 'icon' => 'bi-file-earmark-text-fill'],
+    'cookies'       => ['name' => 'Cookie Policy', 'file' => 'cookies.php', 'icon' => 'bi-cookie'],
+    'gdpr'          => ['name' => 'GDPR Compliance', 'file' => 'gdpr.php', 'icon' => 'bi-shield-check'],
+    'data-deletion' => ['name' => 'Data Deletion', 'file' => 'data-deletion.php', 'icon' => 'bi-trash3-fill'],
 ];
 
 // Handle Form Actions (POST)
@@ -108,6 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         } elseif ($slug === 'cookies') {
             $extraData = [
                 'effective_date' => sanitize($_POST['extra']['effective_date'] ?? date('F Y')),
+            ];
+        } elseif ($slug === 'gdpr') {
+            $extraData = [
+                'last_modified' => sanitize($_POST['extra']['last_modified'] ?? date('F Y')),
+            ];
+        } elseif ($slug === 'data-deletion') {
+            $extraData = [
+                'last_updated' => sanitize($_POST['extra']['last_updated'] ?? date('F d, Y')),
             ];
         }
 
@@ -525,7 +535,7 @@ include __DIR__ . '/../includes/header.php';
                     </div>
 
                     <!-- =======================================================
-                         LEGAL / POLICY PAGES (PRIVACY, TERMS, COOKIES)
+                         LEGAL / POLICY PAGES (PRIVACY, TERMS, COOKIES, GDPR, DATA DELETION)
                     ======================================================= -->
                     <?php else: ?>
                     <div class="card mb-4" style="border-radius: var(--border-radius);">
@@ -537,10 +547,15 @@ include __DIR__ . '/../includes/header.php';
                                     <input type="text" name="title" class="form-control" value="<?= e($pageData['title']); ?>" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Effective / Modified Date</label>
-                                    <input type="text" name="extra[<?= $activeSlug === 'terms' ? 'last_modified' : 'effective_date'; ?>]" class="form-control" value="<?= e($extra['effective_date'] ?? ($extra['last_modified'] ?? date('F Y'))); ?>">
+                                    <label class="form-label fw-semibold"><?= ($activeSlug === 'data-deletion') ? 'Last Updated Date' : (($activeSlug === 'terms' || $activeSlug === 'gdpr') ? 'Last Modified Date' : 'Effective Date'); ?></label>
+                                    <input type="text" name="extra[<?= in_array($activeSlug, ['terms', 'gdpr']) ? 'last_modified' : ($activeSlug === 'data-deletion' ? 'last_updated' : 'effective_date'); ?>]" class="form-control" value="<?= e($extra['effective_date'] ?? ($extra['last_modified'] ?? ($extra['last_updated'] ?? date('F Y')))); ?>">
                                 </div>
-                                <?php if ($activeSlug === 'terms'): ?>
+                                <?php if ($activeSlug === 'data-deletion'): ?>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Subtitle / Overview Description</label>
+                                    <input type="text" name="subtitle" class="form-control" value="<?= e($pageData['subtitle'] ?? ''); ?>" placeholder="Learn how to manage and delete your data from WAPI">
+                                </div>
+                                <?php elseif ($activeSlug === 'terms'): ?>
                                 <div class="col-12">
                                     <label class="form-label fw-semibold">Intro Notice Banner Text</label>
                                     <input type="text" name="extra[intro_notice]" class="form-control" value="<?= e($extra['intro_notice'] ?? ''); ?>" placeholder="By using WAPI, you agree to these terms...">

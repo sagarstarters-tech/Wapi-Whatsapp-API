@@ -30,7 +30,7 @@ class PageManager {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // Seed default pages if table is empty or missing slugs
-        $slugs = ['contact', 'about', 'privacy', 'terms', 'cookies'];
+        $slugs = ['contact', 'about', 'privacy', 'terms', 'cookies', 'gdpr', 'data-deletion'];
         foreach ($slugs as $slug) {
             $exists = $db->fetchColumn("SELECT COUNT(*) FROM `cms_pages` WHERE `slug` = ?", [$slug]);
             if (!$exists) {
@@ -304,6 +304,108 @@ class PageManager {
                     'meta_description' => 'Understand how WAPI uses cookies, tracking technologies, and how you can control your cookie preferences on our website.',
                     'extra_data'       => [
                         'effective_date' => 'October 2026'
+                    ]
+                ];
+
+            case 'gdpr':
+                return [
+                    'slug'             => 'gdpr',
+                    'title'            => 'GDPR Compliance',
+                    'subtitle'         => 'Last modified: October 2026',
+                    'content'          => '<h4 class="fw-bold mt-4 mb-3">1. Our Commitment to GDPR</h4>
+<p class="text-secondary">At WAPI, we are committed to upholding the General Data Protection Regulation (GDPR) standards for our users and customers. We take data protection and privacy seriously.</p>
+
+<h4 class="fw-bold mt-4 mb-3">2. Data Processing Principles</h4>
+<p class="text-secondary">WAPI processes all personal data fairly, lawfully, and in a transparent manner. We only collect data for specific, explicit, and legitimate purposes.</p>
+
+<h4 class="fw-bold mt-4 mb-3">3. Your Rights Under GDPR</h4>
+<ul>
+    <li class="text-secondary mb-3"><strong>Right of Access:</strong> You have the right to request access to the personal data we process about you.</li>
+    <li class="text-secondary mb-3"><strong>Right to Rectification:</strong> You have the right to request the correction of inaccurate or incomplete personal data.</li>
+    <li class="text-secondary mb-3"><strong>Right to Erasure (Right to be Forgotten):</strong> You may request the deletion of your personal data under certain conditions.</li>
+    <li class="text-secondary mb-3"><strong>Right to Restrict Processing:</strong> You have the right to object to or restrict our processing of your personal data.</li>
+    <li class="text-secondary mb-3"><strong>Right to Data Portability:</strong> You may request a copy of your personal data in a machine-readable format.</li>
+</ul>
+
+<h4 class="fw-bold mt-4 mb-3">4. International Data Transfers</h4>
+<p class="text-secondary">When data is transferred outside the European Economic Area (EEA), WAPI ensures that appropriate safeguards are in place to maintain the security and privacy of the data.</p>
+
+<h4 class="fw-bold mt-4 mb-3">5. Data Breach Notification</h4>
+<p class="text-secondary">In the unlikely event of a data breach, WAPI has established internal procedures and will notify the relevant supervisory authority and affected data subjects without undue delay.</p>
+
+<h4 class="fw-bold mt-4 mb-3">6. Contacting the DPO</h4>
+<p class="text-secondary">If you have questions about your data or our GDPR compliance, please email our Data Protection Officer at ' . htmlspecialchars($contactEmail) . '.</p>',
+                    'meta_title'       => 'GDPR Compliance | WAPI',
+                    'meta_description' => 'Review WAPI commitment to GDPR data protection, data processing principles, user privacy rights, and Data Protection Officer contact details.',
+                    'extra_data'       => [
+                        'last_modified' => 'October 2026'
+                    ]
+                ];
+
+            case 'data-deletion':
+                return [
+                    'slug'             => 'data-deletion',
+                    'title'            => 'Data Deletion Instructions',
+                    'subtitle'         => 'Learn how to manage and delete your data from WAPI',
+                    'content'          => '<div class="mb-5">
+    <h4 class="fw-bold mb-3">Overview</h4>
+    <p class="text-secondary">
+        At WAPI, we value your privacy and provide you with full control over your personal data. 
+        Users can request the deletion of their accounts and associated data at any time. 
+        If you use our services through third-party platforms like Facebook, you can also request data removal through these instructions.
+    </p>
+</div>
+
+<div class="mb-5">
+    <h4 class="fw-bold mb-3">1. How to Delete Your Account</h4>
+    <p class="text-secondary">The fastest way to delete your data is through your dashboard:</p>
+    <ol class="text-secondary">
+        <li class="mb-2">Log in to your <strong>WAPI Dashboard</strong>.</li>
+        <li class="mb-2">Navigate to <strong>Account Settings</strong>.</li>
+        <li class="mb-2">Click on <strong>Security</strong> or <strong>Subscription</strong> tab.</li>
+        <li class="mb-2">Select the <strong>Delete Account</strong> option at the bottom of the page.</li>
+        <li class="mb-2">Confirm your password and click <strong>Permanently Delete</strong>.</li>
+    </ol>
+    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 mt-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Warning:</strong> Account deletion is permanent. All your contacts, message history, and API configurations will be immediately and irrevocably removed from our servers.
+    </div>
+</div>
+
+<div class="mb-5">
+    <h4 class="fw-bold mb-3">2. Request via Email</h4>
+    <p class="text-secondary">
+        If you cannot access your account or wish to request data deletion manually, please send an email to our support team from your registered email address:
+    </p>
+    <div class="bg-light p-4 rounded-3 border-start border-primary border-4">
+        <p class="mb-1 fw-bold">Email to:</p>
+        <a href="mailto:' . htmlspecialchars($contactEmail) . '" class="text-primary text-decoration-none fs-5">
+            ' . htmlspecialchars($contactEmail) . '
+        </a>
+        <p class="mt-3 mb-1 fw-bold">Subject:</p>
+        <p class="text-secondary mb-0">Data Deletion Request - [Your Full Name]</p>
+    </div>
+    <p class="text-secondary mt-3">
+        Our team will process your request within 48-72 business hours and confirm via email once the deletion is complete.
+    </p>
+</div>
+
+<div class="mb-5">
+    <h4 class="fw-bold mb-3">3. Facebook Data Deletion</h4>
+    <p class="text-secondary">
+        If you have connected our WAPI Facebook App to your Meta Business account and wish to remove the app data:
+    </p>
+    <ol class="text-secondary">
+        <li class="mb-2">Go to your Facebook Profile\'s <strong>Settings & Privacy > Settings</strong>.</li>
+        <li class="mb-2">Click <strong>Apps and Websites</strong> and you will see all of your Apps activities.</li>
+        <li class="mb-2">Select the checkbox of <strong>WAPI</strong>.</li>
+        <li class="mb-2">Click <strong>Remove</strong> button.</li>
+    </ol>
+</div>',
+                    'meta_title'       => 'Data Deletion Instructions | WAPI',
+                    'meta_description' => 'Instructions on how to request the deletion and removal of your personal data and account from the WAPI WhatsApp API platform.',
+                    'extra_data'       => [
+                        'last_updated' => 'October 2026'
                     ]
                 ];
 
