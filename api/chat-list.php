@@ -28,14 +28,21 @@ foreach ($conversations as $c) {
     $msgType = $c['type'] ?? 'text';
     $preview = substr($c['content'] ?? '', 0, 30);
 
-    if ($msgType === 'image') $preview = '📷 ' . ($preview !== '[Image]' ? $preview : 'Photo');
+    $rawError = $c['error_message'] ?? '';
+    $detectedOtp = extractOtpFromMessage($c['content'] ?? '', $rawError);
+
+    if ($detectedOtp) {
+        $preview = '🔐 OTP: ' . $detectedOtp;
+    } elseif ($msgType === 'image') $preview = '📷 ' . ($preview !== '[Image]' ? $preview : 'Photo');
     elseif ($msgType === 'video') $preview = '🎥 ' . ($preview !== '[Video]' ? $preview : 'Video');
     elseif ($msgType === 'audio' || $msgType === 'voice') $preview = '🎵 Audio';
     elseif ($msgType === 'document') $preview = '📄 ' . ($preview !== '[Document]' ? $preview : 'Document');
     elseif ($msgType === 'sticker') $preview = '🏷️ Sticker';
     elseif ($msgType === 'location') $preview = '📍 Location';
     elseif ($msgType === 'button') $preview = '🔑 ' . $preview;
-    elseif ($msgType === 'unsupported') $preview = '⚠️ Unsupported message';
+    elseif ($msgType === 'unsupported') {
+        $preview = !empty($c['content']) && strpos($c['content'], '⚠️') !== false ? $c['content'] : '⚠️ Unsupported message';
+    }
     elseif ($msgType === 'reaction') $preview = '😊 Reaction';
     elseif ($msgType === 'order') $preview = '🛒 Order';
     elseif ($msgType === 'contacts') $preview = '👤 Contact';

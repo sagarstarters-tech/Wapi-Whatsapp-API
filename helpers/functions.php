@@ -298,3 +298,47 @@ function renderPagination($pagination, $urlPattern = '?page=%d') {
     $html .= '</ul></nav>';
     return $html;
 }
+
+/**
+ * Detect and extract OTP or verification code from text or JSON array
+ */
+function extractOtpFromMessage($content, $rawData = null) {
+    $textToSearch = (string)$content;
+    if (is_array($rawData)) {
+        $textToSearch .= ' ' . json_encode($rawData, JSON_UNESCAPED_UNICODE);
+    } elseif (is_string($rawData) && !empty($rawData)) {
+        $textToSearch .= ' ' . $rawData;
+    }
+
+    if (empty(trim($textToSearch))) return null;
+
+    // 1. Explicit keyword followed by 4-8 digit code (e.g. "code is 123456", "verification code is: 456789", "OTP: 987654", "Facebook code: 123456")
+    if (preg_match('/(?:code|otp|pin|verification(?:\s+code)?|password|security\s+code)(?:(?:\s+is)?[\s:=–-]+|\s+)([0-9]{4,8})\b/i', $textToSearch, $m)) {
+        return $m[1];
+    }
+
+    // 2. Android / WhatsApp Autofill format: "<#> 123456 is your code" or "<#> 123456"
+    if (preg_match('/<#>\s*([0-9]{4,8})\b/i', $textToSearch, $m)) {
+        return $m[1];
+    }
+
+    // 3. Code followed by "is your ... code" (e.g. "849201 is your Facebook code", "492-104 is your WhatsApp code")
+    if (preg_match('/\b([0-9]{3,4}[-\s][0-9]{3,4})\s+(?:is\s+your|for)\b/i', $textToSearch, $m)) {
+        return preg_replace('/[^0-9]/', '', $m[1]);
+    }
+    if (preg_match('/\b([0-9]{4,8})\s+(?:is\s+your|for)\b/i', $textToSearch, $m)) {
+        return $m[1];
+    }
+
+    // 4. JSON key for code or otp (e.g. "code":"123456", "otp":"123456", "token":"123456")
+    if (preg_match('/"(?:code|otp|pin|token|code_value)"\s*:\s*"?([0-9]{4,8})"?/i', $textToSearch, $m)) {
+        return $m[1];
+    }
+
+    // 5. Template parameter text that is purely digits between 4-8 chars
+    if (preg_match('/"(?:text|body)"\s*:\s*"([0-9]{4,8})"/i', $textToSearch, $m)) {
+        return $m[1];
+    }
+
+    return null;
+}

@@ -241,6 +241,12 @@ class WhatsApp {
      * Process incoming webhook
      */
     public function processWebhook($payload, $userId = null) {
+        // Resolve user_id from phone_number_id if not provided
+        if (!$userId && isset($payload['entry'][0]['changes'][0]['value']['metadata']['phone_number_id'])) {
+            $pnId = $payload['entry'][0]['changes'][0]['value']['metadata']['phone_number_id'];
+            $userId = $this->db->fetchColumn("SELECT user_id FROM whatsapp_accounts WHERE phone_number_id = ? LIMIT 1", [$pnId]);
+        }
+
         // Log webhook
         $this->db->insert('webhook_logs', [
             'user_id' => $userId,
@@ -395,14 +401,46 @@ class WhatsApp {
                 break;
 
             case 'unsupported':
-                // WhatsApp Cloud API sends 'unsupported' for newer features
-                // (polls, channels, edited messages, etc.) - show a friendly notice
-                $text = '⚠️ This message type isn\'t supported in the chat viewer yet.';
+                // Check if errors or unsupported details contain error message or details
+                $unsupType = $msg['unsupported']['type'] ?? '';
+                $errDetails = '';
+                if (!empty($msg['errors']) && is_array($msg['errors'])) {
+                    $errParts = [];
+                    foreach ($msg['errors'] as $err) {
+                        $p = trim(($err['title'] ?? '') . ': ' . ($err['message'] ?? ''));
+                        if (!empty($err['error_data']['details'])) $p .= ' (' . $err['error_data']['details'] . ')';
+                        if ($p) $errParts[] = $p;
+                    }
+                    $errDetails = implode(' | ', $errParts);
+                }
+                
+                // Deep search in msg for any OTP code
+                $foundOtp = function_exists('extractOtpFromMessage') ? extractOtpFromMessage('', $msg) : null;
+                if ($foundOtp) {
+                    $text = "🔐 OTP / Verification Code: {$foundOtp}" . ($unsupType ? "\n[System message type: {$unsupType}]" : '');
+                } elseif (!empty($errDetails)) {
+                    $text = "⚠️ Unsupported Message" . ($unsupType ? " ({$unsupType})" : "") . ": {$errDetails}";
+                } else {
+                    $text = "⚠️ Unsupported message" . ($unsupType ? " ({$unsupType})" : "");
+                }
                 break;
 
             case 'template':
                 $templateName = $msg['template']['name'] ?? 'Unknown';
-                $text = '[Template: ' . $templateName . ']';
+                $paramTexts = [];
+                foreach ($msg['template']['components'] ?? [] as $comp) {
+                    foreach ($comp['parameters'] ?? [] as $param) {
+                        if (isset($param['text'])) $paramTexts[] = $param['text'];
+                    }
+                }
+                // Check if template has an OTP parameter
+                $foundOtp = function_exists('extractOtpFromMessage') ? extractOtpFromMessage('', $msg['template']) : null;
+                if ($foundOtp) {
+                    $text = "🔐 OTP / Code: {$foundOtp}\n[Template: {$templateName}]";
+                } else {
+                    $paramsStr = !empty($paramTexts) ? ': ' . implode(', ', $paramTexts) : '';
+                    $text = '[Template: ' . $templateName . $paramsStr . ']';
+                }
                 break;
 
             case 'order':
@@ -453,7 +491,7 @@ class WhatsApp {
         $contactId = $this->db->fetchColumn("SELECT id FROM contacts WHERE user_id = ? AND phone = ?", [$userId, $from]) ?: null;
         $waAccountId = $this->db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE phone_number_id = ? AND user_id = ?", [$phoneNumberId, $userId]) ?: null;
 
-        // Save incoming message
+        // Save incoming message (retain raw JSON payload in error_message column)
         $this->db->insert('messages', [
             'user_id'              => $userId,
             'whatsapp_account_id'  => $waAccountId,
@@ -464,6 +502,7 @@ class WhatsApp {
             'content'              => $text,
             'media_url'            => $mediaUrl,
             'status'               => 'delivered',
+            'error_message'        => json_encode($msg, JSON_UNESCAPED_UNICODE),
             'direction'            => 'inbound'
         ]);
     }

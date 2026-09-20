@@ -335,14 +335,19 @@ include __DIR__ . '/../includes/header.php';
                                 <div class="text-muted text-truncate mini-msg" style="font-size: 0.75rem;">
                                     <?= $c['direction'] === 'outbound' ? '✓ ' : ''; ?><?php
                                         $msgType = $c['type'] ?? 'text';
+                                        $rawError = $c['error_message'] ?? '';
+                                        $detectedOtp = extractOtpFromMessage($c['content'] ?? '', $rawError);
                                         $preview = substr($c['content'] ?? '', 0, 30);
-                                        if ($msgType === 'image') echo '📷 ' . ($preview !== '[Image]' ? e($preview) : 'Photo');
+                                        if ($detectedOtp) echo '🔐 OTP: ' . e($detectedOtp);
+                                        elseif ($msgType === 'image') echo '📷 ' . ($preview !== '[Image]' ? e($preview) : 'Photo');
                                         elseif ($msgType === 'video') echo '🎥 ' . ($preview !== '[Video]' ? e($preview) : 'Video');
                                         elseif ($msgType === 'audio' || $msgType === 'voice') echo '🎵 Audio';
                                         elseif ($msgType === 'document') echo '📄 ' . ($preview !== '[Document]' ? e($preview) : 'Document');
                                         elseif ($msgType === 'sticker') echo '🏷️ Sticker';
                                         elseif ($msgType === 'location') echo '📍 Location';
-                                        elseif ($msgType === 'unsupported') echo '⚠️ Unsupported message';
+                                        elseif ($msgType === 'unsupported') {
+                                            echo (!empty($c['content']) && strpos($c['content'], '⚠️') !== false ? e($preview) : '⚠️ Unsupported message');
+                                        }
                                         elseif ($msgType === 'reaction') echo '😊 Reaction';
                                         elseif ($msgType === 'order') echo '🛒 Order';
                                         elseif ($msgType === 'contacts') echo '👤 Contact';
@@ -614,11 +619,42 @@ include __DIR__ . '/../includes/header.php';
                 if (btnLabel) {
                     contentHtml += `<div style="margin-top:8px; padding:6px 12px; border:1px solid ${m.direction==='inbound'?'#d1d5db':'rgba(255,255,255,0.4)'}; border-radius:8px; font-size:0.8rem; text-align:center; opacity:0.85; cursor:default;">${escapeHtml(btnLabel)}</div>`;
                 }
+            } else if (m.detected_otp || (m.content && m.content.includes('🔐 OTP'))) {
+                let otp = m.detected_otp;
+                if (!otp && m.content) {
+                    let match = m.content.match(/(?:OTP|Code)[:\s]+([0-9]{4,8})/i);
+                    if (match) otp = match[1];
+                }
+                contentHtml = `<div style="background: ${m.direction==='inbound'?'rgba(16,185,129,0.12)':'rgba(255,255,255,0.2)'}; border: 1px solid ${m.direction==='inbound'?'rgba(16,185,129,0.35)':'rgba(255,255,255,0.4)'}; border-radius: 12px; padding: 12px 14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px;">
+                        <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:${m.direction==='inbound'?'#059669':'#fff'};"><i class="bi bi-shield-lock-fill me-1"></i> Verification Code / OTP</span>
+                        <span class="badge bg-success" style="font-size:0.65rem;">Active</span>
+                    </div>
+                    <div style="font-size: 1.65rem; font-weight: 800; letter-spacing: 3px; font-family: monospace; color:${m.direction==='inbound'?'#047857':'#fff'}; margin: 4px 0;">${escapeHtml(otp || 'CODE')}</div>
+                    <div style="font-size:0.75rem; opacity:0.8; margin-bottom:6px;">${escapeHtml(m.content ? m.content.split('\n')[1] || '' : '')}</div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        <button type="button" class="btn btn-sm btn-success py-1 px-3 rounded-pill fw-bold" style="font-size:0.75rem;" onclick="navigator.clipboard.writeText('${otp}'); alert('OTP Copied: ${otp}');">
+                            <i class="bi bi-clipboard me-1"></i> Copy Code
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" style="font-size:0.75rem;" onclick="viewChatRawPayload(${m.id})">
+                            <i class="bi bi-code-square me-1"></i> Raw
+                        </button>
+                    </div>
+                </div>`;
             } else if (m.type === 'unsupported' || (m.content && m.content.startsWith('[UNSUPPORTED'))) {
-                // Show a clean notice for unsupported WhatsApp message types (also catches old DB records)
-                contentHtml = `<div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:${m.direction==='inbound'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.15)'}; border-radius:8px; font-size:0.82rem; opacity:0.85;">
-                    <span style="font-size:1.1rem;">⚠️</span>
-                    <span>This message type isn't supported in the chat viewer yet</span>
+                let noteText = m.content && m.content !== '⚠️ This message type isn\'t supported in the chat viewer yet.' ? m.content : 'This message type isn\'t supported in the standard chat viewer';
+                contentHtml = `<div style="padding:10px 12px; background:${m.direction==='inbound'?'rgba(245,158,11,0.1)':'rgba(255,255,255,0.15)'}; border: 1px solid rgba(245,158,11,0.3); border-radius:10px; font-size:0.82rem;">
+                    <div style="display:flex; align-items:flex-start; gap:8px;">
+                        <span style="font-size:1.1rem; line-height:1;">⚠️</span>
+                        <div style="flex:1;">
+                            <div style="font-weight:600; color:${m.direction==='inbound'?'#b45309':'#fff'};">${escapeHtml(noteText)}</div>
+                            <div style="margin-top:6px;">
+                                <button type="button" class="btn btn-sm btn-outline-dark py-0 px-2 rounded" style="font-size:0.75rem;" onclick="viewChatRawPayload(${m.id})">
+                                    <i class="bi bi-code-slash me-1"></i> View Raw Payload
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>`;
             } else {
                 // Text or fallback for media without URL
@@ -670,6 +706,89 @@ include __DIR__ . '/../includes/header.php';
             startPolling();
         }
     });
+
+    let currentChatModalOtp = '';
+    let currentChatRawJson = '';
+
+    function copyChatModalOtp() {
+        if (!currentChatModalOtp) return;
+        navigator.clipboard.writeText(currentChatModalOtp).then(() => {
+            alert('OTP Copied to clipboard: ' + currentChatModalOtp);
+        });
+    }
+
+    function copyChatRawJson() {
+        if (!currentChatRawJson) return;
+        navigator.clipboard.writeText(currentChatRawJson).then(() => {
+            alert('Raw JSON copied to clipboard.');
+        });
+    }
+
+    function viewChatRawPayload(msgId) {
+        const modal = new bootstrap.Modal(document.getElementById('chatRawPayloadModal'));
+        document.getElementById('chatRawPayloadContent').innerText = 'Loading payload from server...';
+        document.getElementById('chatModalOtpAlert').style.display = 'none';
+        currentChatModalOtp = '';
+        currentChatRawJson = '';
+        modal.show();
+
+        fetch('<?= baseUrl('api/message-details.php?id='); ?>' + msgId)
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    if (d.detected_otp) {
+                        currentChatModalOtp = d.detected_otp;
+                        document.getElementById('chatModalOtpCode').innerText = d.detected_otp;
+                        document.getElementById('chatModalOtpAlert').style.display = 'flex';
+                    }
+                    if (d.raw_payload) {
+                        currentChatRawJson = JSON.stringify(d.raw_payload, null, 2);
+                        document.getElementById('chatRawPayloadContent').innerText = currentChatRawJson;
+                    } else if (d.content) {
+                        currentChatRawJson = d.content;
+                        document.getElementById('chatRawPayloadContent').innerText = d.content;
+                    } else {
+                        document.getElementById('chatRawPayloadContent').innerText = 'No raw payload available for this message.';
+                    }
+                } else {
+                    document.getElementById('chatRawPayloadContent').innerText = 'Unable to find raw payload for message #' + msgId;
+                }
+            })
+            .catch(err => {
+                document.getElementById('chatRawPayloadContent').innerText = 'Error connecting to server.';
+            });
+    }
 </script>
+
+<!-- Raw Payload Modal in Live Chat -->
+<div class="modal fade" id="chatRawPayloadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary"><i class="bi bi-code-square me-2"></i> Raw Message Payload</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-success d-flex align-items-center justify-content-between p-3 rounded-3 shadow-sm border-0 mb-3" id="chatModalOtpAlert" style="display:none; background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;"><i class="bi bi-shield-lock-fill"></i> Detected Verification Code / OTP</div>
+                        <div class="display-6 fw-bold my-1" id="chatModalOtpCode" style="letter-spacing: 2px; font-family: monospace;"></div>
+                    </div>
+                    <button type="button" class="btn btn-light btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm" onclick="copyChatModalOtp()"><i class="bi bi-clipboard me-1"></i> Copy Code</button>
+                </div>
+                <div class="p-3 bg-dark rounded-3">
+                    <div class="d-flex justify-content-between align-items-center pb-2 border-bottom border-secondary mb-2">
+                        <span class="text-secondary small">Meta Webhook Payload</span>
+                        <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 0.75rem;" onclick="copyChatRawJson()">Copy JSON</button>
+                    </div>
+                    <pre id="chatRawPayloadContent" class="m-0 text-success" style="font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light w-100" style="border-radius: 10px;" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

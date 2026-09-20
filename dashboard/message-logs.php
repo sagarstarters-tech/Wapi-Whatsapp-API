@@ -109,7 +109,14 @@ include __DIR__ . '/../includes/header.php';
                                 <div style="font-size: 0.75rem; color: var(--text-muted);"><?= e($msg['to_number']); ?></div>
                             </td>
                             <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"><?= ucfirst($msg['type']); ?></span></td>
-                            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem;"><?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?></td>
+                            <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem;">
+                                <?php
+                                    $rowOtp = extractOtpFromMessage($msg['content'], $msg['error_message'] ?? '');
+                                    if ($rowOtp): ?>
+                                    <span class="badge rounded-pill bg-success px-2 py-1 me-1 shadow-sm"><i class="bi bi-shield-lock-fill"></i> OTP: <?= e($rowOtp); ?></span>
+                                <?php endif; ?>
+                                <?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?>
+                            </td>
                             <td><span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span></td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap;"><?= timeAgo($msg['created_at']); ?></td>
                             <td>
@@ -123,7 +130,8 @@ include __DIR__ . '/../includes/header.php';
                                     'time'        => date('d M Y, H:i:s', strtotime($msg['created_at'])),
                                     'content'     => $msg['content'],
                                     'error'       => $msg['error_message'] ?? '',
-                                    'media_url'   => $msg['media_url'] ?? ''
+                                    'media_url'   => $msg['media_url'] ?? '',
+                                    'row_otp'     => $rowOtp
                                 ])); ?>)" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </button>
@@ -140,13 +148,29 @@ include __DIR__ . '/../includes/header.php';
 
 <!-- Message Detail Modal -->
 <div class="modal fade" id="messageDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" style="color: var(--primary);">Message Details</h5>
+                <h5 class="modal-title fw-bold" style="color: var(--primary);"><i class="bi bi-chat-text-fill me-2"></i>Message Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
+                <!-- Highlighted OTP Banner -->
+                <div id="modalOtpSection" class="p-3 rounded-4 mb-4 shadow-sm" style="display:none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-weight: 700;">
+                                <i class="bi bi-shield-lock-fill me-1"></i> Verification Code / OTP
+                            </div>
+                            <div id="modalOtpCode" class="fw-bold my-1" style="font-size: 2.2rem; letter-spacing: 3px; font-family: monospace;"></div>
+                            <div style="font-size: 0.75rem; opacity: 0.85;">Received from Facebook, Meta or Authentication Service</div>
+                        </div>
+                        <button type="button" class="btn btn-light fw-bold px-3 py-2 rounded-pill shadow-sm" onclick="copyModalOtp()">
+                            <i class="bi bi-clipboard-check me-1"></i> Copy Code
+                        </button>
+                    </div>
+                </div>
+
                 <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded-4 bg-light">
                     <div id="modalIcon" class="rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; font-size: 1.25rem;"></div>
                     <div>
@@ -166,11 +190,11 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="mb-3" id="modalErrorSection" style="display:none;">
-                    <label class="text-muted small fw-bold text-uppercase mb-2 d-block" style="letter-spacing: 0.5px; color: var(--danger);">❌ Failure Reason (Meta API Error)</label>
+                    <label class="text-muted small fw-bold text-uppercase mb-2 d-block" style="letter-spacing: 0.5px; color: var(--danger);">❌ System / API Error</label>
                     <div id="modalError" class="p-3 rounded-3 border" style="font-size: 0.85rem; white-space: pre-wrap; line-height: 1.6; background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.3) !important; color: #b91c1c;"></div>
                 </div>
 
-                <div class="row g-3 mt-2">
+                <div class="row g-3 my-2">
                     <div class="col-6">
                         <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Type</label>
                         <span id="modalType" class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"></span>
@@ -178,6 +202,28 @@ include __DIR__ . '/../includes/header.php';
                     <div class="col-6">
                         <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Status</label>
                         <span id="modalStatus" class="status-badge"></span>
+                    </div>
+                </div>
+
+                <!-- Raw Webhook / Technical Payload Accordion -->
+                <div class="accordion mt-3" id="modalRawAccordion">
+                    <div class="accordion-item border rounded-3 overflow-hidden">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-2 px-3 bg-light fw-semibold" style="font-size: 0.85rem;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRawPayload">
+                                <i class="bi bi-code-square me-2 text-primary"></i> View Raw Webhook & Technical Payload
+                            </button>
+                        </h2>
+                        <div id="collapseRawPayload" class="accordion-collapse collapse" data-bs-parent="#modalRawAccordion">
+                            <div class="accordion-body p-3 bg-dark">
+                                <div class="d-flex justify-content-between align-items-center pb-2 border-bottom border-secondary mb-2">
+                                    <span class="text-secondary small">Raw Payload Received from Meta</span>
+                                    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 0.75rem;" onclick="copyModalRawJson()">
+                                        <i class="bi bi-clipboard me-1"></i> Copy JSON
+                                    </button>
+                                </div>
+                                <pre id="modalRawPayload" class="m-0 text-success" style="font-family: monospace; font-size: 0.75rem; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">Loading payload details...</pre>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -200,10 +246,30 @@ include __DIR__ . '/../includes/header.php';
 </style>
 
 <script>
+    let currentModalOtp = '';
+    let currentRawJson = '';
+
+    function copyModalOtp() {
+        if (!currentModalOtp) return;
+        navigator.clipboard.writeText(currentModalOtp).then(() => {
+            alert('OTP Copied to clipboard: ' + currentModalOtp);
+        });
+    }
+
+    function copyModalRawJson() {
+        if (!currentRawJson) return;
+        navigator.clipboard.writeText(currentRawJson).then(() => {
+            alert('Raw JSON copied to clipboard.');
+        });
+    }
+
     function viewMessage(data) {
         const modal = new bootstrap.Modal(document.getElementById('messageDetailModal'));
         
-        // Populate modal data
+        currentModalOtp = data.row_otp || '';
+        currentRawJson = '';
+
+        // Reset and populate modal data
         document.getElementById('modalTarget').innerText  = data.name;
         document.getElementById('modalTime').innerText    = data.time;
         document.getElementById('modalContent').innerText = data.content || '-';
@@ -213,6 +279,16 @@ include __DIR__ . '/../includes/header.php';
         statusEl.innerText  = data.status;
         statusEl.className  = 'status-badge status-' + data.status.toLowerCase();
         
+        // Initial OTP check from row
+        const otpSection = document.getElementById('modalOtpSection');
+        const otpCodeEl  = document.getElementById('modalOtpCode');
+        if (currentModalOtp) {
+            otpCodeEl.innerText = currentModalOtp;
+            otpSection.style.display = 'block';
+        } else {
+            otpSection.style.display = 'none';
+        }
+
         // Media URL
         const mediaSection = document.getElementById('modalMediaSection');
         const mediaLink    = document.getElementById('modalMediaUrl');
@@ -224,10 +300,10 @@ include __DIR__ . '/../includes/header.php';
             mediaSection.style.display = 'none';
         }
 
-        // Error message (only for failed)
+        // Error message
         const errorSection = document.getElementById('modalErrorSection');
         const errorBox     = document.getElementById('modalError');
-        if (data.error && data.status.toLowerCase() === 'failed') {
+        if (data.error && (data.status.toLowerCase() === 'failed' || data.type.toLowerCase() === 'unsupported')) {
             errorBox.innerText = data.error;
             errorSection.style.display = 'block';
         } else {
@@ -245,7 +321,41 @@ include __DIR__ . '/../includes/header.php';
             iconEl.style.color = 'var(--info)';
         }
 
+        // Raw payload
+        const rawPre = document.getElementById('modalRawPayload');
+        rawPre.innerText = 'Fetching technical payload...';
+
         modal.show();
+
+        // Async fetch full technical details and extract OTP
+        fetch('<?= baseUrl('api/message-details.php?id='); ?>' + data.id)
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    if (res.content && res.content !== data.content) {
+                        document.getElementById('modalContent').innerText = res.content;
+                    }
+                    if (res.detected_otp) {
+                        currentModalOtp = res.detected_otp;
+                        otpCodeEl.innerText = res.detected_otp;
+                        otpSection.style.display = 'block';
+                    }
+                    if (res.raw_payload) {
+                        currentRawJson = JSON.stringify(res.raw_payload, null, 2);
+                        rawPre.innerText = currentRawJson;
+                    } else if (res.error_message) {
+                        currentRawJson = res.error_message;
+                        rawPre.innerText = currentRawJson;
+                    } else {
+                        rawPre.innerText = 'No extended raw payload stored for this message.';
+                    }
+                } else {
+                    rawPre.innerText = data.error || 'No raw payload available.';
+                }
+            })
+            .catch(() => {
+                rawPre.innerText = data.error || 'Unable to load extended payload.';
+            });
     }
 </script>
 
