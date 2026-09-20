@@ -1,41 +1,47 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header('Content-Type: application/json');
-require_once __DIR__ . '/../../config/config.php';
-$db = Database::getInstance();
 
-$res = [];
+try {
+    require_once __DIR__ . '/../../config/config.php';
+    $db = Database::getInstance();
+    $res = [];
 
-// 1. Check AI Bots
-$res['ai_bots'] = $db->fetchAll("SELECT id, user_id, whatsapp_account_id, name, status, ai_provider, ai_model, welcome_message FROM ai_bots");
+    // Check AI Bots
+    try {
+        $res['ai_bots'] = $db->fetchAll("SELECT * FROM ai_bots");
+    } catch (Exception $e) { $res['ai_bots_err'] = $e->getMessage(); }
 
-// 2. Check WhatsApp Accounts
-$res['wa_accounts'] = $db->fetchAll("SELECT id, user_id, phone_number_id, phone_number, status FROM whatsapp_accounts");
+    // Check WhatsApp Accounts
+    try {
+        $res['wa_accounts'] = $db->fetchAll("SELECT id, user_id, phone_number_id, phone_number, status FROM whatsapp_accounts");
+    } catch (Exception $e) { $res['wa_accounts_err'] = $e->getMessage(); }
 
-// 3. Check Chatbot Flows
-$res['flows'] = $db->fetchAll("SELECT id, user_id, name, is_active, updated_at FROM chatbot_flows ORDER BY updated_at DESC");
+    // Check Chatbot Flows
+    try {
+        $res['flows'] = $db->fetchAll("SELECT id, user_id, name, is_active, updated_at FROM chatbot_flows ORDER BY updated_at DESC");
+    } catch (Exception $e) { $res['flows_err'] = $e->getMessage(); }
 
-// 4. Check AI Conversations
-$res['ai_conversations'] = $db->fetchAll("SELECT id, bot_id, user_id, customer_phone, customer_name, status, last_message_at FROM ai_conversations ORDER BY id DESC LIMIT 5");
+    // Check Log Files
+    $logFiles = [
+        'webhook_root' => __DIR__ . '/../../logs/webhook_root.log',
+        'ai_webhook' => __DIR__ . '/../../logs/ai_webhook.log',
+        'webhook_debug' => __DIR__ . '/../webhook_debug.txt',
+        'chatbot_debug' => __DIR__ . '/../../chatbot-engine/webhook_debug.log',
+        'error_log' => __DIR__ . '/../../logs/error.log'
+    ];
 
-// 5. Check AI Messages
-$res['ai_messages'] = $db->fetchAll("SELECT id, conversation_id, bot_id, direction, sender_type, content, created_at FROM ai_messages ORDER BY id DESC LIMIT 5");
-
-// 6. Check Log Files
-$logFiles = [
-    'webhook_root' => __DIR__ . '/../../logs/webhook_root.log',
-    'ai_webhook' => __DIR__ . '/../../logs/ai_webhook.log',
-    'webhook_debug' => __DIR__ . '/../webhook_debug.txt',
-    'chatbot_debug' => __DIR__ . '/../../chatbot-engine/webhook_debug.log',
-    'error_log' => __DIR__ . '/../../logs/error.log'
-];
-
-foreach ($logFiles as $k => $p) {
-    if (file_exists($p)) {
-        $lines = file($p);
-        $res['logs'][$k] = array_slice($lines, -20);
-    } else {
-        $res['logs'][$k] = 'File not found';
+    foreach ($logFiles as $k => $p) {
+        if (file_exists($p)) {
+            $lines = file($p);
+            $res['logs'][$k] = array_slice($lines, -15);
+        } else {
+            $res['logs'][$k] = 'File not found';
+        }
     }
-}
 
-echo json_encode($res, JSON_PRETTY_PRINT);
+    echo json_encode($res, JSON_PRETTY_PRINT);
+} catch (Throwable $t) {
+    echo json_encode(['fatal' => $t->getMessage(), 'line' => $t->getLine(), 'file' => $t->getFile()], JSON_PRETTY_PRINT);
+}
