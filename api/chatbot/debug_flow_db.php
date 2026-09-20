@@ -1,19 +1,35 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
-$db = Database::getInstance();
-$flow = $db->fetch("SELECT flow_json FROM chatbot_flows WHERE id = 13");
-$data = json_decode($flow['flow_json'], true);
-$nodes = $data['drawflow']['Home']['data'] ?? [];
 
-$nodeDetails = [];
-foreach ([61, 62, 64, 65, 67, 68, 69, 70, 71] as $id) {
-    if (isset($nodes[$id])) {
-        $nodeDetails[$id] = [
-            'name' => $nodes[$id]['name'],
-            'data' => $nodes[$id]['data']
-        ];
-    }
+$found = [];
+$searchDirs = [
+    dirname(__DIR__, 2), // root of wapi
+    dirname(__DIR__, 3), // parent dir (e.g. public_html or domains)
+    sys_get_temp_dir()
+];
+
+foreach ($searchDirs as $dir) {
+    if (!is_dir($dir)) continue;
+    try {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveCallbackFilterIterator(
+                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+                function ($file, $key, $iterator) {
+                    if ($iterator->hasChildren() && in_array($file->getFilename(), ['.git', 'vendor', 'node_modules', 'sessions'])) {
+                        return false;
+                    }
+                    return true;
+                }
+            )
+        );
+        foreach ($files as $file) {
+            if (strpos($file->getFilename(), 'media_69') !== false || strpos($file->getFilename(), '177571') !== false) {
+                $found[] = $file->getPathname();
+                if (count($found) > 30) break 2;
+            }
+        }
+    } catch (Exception $e) {}
 }
 
 header('Content-Type: application/json');
-echo json_encode($nodeDetails, JSON_PRETTY_PRINT);
+echo json_encode(['found_media' => $found], JSON_PRETTY_PRINT);
