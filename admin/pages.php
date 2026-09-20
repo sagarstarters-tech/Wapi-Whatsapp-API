@@ -149,44 +149,14 @@ $extra = $pageData['extra_data'] ?? [];
 
 $pageTitle = 'Pages Customizer';
 $extraCss = [asset('assets/css/dashboard.css')];
-$extraJs = [asset('assets/js/admin.js')];
+$extraJs = [
+    asset('assets/js/admin.js'),
+    'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js'
+];
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
-.editor-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    background: #f8fafc;
-    padding: 8px 12px;
-    border: 1px solid #e2e8f0;
-    border-bottom: none;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-}
-.editor-toolbar button {
-    background: #fff;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 4px 10px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    cursor: pointer;
-    color: #334155;
-    transition: all 0.15s ease;
-}
-.editor-toolbar button:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-}
-.editor-textarea {
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.875rem;
-    line-height: 1.6;
-}
 .page-nav-pill {
     padding: 8px 16px;
     border-radius: 8px;
@@ -209,6 +179,19 @@ include __DIR__ . '/../includes/header.php';
     background: var(--primary);
     color: #fff;
     border-color: var(--primary);
+}
+.tox-tinymce {
+    border: 1px solid var(--border-color, #e2e8f0) !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.tox .tox-toolbar, .tox .tox-toolbar__overflow, .tox .tox-toolbar__primary {
+    background-color: #f8fafc !important;
+}
+.tox .tox-menubar {
+    background-color: #f1f5f9 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
 }
 </style>
 
@@ -455,16 +438,11 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-semibold">Company Story / Description (HTML Supported)</label>
-                                    <div class="editor-toolbar">
-                                        <button type="button" onclick="insertTag('contentArea', '<b>', '</b>')"><b>B</b></button>
-                                        <button type="button" onclick="insertTag('contentArea', '<i>', '</i>')"><i>I</i></button>
-                                        <button type="button" onclick="insertTag('contentArea', '<h4>', '</h4>')">H4</button>
-                                        <button type="button" onclick="insertTag('contentArea', '<p class=\"lead text-secondary\">', '</p>')">Lead</button>
-                                        <button type="button" onclick="insertTag('contentArea', '<p class=\"text-secondary\">', '</p>')">Paragraph</button>
-                                        <button type="button" onclick="insertTag('contentArea', '<a href=\"#\" class=\"btn btn-primary\">', '</a>')">Button</button>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-semibold mb-0">Company Story / Description (Visual Editor)</label>
+                                        <small class="text-muted"><i class="bi bi-magic me-1"></i> Visual WYSIWYG Mode</small>
                                     </div>
-                                    <textarea name="content" id="contentArea" class="form-control editor-textarea" rows="6"><?= e($pageData['content']); ?></textarea>
+                                    <textarea name="content" id="contentArea" class="form-control" rows="8"><?= e($pageData['content']); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -567,27 +545,27 @@ include __DIR__ . '/../includes/header.php';
 
                     <div class="card mb-4" style="border-radius: var(--border-radius);">
                         <div class="card-body p-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                                <h5 class="fw-bold mb-0"><i class="bi bi-code-square text-primary me-2"></i>Policy Content (Rich HTML)</h5>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openPreviewModal()">
-                                    <i class="bi bi-eye me-1"></i> Live Preview
-                                </button>
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <div>
+                                    <h5 class="fw-bold mb-1"><i class="bi bi-file-earmark-richtext text-primary me-2"></i>Policy Content (Visual Word-Style Editor)</h5>
+                                    <small class="text-muted">Aapko koi HTML tags dekhne ya likhne ki zaroorat nahi hai. Microsoft Word ya Google Docs ki tarah directly format karein.</small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openPreviewModal()">
+                                        <i class="bi bi-eye me-1"></i> Live Preview
+                                    </button>
+                                </div>
                             </div>
 
-                            <!-- Formatting Toolbar -->
-                            <div class="editor-toolbar">
-                                <button type="button" onclick="insertTag('contentArea', '<b>', '</b>')"><b>B</b></button>
-                                <button type="button" onclick="insertTag('contentArea', '<i>', '</i>')"><i>I</i></button>
-                                <button type="button" onclick="insertTag('contentArea', '<u>', '</u>')"><u>U</u></button>
-                                <button type="button" onclick="insertTag('contentArea', '<h4 class=\"fw-bold mt-4 mb-3\">', '</h4>')">H4 Section</button>
-                                <button type="button" onclick="insertTag('contentArea', '<h5 class=\"fw-bold mt-3 mb-2\">', '</h5>')">H5 Sub</button>
-                                <button type="button" onclick="insertTag('contentArea', '<p class=\"text-secondary\">', '</p>')">Paragraph</button>
-                                <button type="button" onclick="insertTag('contentArea', '<ul>\n  <li class=\"text-secondary mb-2\">', '</li>\n</ul>')">Bullet List</button>
-                                <button type="button" onclick="insertTag('contentArea', '<a href=\"mailto:support@wapi.com\">', '</a>')">Link</button>
-                                <button type="button" onclick="insertTag('contentArea', '<div class=\"alert alert-info\">', '</div>')">Alert</button>
+                            <textarea name="content" id="contentArea" class="form-control" rows="18"><?= e($pageData['content']); ?></textarea>
+                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-check2-circle text-success me-1"></i> <strong>Visual WYSIWYG Mode:</strong> Normal typing aur formatting karein.
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-code-slash me-1"></i> Agar direct HTML code dekhna ho to toolbar me <strong>&lt;&gt;</strong> (Code) icon click karein.
+                                </small>
                             </div>
-                            <textarea name="content" id="contentArea" class="form-control editor-textarea" rows="18" required><?= e($pageData['content']); ?></textarea>
-                            <small class="text-muted d-block mt-2">Aap yahan pure HTML, headings, bullet points aur paragraphs freely add ya customize kar sakte hain.</small>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -686,22 +664,44 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-function insertTag(textareaId, openTag, closeTag) {
-    const el = document.getElementById(textareaId);
-    if (!el) return;
+// Initialize TinyMCE for Visual Word-style editing
+if (typeof tinymce !== 'undefined') {
+    tinymce.init({
+        selector: '#contentArea',
+        height: <?= ($activeSlug === 'about') ? '340' : '580'; ?>,
+        menubar: 'edit view insert format tools table',
+        plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'table', 'wordcount'
+        ],
+        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link table blockquote | code fullscreen preview',
+        content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.8; color: #374151; padding: 20px; } h1, h2, h3, h4, h5, h6 { font-weight: 700; color: #111827; margin-top: 1.5rem; margin-bottom: 0.75rem; } p { margin-bottom: 1rem; color: #4b5563; } ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; } li { margin-bottom: 0.5rem; color: #4b5563; } a { color: #4f46e5; text-decoration: underline; }',
+        branding: false,
+        promotion: false,
+        elementpath: true,
+        setup: function(editor) {
+            editor.on('change keyup NodeChange', function() {
+                editor.save();
+            });
+        }
+    });
+}
 
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const text = el.value;
-    const selected = text.substring(start, end);
-
-    const replacement = openTag + (selected || '') + closeTag;
-    el.value = text.substring(0, start) + replacement + text.substring(end);
-    el.focus();
-    el.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+// Ensure TinyMCE saves to textarea on form submit
+const editForm = document.querySelector('form');
+if (editForm) {
+    editForm.addEventListener('submit', function() {
+        if (typeof tinymce !== 'undefined') {
+            tinymce.triggerSave();
+        }
+    });
 }
 
 function openPreviewModal() {
+    if (typeof tinymce !== 'undefined' && tinymce.get('contentArea')) {
+        tinymce.triggerSave();
+    }
     const el = document.getElementById('contentArea');
     if (!el) return;
     document.getElementById('previewBody').innerHTML = el.value;
