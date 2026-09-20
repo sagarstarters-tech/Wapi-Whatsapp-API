@@ -96,22 +96,26 @@ try {
         $kbId = $kb['id'];
     }
 
-    // Add URL via class method
+    // Add URL via class method (auto-crawls website)
     $urlData = AIKnowledgeBase::addUrl($kbId, $userId, $url);
 
     if (!$urlData) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to add URL to knowledge base.']);
+        echo json_encode(['success' => false, 'message' => 'Failed to auto-crawl URL.']);
         exit;
     }
 
+    $urlId = is_array($urlData) ? ($urlData['id'] ?? null) : $urlData;
+    $msg = is_array($urlData) && !empty($urlData['message']) ? $urlData['message'] : 'Website auto-crawled and added successfully!';
+
     echo json_encode([
         'success' => true,
+        'id'      => $urlId,
         'data'    => $urlData,
-        'message' => 'URL added successfully'
+        'message' => $msg
     ]);
 } catch (Exception $e) {
     error_log("AI Bot add-url error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Failed to add URL. Please try again.']);
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

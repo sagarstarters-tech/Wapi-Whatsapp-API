@@ -346,94 +346,375 @@ class AIKnowledgeBase
      * @return int   URL record ID
      * @throws Exception
      */
-    public static function addUrl(int $kbId, int $userId, string $url): int
+    /**
+     * Add and auto-crawl a website URL for the knowledge base
+     *
+     * @param int    $kbId
+     * @param int    $userId
+     * @param string $url
+     * @return array Crawl results containing id, title, chunks_count, pages_crawled, message
+     * @throws Exception
+     */
+    public static function addUrl(int $kbId, int $userId, string $url): array
+    {
+        return self::autoCrawlWebsite($kbId, $userId, $url, 25);
+    }
+
+    /**
+     * Auto-crawl a website: discovers internal pages, products, specs, and prices,
+     * chunks content with link preservation, and saves into the knowledge base.
+     *
+     * @param int    $kbId
+     * @param int    $userId
+     * @param string $startUrl
+     * @param int    $maxPages
+     * @return array
+     * @throws Exception
+     */
+    public static function autoCrawlWebsite(int $kbId, int $userId, string $startUrl, int $maxPages = 25): array
     {
         $db = Database::getInstance();
 
-        // Verify ownership
+        // Verify KB ownership
         $kb = $db->fetch("SELECT * FROM ai_knowledge_bases WHERE id = ? AND user_id = ?", [$kbId, $userId]);
         if (!$kb) {
             throw new Exception('Knowledge base not found or access denied.');
         }
 
         // Validate URL
-        $url = filter_var(trim($url), FILTER_VALIDATE_URL);
-        if (!$url) {
+        $startUrl = filter_var(trim($startUrl), FILTER_VALIDATE_URL);
+        if (!$startUrl) {
             throw new Exception('Invalid URL provided.');
         }
 
-        // Check for duplicate URL
-        $exists = $db->exists(
-            'ai_kb_urls',
-            'kb_id = ? AND url = ?',
-            [$kbId, $url]
-        );
-        if ($exists) {
-            throw new Exception('This URL has already been added to the knowledge base.');
+        $parsed = parse_url($startUrl);
+        if (empty($parsed['scheme']) || !in_array(strtolower($parsed['scheme']), ['http', 'https'])) {
+            throw new Exception('Only HTTP and HTTPS URLs are allowed.');
+        }
+        $baseHost = $parsed['host'] ?? '';
+        if (empty($baseHost)) {
+            throw new Exception('Invalid website host.');
         }
 
-        // Crawl the URL
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 5,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_USERAGENT => 'WAPI-KnowledgeBase-Crawler/1.0',
-            CURLOPT_HTTPHEADER => [
-                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language: en-US,en;q=0.5',
-            ],
-        ]);
-
-        $html = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($html === false || !empty($curlError)) {
-            throw new Exception('Failed to fetch URL: ' . $curlError);
+        // Check if URL already exists in ai_kb_urls for this KB
+        $existing = $db->fetch("SELECT * FROM ai_kb_urls WHERE kb_id = ? AND url = ? LIMIT 1", [$kbId, $startUrl]);
+        if ($existing) {
+            $urlId = (int) $existing['id'];
+            // Remove previous chunks for this URL so we can re-train cleanly
+            $db->query("DELETE FROM ai_kb_chunks WHERE kb_id = ? AND source_type = 'url' AND source_id = ?", [$kbId, $urlId]);
+            $db->update('ai_kb_urls', [
+                'status' => 'processing',
+                'last_crawled_at' => date('Y-m-d H:i:s'),
+            ], 'id = ?', [$urlId]);
+        } else {
+            $urlId = $db->insert('ai_kb_urls', [
+                'kb_id' => $kbId,
+                'user_id' => $userId,
+                'url' => $startUrl,
+                'title' => sanitize($startUrl),
+                'status' => 'processing',
+                'chunks_count' => 0,
+                'last_crawled_at' => date('Y-m-d H:i:s'),
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
         }
 
-        if ($httpCode !== 200) {
-            throw new Exception("URL returned HTTP status {$httpCode}.");
+        // Crawl state
+        $visited = [];
+        $queue = [$startUrl];
+        $allProducts = [];
+        $allChunks = [];
+        $mainTitle = '';
+
+        // Breadth-first crawl with multi-curl
+        while (!empty($queue) && count($visited) < $maxPages) {
+            $batch = [];
+            while (!empty($queue) && count($batch) < 8 && (count($visited) + count($batch)) < $maxPages) {
+                $next = array_shift($queue);
+                if (!isset($visited[$next])) {
+                    $batch[] = $next;
+                    $visited[$next] = true;
+                }
+            }
+
+            if (empty($batch)) break;
+
+            $fetchResults = self::fetchUrlsMulti($batch);
+
+            foreach ($fetchResults as $pageUrl => $data) {
+                if ($data['code'] !== 200 || empty($data['html'])) {
+                    continue;
+                }
+
+                $html = $data['html'];
+
+                // Extract title
+                $pageTitle = '';
+                if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $tm)) {
+                    $pageTitle = trim(html_entity_decode(strip_tags($tm[1])));
+                }
+                if (empty($mainTitle) && !empty($pageTitle)) {
+                    $mainTitle = $pageTitle;
+                }
+
+                // Discover and queue internal links
+                $discovered = self::extractCrawlerLinks($html, $pageUrl, $baseHost);
+                foreach ($discovered as $link) {
+                    if (!isset($visited[$link]) && !in_array($link, $queue)) {
+                        $queue[] = $link;
+                    }
+                }
+                $queue = self::prioritizeCrawlerLinks(array_unique($queue));
+
+                // Check if page is a product page
+                $isProduct = (
+                    strpos($pageUrl, '/product/') !== false ||
+                    strpos($pageUrl, 'product.php') !== false ||
+                    strpos($html, 'og:type" content="product"') !== false ||
+                    (strpos($html, 'class="product') !== false && preg_match('/(?:₹|Rs\.?|INR)\s*[0-9]/i', $html))
+                );
+
+                if ($isProduct) {
+                    // Extract product details
+                    preg_match('/<h1[^>]*>(.*?)<\/h1>/si', $html, $h1Match);
+                    $prodName = !empty($h1Match[1]) ? trim(strip_tags($h1Match[1])) : $pageTitle;
+
+                    preg_match('/(?:₹|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]{2})?)/si', $html, $priceMatch);
+                    $prodPrice = !empty($priceMatch[0]) ? trim(strip_tags($priceMatch[0])) : '';
+
+                    preg_match('/<meta name="description" content="([^"]*)"/si', $html, $descMatch);
+                    $prodDesc = !empty($descMatch[1]) ? trim($descMatch[1]) : '';
+
+                    if (!empty($prodName)) {
+                        $allProducts[$pageUrl] = [
+                            'title' => $prodName,
+                            'price' => $prodPrice,
+                            'url' => $pageUrl,
+                            'description' => $prodDesc
+                        ];
+
+                        // Create dedicated product chunk
+                        $prodChunk = "PRODUCT NAME: {$prodName}\n";
+                        if (!empty($prodPrice)) {
+                            $prodChunk .= "PRICE: {$prodPrice}\n";
+                        }
+                        $prodChunk .= "DIRECT PURCHASE LINK: {$pageUrl}\n";
+                        if (!empty($prodDesc)) {
+                            $prodChunk .= "DESCRIPTION: {$prodDesc}\n";
+                        }
+
+                        $allChunks[] = $prodChunk;
+                    }
+                }
+
+                // Also extract clean readable text for general knowledge
+                $pageText = self::extractTextFromHtml($html);
+                if (!empty($pageText) && strlen($pageText) > 80) {
+                    $pageChunks = self::chunkText($pageText, 350);
+                    // Add up to 3 chunks per page to avoid flooding
+                    foreach (array_slice($pageChunks, 0, 3) as $pc) {
+                        if (!in_array($pc, $allChunks)) {
+                            $allChunks[] = $pc;
+                        }
+                    }
+                }
+            }
         }
 
-        // Extract text from HTML
-        $text = self::extractTextFromHtml($html);
-
-        if (empty(trim($text))) {
-            throw new Exception('Could not extract any text from the URL.');
+        // If products were extracted, compile an automated Master Catalog chunk
+        if (!empty($allProducts)) {
+            $masterCatalog = "OFFICIAL PRODUCT CATALOG & DIRECT PURCHASE LINKS ({$baseHost}):\n";
+            $masterCatalog .= "Store Homepage: {$startUrl}\n";
+            $masterCatalog .= "Available Products:\n";
+            foreach ($allProducts as $p) {
+                $priceStr = !empty($p['price']) ? " - Price: {$p['price']}" : "";
+                $masterCatalog .= "• {$p['title']}{$priceStr}\n  Buy Link: {$p['url']}\n";
+            }
+            // Prepend master catalog as first chunk for top search relevance
+            array_unshift($allChunks, $masterCatalog);
         }
 
-        // Extract title
-        $title = '';
-        if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $titleMatch)) {
-            $title = trim(html_entity_decode(strip_tags($titleMatch[1])));
+        // Fallback: if nothing was extracted, extract seed URL directly
+        if (empty($allChunks)) {
+            $seedRes = self::fetchUrlsMulti([$startUrl]);
+            $seedHtml = $seedRes[$startUrl]['html'] ?? '';
+            $text = self::extractTextFromHtml($seedHtml);
+            if (!empty($text)) {
+                $allChunks = self::chunkText($text);
+            }
         }
 
-        // Save URL record
-        $urlId = $db->insert('ai_kb_urls', [
-            'kb_id' => $kbId,
-            'user_id' => $userId,
-            'url' => $url,
-            'title' => sanitize($title ?: $url),
+        if (empty($allChunks)) {
+            throw new Exception("Could not extract any content from {$startUrl}. Please check the URL and try again.");
+        }
+
+        // Save chunks to database
+        self::saveChunks($kbId, 'url', $urlId, $allChunks);
+
+        // Update URL record
+        $db->update('ai_kb_urls', [
+            'title' => sanitize($mainTitle ?: $startUrl),
+            'chunks_count' => count($allChunks),
             'status' => 'completed',
             'last_crawled_at' => date('Y-m-d H:i:s'),
-            'created_at' => date('Y-m-d H:i:s'),
-        ]);
-
-        // Chunk and save
-        $chunks = self::chunkText($text);
-        self::saveChunks($kbId, 'url', $urlId, $chunks);
+        ], 'id = ?', [$urlId]);
 
         // Update KB timestamp
         $db->update('ai_knowledge_bases', ['updated_at' => date('Y-m-d H:i:s')], 'id = ?', [$kbId]);
 
-        return $urlId;
+        return [
+            'id' => $urlId,
+            'url' => $startUrl,
+            'title' => $mainTitle ?: $startUrl,
+            'pages_crawled' => count($visited),
+            'products_found' => count($allProducts),
+            'chunks_count' => count($allChunks),
+            'message' => "Successfully auto-crawled " . count($visited) . " pages (" . count($allProducts) . " products found) and generated " . count($allChunks) . " knowledge chunks!"
+        ];
+    }
+
+    /**
+     * Normalize URL and verify it belongs to the target host
+     */
+    private static function normalizeCrawlerUrl(string $href, string $currentUrl, string $baseHost): ?string
+    {
+        $href = trim($href);
+        if (empty($href) || strpos($href, '#') === 0 || strpos($href, 'javascript:') === 0 || strpos($href, 'mailto:') === 0 || strpos($href, 'tel:') === 0) {
+            return null;
+        }
+
+        $parsedCurrent = parse_url($currentUrl);
+        $scheme = $parsedCurrent['scheme'] ?? 'https';
+        $host = $parsedCurrent['host'] ?? $baseHost;
+
+        // Relative to absolute
+        if (strpos($href, '//') === 0) {
+            $fullUrl = $scheme . ':' . $href;
+        } elseif (strpos($href, '/') === 0) {
+            $fullUrl = $scheme . '://' . $host . $href;
+        } elseif (strpos($href, 'http://') === 0 || strpos($href, 'https://') === 0) {
+            $fullUrl = $href;
+        } else {
+            $baseDir = dirname($parsedCurrent['path'] ?? '/');
+            $fullUrl = $scheme . '://' . $host . rtrim($baseDir, '/') . '/' . $href;
+        }
+
+        $parsed = parse_url($fullUrl);
+        if (empty($parsed['host'])) return null;
+
+        // Check same domain (ignore www. prefix)
+        $currentHostNorm = preg_replace('/^www\./', '', strtolower($baseHost));
+        $parsedHostNorm = preg_replace('/^www\./', '', strtolower($parsed['host']));
+        if ($currentHostNorm !== $parsedHostNorm) {
+            return null;
+        }
+
+        // Exclude static assets
+        $path = strtolower($parsed['path'] ?? '');
+        if (preg_match('/\.(jpg|jpeg|png|gif|svg|webp|ico|css|js|pdf|zip|rar|tar|gz|mp4|mp3|woff|woff2|ttf|eot)$/i', $path)) {
+            return null;
+        }
+
+        // Exclude admin/auth/cart pages
+        if (preg_match('/\/(login|logout|admin|cart|checkout|wp-admin|user\/profile|user\/orders)/i', $path)) {
+            return null;
+        }
+
+        // Clean tracking query params
+        $cleanUrl = $parsed['scheme'] . '://' . $parsed['host'] . ($parsed['path'] ?? '/');
+        if (!empty($parsed['query'])) {
+            parse_str($parsed['query'], $queryParams);
+            unset($queryParams['utm_source'], $queryParams['utm_medium'], $queryParams['utm_campaign'], $queryParams['utm_term'], $queryParams['utm_content'], $queryParams['fbclid']);
+            if (!empty($queryParams)) {
+                $cleanUrl .= '?' . http_build_query($queryParams);
+            }
+        }
+
+        return rtrim($cleanUrl, '/');
+    }
+
+    /**
+     * Extract all valid internal links from HTML
+     */
+    private static function extractCrawlerLinks(string $html, string $currentUrl, string $baseHost): array
+    {
+        $links = [];
+        if (preg_match_all('/<a\s+[^>]*href=[\'"]([^\'"]+)[\'"]/i', $html, $matches)) {
+            foreach ($matches[1] as $href) {
+                $normalized = self::normalizeCrawlerUrl($href, $currentUrl, $baseHost);
+                if ($normalized) {
+                    $links[$normalized] = true;
+                }
+            }
+        }
+        return array_keys($links);
+    }
+
+    /**
+     * Prioritize links so product, shop, catalog, and info pages are crawled first
+     */
+    private static function prioritizeCrawlerLinks(array $links): array
+    {
+        usort($links, function($a, $b) {
+            $scoreA = 0;
+            $scoreB = 0;
+            if (preg_match('/(product|item|shop|category|catalog)/i', $a)) $scoreA += 10;
+            if (preg_match('/(about|contact|faq|service|pricing)/i', $a)) $scoreA += 5;
+            if (preg_match('/(product|item|shop|category|catalog)/i', $b)) $scoreB += 10;
+            if (preg_match('/(about|contact|faq|service|pricing)/i', $b)) $scoreB += 5;
+            return $scoreB - $scoreA;
+        });
+        return $links;
+    }
+
+    /**
+     * Concurrently fetch an array of URLs using curl_multi
+     */
+    private static function fetchUrlsMulti(array $urls): array
+    {
+        $mh = curl_multi_init();
+        $curlHandles = [];
+        $results = [];
+
+        foreach ($urls as $url) {
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 3,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_CONNECTTIMEOUT => 4,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WAPI-AutoCrawler/2.0',
+                CURLOPT_HTTPHEADER => ['Accept: text/html,application/xhtml+xml;q=0.9,*/*;q=0.8']
+            ]);
+            curl_multi_add_handle($mh, $ch);
+            $curlHandles[$url] = $ch;
+        }
+
+        $active = null;
+        do {
+            $mrc = curl_multi_exec($mh, $active);
+        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+
+        while ($active && $mrc == CURLM_OK) {
+            if (curl_multi_select($mh) != -1) {
+                do {
+                    $mrc = curl_multi_exec($mh, $active);
+                } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+            }
+        }
+
+        foreach ($curlHandles as $url => $ch) {
+            $html = curl_multi_getcontent($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $results[$url] = ['code' => $httpCode, 'html' => $html];
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($mh);
+        return $results;
     }
 
     /**

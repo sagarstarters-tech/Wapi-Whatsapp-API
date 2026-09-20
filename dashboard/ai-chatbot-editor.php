@@ -467,26 +467,48 @@ function uploadFiles(files) {
     });
 }
 
-// URL Crawl
+// URL Crawl (Auto-crawls entire website pages & products)
 document.getElementById('btnCrawlUrl')?.addEventListener('click', function() {
     const url = document.getElementById('crawlUrl').value.trim();
     if (!url) return;
     if (!botId) { Swal.fire('Info', 'Save the bot first before adding URLs.', 'info'); return; }
-    this.disabled = true; this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    this.disabled = true; 
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Auto-crawling...';
+    
     fetch(baseUrl + 'api/ai-bot/add-url.php', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ bot_id: botId, url: url })
     }).then(r => r.json()).then(data => {
-        this.disabled = false; this.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Crawl';
+        this.disabled = false; 
+        this.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Crawl';
         if (data.success) {
             document.getElementById('crawlUrl').value = '';
-            const html = `<div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: var(--bg-secondary); border-radius: 8px;" data-id="${data.id}">
-                <div class="d-flex align-items-center gap-2"><i class="bi bi-link-45deg text-primary"></i><span style="font-size: 0.8125rem;">${url}</span></div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge('url', ${data.id}, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
-            </div>`;
-            document.getElementById('urlsList').insertAdjacentHTML('beforeend', html);
-        } else { Swal.fire('Error', data.message || 'Failed to crawl URL.', 'error'); }
-    }).catch(() => { this.disabled = false; this.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Crawl'; Swal.fire('Error', 'Network error.', 'error'); });
+            
+            // Check if element with this data-id or URL already exists
+            const existingEl = document.querySelector(`#urlsList [data-id="${data.id}"]`);
+            if (!existingEl) {
+                const html = `<div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: var(--bg-secondary); border-radius: 8px;" data-id="${data.id}">
+                    <div class="d-flex align-items-center gap-2"><i class="bi bi-link-45deg text-primary"></i><span style="font-size: 0.8125rem;">${url}</span></div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKnowledge('url', ${data.id}, this)" style="padding: 2px 6px;"><i class="bi bi-x"></i></button>
+                </div>`;
+                document.getElementById('urlsList').insertAdjacentHTML('beforeend', html);
+            }
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Auto-Crawl Complete!',
+                text: data.message || 'Website crawled successfully and added to Knowledge Base.',
+                confirmButtonColor: '#25D366'
+            });
+        } else { 
+            Swal.fire('Error', data.message || 'Failed to crawl URL.', 'error'); 
+        }
+    }).catch(() => { 
+        this.disabled = false; 
+        this.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Crawl'; 
+        Swal.fire('Error', 'Network error or crawl timed out.', 'error'); 
+    });
 });
 
 function deleteKnowledge(type, id, el) {
