@@ -13,6 +13,12 @@ $userId = $_SESSION['user_id'];
 $hideNav = true;
 $migrationNeeded = false;
 
+$enableAIChatbot = $settings->get('enable_ai_chatbot_builder', '1') === '1';
+if (!$enableAIChatbot && !Auth::isAdmin()) {
+    setFlash('warning', 'AI ChatBot Builder module is currently disabled by administrator.');
+    redirect('dashboard/');
+}
+
 // Fetch user's AI bots (wrapped in try-catch for pre-migration state)
 try {
     $bots = $db->fetchAll("SELECT b.*, 
@@ -28,16 +34,12 @@ try {
 }
 
 // Plan limit for AI bots
-try {
-    $subscription = $db->fetch("SELECT s.*, p.ai_bots_limit FROM subscriptions s 
-        JOIN plans p ON s.plan_id = p.id 
-        WHERE s.user_id = ? AND s.status = 'active' 
-        ORDER BY s.created_at DESC LIMIT 1", [$userId]);
-    $botsLimit = $subscription['ai_bots_limit'] ?? 0;
-} catch (Exception $e) {
-    $botsLimit = 0;
-}
-$botsUsed = count($bots);
+$userPlan = $db->fetch("SELECT p.* FROM users u LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status = 'active' LEFT JOIN plans p ON s.plan_id = p.id WHERE u.id = ? LIMIT 1", [$userId]);
+$aiBotsLimit = (int) ($userPlan['ai_bots_limit'] ?? 1);
+$currentBotsCount = count($bots);
+$canCreateBot = $currentBotsCount < $aiBotsLimit;
+$botsLimit = $aiBotsLimit;
+$botsUsed = $currentBotsCount;
 
 // Fetch WA accounts for display
 $waAccounts = $db->fetchAll('SELECT id, phone_number, business_name FROM whatsapp_accounts WHERE user_id = ?', [$userId]);
@@ -52,6 +54,17 @@ include __DIR__ . '/../includes/header.php';
     <?php include __DIR__ . '/../includes/sidebar.php'; ?>
 
     <main class="main-content">
+        <?php if (!$enableAIChatbot): ?>
+        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 p-3 rounded-3" style="border-left: 4px solid #f59e0b;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill fs-5 text-warning"></i>
+                <div>
+                    <strong>Admin Notice:</strong> AI ChatBot Builder is currently disabled globally for regular users.
+                </div>
+            </div>
+            <a href="<?= baseUrl('admin/settings.php?tab=automations'); ?>" class="btn btn-warning btn-sm">Enable in Settings</a>
+        </div>
+        <?php endif; ?>
         <div class="dash-header">
             <div>
                 <h1 class="dash-title">🤖 AI ChatBot Builder</h1>

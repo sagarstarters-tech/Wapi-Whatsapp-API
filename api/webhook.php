@@ -254,8 +254,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Check global automation module toggles
+            $settings = new Settings();
+            $chatbotModuleEnabled = $settings->get('enable_chatbot_builder', '1') === '1';
+            $aiChatbotModuleEnabled = $settings->get('enable_ai_chatbot_builder', '1') === '1';
+
             // Helper to pass message to AI Bot if active
-            $tryAIBot = function($msgText) use ($db, $phoneNumberId, $userId, $from, $profileName, $accessToken) {
+            $tryAIBot = function($msgText) use ($db, $phoneNumberId, $userId, $from, $profileName, $accessToken, $aiChatbotModuleEnabled) {
+                if (!$aiChatbotModuleEnabled) {
+                    file_put_contents(__DIR__ . '/../logs/ai_webhook.log', "[" . date('Y-m-d H:i:s') . "] AI ChatBot Builder module is disabled globally. Skipping AI reply for $from\n", FILE_APPEND);
+                    return false;
+                }
                 if (empty(trim($msgText))) return false;
                 try {
                     $waAccountId = $db->fetchColumn("SELECT id FROM whatsapp_accounts WHERE phone_number_id = ? AND user_id = ? LIMIT 1", [$phoneNumberId, $userId]);
@@ -286,11 +295,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return false;
             };
 
-            // Load ALL active flows for this user
-            $activeFlows = $db->fetchAll(
-                "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY updated_at DESC",
-                [$userId]
-            );
+            // Load ALL active flows for this user (only if Chatbot Builder module is enabled)
+            $activeFlows = [];
+            if ($chatbotModuleEnabled) {
+                $activeFlows = $db->fetchAll(
+                    "SELECT id, flow_json FROM chatbot_flows WHERE user_id = ? AND is_active = 1 ORDER BY updated_at DESC",
+                    [$userId]
+                );
+            } else {
+                file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] Chatbot Builder module is disabled globally. Skipping chatbot flows.\n", FILE_APPEND);
+            }
 
             if (empty($activeFlows)) {
                 file_put_contents(__DIR__ . '/../logs/webhook_root.log', "[" . date('H:i:s') . "] No active chatbot flows found for user $userId. Checking AI Bot...\n", FILE_APPEND);

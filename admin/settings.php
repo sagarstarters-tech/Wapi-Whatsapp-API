@@ -80,6 +80,7 @@ include __DIR__ . '/../includes/header.php';
         <!-- Settings Tabs -->
         <ul class="nav nav-pills mb-4 flex-wrap gap-2">
             <li><a class="nav-link <?= $activeTab === 'general' ? 'active' : ''; ?> btn-sm" href="?tab=general" style="border-radius: 8px;">General</a></li>
+            <li><a class="nav-link <?= $activeTab === 'automations' ? 'active' : ''; ?> btn-sm" href="?tab=automations" style="border-radius: 8px;"><i class="bi bi-robot me-1"></i>Automations</a></li>
             <li><a class="nav-link <?= $activeTab === 'theme' ? 'active' : ''; ?> btn-sm" href="?tab=theme" style="border-radius: 8px;">Theme</a></li>
             <li><a class="nav-link <?= $activeTab === 'landing' ? 'active' : ''; ?> btn-sm" href="?tab=landing" style="border-radius: 8px;">Landing Page</a></li>
             <li><a class="nav-link <?= $activeTab === 'seo' ? 'active' : ''; ?> btn-sm" href="?tab=seo" style="border-radius: 8px;">SEO</a></li>
@@ -196,6 +197,90 @@ include __DIR__ . '/../includes/header.php';
                         <div class="col-12">
                             <label class="form-label">Footer Text</label>
                             <input type="text" name="settings[footer_text]" class="form-control" value="<?= e($allSettings['footer_text'] ?? ''); ?>">
+                        </div>
+                    </div>
+
+                <?php elseif ($activeTab === 'automations'): ?>
+                    <h5 class="fw-bold mb-1"><i class="bi bi-robot me-2 text-primary"></i>Automation Modules Settings</h5>
+                    <p class="text-muted small mb-4">Enable or disable Chatbot Builder and AI ChatBot Builder across the platform.</p>
+
+                    <?php 
+                    $chatbotEnabled = ($allSettings['enable_chatbot_builder'] ?? '1') === '1';
+                    $aiChatbotEnabled = ($allSettings['enable_ai_chatbot_builder'] ?? '1') === '1';
+                    ?>
+
+                    <div class="row g-4">
+                        <!-- Chatbot Builder Module Card -->
+                        <div class="col-md-6">
+                            <div class="p-4 border rounded-3 h-100 d-flex flex-column justify-content-between shadow-sm" style="background: var(--card-bg, #ffffff); border-color: var(--border-color) !important;">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; font-size: 1.4rem;">
+                                                <i class="bi bi-robot"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0">Chatbot Builder</h6>
+                                                <small class="text-muted">Visual Flow Builder</small>
+                                            </div>
+                                        </div>
+                                        <div class="form-check form-switch m-0">
+                                            <input type="hidden" name="settings[enable_chatbot_builder]" value="0">
+                                            <input class="form-check-input" type="checkbox" name="settings[enable_chatbot_builder]" value="1" id="switchChatbotBuilder" <?= $chatbotEnabled ? 'checked' : ''; ?> style="width: 2.8rem; height: 1.5rem; cursor: pointer;" onchange="ajaxToggleModule('chatbot_builder', this.checked)">
+                                        </div>
+                                    </div>
+                                    <p class="text-secondary small mb-3" style="line-height: 1.6;">
+                                        Visual flowchart rule-based chatbot builder. When enabled, users can build keyword-triggered nodes, buttons, interactive media replies, and automated WhatsApp conversation flows.
+                                    </p>
+                                </div>
+                                <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                                    <span id="badgeChatbotBuilder" class="badge <?= $chatbotEnabled ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'; ?> px-2 py-1">
+                                        <i class="bi <?= $chatbotEnabled ? 'bi-check-circle-fill' : 'bi-dash-circle'; ?> me-1"></i><?= $chatbotEnabled ? 'Active & Enabled' : 'Disabled'; ?>
+                                    </span>
+                                    <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="btn btn-sm btn-outline-primary" style="border-radius: 6px;" target="_blank">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Open Builder
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI ChatBot Builder Module Card -->
+                        <div class="col-md-6">
+                            <div class="p-4 border rounded-3 h-100 d-flex flex-column justify-content-between shadow-sm" style="background: var(--card-bg, #ffffff); border-color: var(--border-color) !important;">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-3 text-white d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; font-size: 1.4rem; background: linear-gradient(135deg, #667eea, #764ba2);">
+                                                <i class="bi bi-stars"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0">AI ChatBot Builder</h6>
+                                                <small class="text-muted">Knowledge Base & AI Engine</small>
+                                            </div>
+                                        </div>
+                                        <div class="form-check form-switch m-0">
+                                            <input type="hidden" name="settings[enable_ai_chatbot_builder]" value="0">
+                                            <input class="form-check-input" type="checkbox" name="settings[enable_ai_chatbot_builder]" value="1" id="switchAIChatbotBuilder" <?= $aiChatbotEnabled ? 'checked' : ''; ?> style="width: 2.8rem; height: 1.5rem; cursor: pointer;" onchange="ajaxToggleModule('ai_chatbot_builder', this.checked)">
+                                        </div>
+                                    </div>
+                                    <p class="text-secondary small mb-3" style="line-height: 1.6;">
+                                        Generative AI assistant powered by Gemini / OpenAI. When enabled, users can train bots with Documents, Website Auto-Crawl, Q&A pairs, and handle intelligent customer support and conversations.
+                                    </p>
+                                </div>
+                                <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                                    <span id="badgeAIChatbotBuilder" class="badge <?= $aiChatbotEnabled ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'; ?> px-2 py-1">
+                                        <i class="bi <?= $aiChatbotEnabled ? 'bi-check-circle-fill' : 'bi-dash-circle'; ?> me-1"></i><?= $aiChatbotEnabled ? 'Active & Enabled' : 'Disabled'; ?>
+                                    </span>
+                                    <div class="d-flex gap-1">
+                                        <a href="<?= baseUrl('admin/ai-settings.php'); ?>" class="btn btn-sm btn-outline-secondary" style="border-radius: 6px;">
+                                            <i class="bi bi-cpu me-1"></i>AI Settings
+                                        </a>
+                                        <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="btn btn-sm btn-outline-primary" style="border-radius: 6px;" target="_blank">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i>Open Builder
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -393,6 +478,44 @@ document.querySelector('input[name="settings[site_name]"]')?.addEventListener('i
     const brand = document.getElementById('logoPreviewBrand');
     if (brand) brand.textContent = e.target.value || 'WAPI';
 });
+
+function ajaxToggleModule(moduleName, isChecked) {
+    const status = isChecked ? 1 : 0;
+    const badgeId = moduleName === 'chatbot_builder' ? 'badgeChatbotBuilder' : 'badgeAIChatbotBuilder';
+    const badge = document.getElementById(badgeId);
+
+    if (badge) {
+        badge.className = status ? 'badge bg-success-subtle text-success px-2 py-1' : 'badge bg-secondary-subtle text-secondary px-2 py-1';
+        badge.innerHTML = status ? '<i class="bi bi-check-circle-fill me-1"></i>Active & Enabled' : '<i class="bi bi-dash-circle me-1"></i>Disabled';
+    }
+
+    const csrfToken = document.querySelector('input[name="<?= CSRF_TOKEN_NAME; ?>"]')?.value || '';
+
+    fetch('<?= baseUrl("api/toggle-module.php"); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            module: moduleName,
+            status: status,
+            _csrf_token: csrfToken
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            alert(data.message || 'Failed to update module status');
+            // Revert switch
+            const switchEl = document.getElementById(moduleName === 'chatbot_builder' ? 'switchChatbotBuilder' : 'switchAIChatbotBuilder');
+            if (switchEl) switchEl.checked = !isChecked;
+        }
+    })
+    .catch(err => {
+        console.error(err);
+    });
+}
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

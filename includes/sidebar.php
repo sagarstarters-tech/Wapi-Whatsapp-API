@@ -72,19 +72,47 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
         </div>
 
         <!-- Automations -->
+        <?php 
+        $sidebarSettings = isset($settings) ? $settings : new Settings();
+        $enableChatbot = $sidebarSettings->get('enable_chatbot_builder', '1') === '1';
+        $enableAIChatbot = $sidebarSettings->get('enable_ai_chatbot_builder', '1') === '1';
+        $isUserAdmin = Auth::isAdmin();
+        ?>
+        <?php if ($enableChatbot || $enableAIChatbot || $isUserAdmin): ?>
         <div class="sidebar-section">
-            <div class="sidebar-section-title">Automations</div>
-            <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="sidebar-link <?= $currentPage === 'chatbot-builder' ? 'active' : ''; ?>">
+            <div class="sidebar-section-title d-flex justify-content-between align-items-center">
+                <span>Automations</span>
+                <?php if ($isUserAdmin): ?>
+                    <a href="<?= baseUrl('admin/settings.php?tab=automations'); ?>" title="Configure Automations" style="font-size: 0.75rem; color: var(--text-muted);">
+                        <i class="bi bi-gear"></i>
+                    </a>
+                <?php endif; ?>
+            </div>
+            <?php if ($enableChatbot || $isUserAdmin): ?>
+            <a href="<?= baseUrl('dashboard/chatbot-builder.php'); ?>" class="sidebar-link <?= $currentPage === 'chatbot-builder' ? 'active' : ''; ?>" style="<?= !$enableChatbot ? 'opacity: 0.55;' : ''; ?>">
                 <i class="bi bi-robot"></i>
                 <span>Chatbot Builder</span>
-                <span class="badge rounded-pill bg-primary ms-auto" style="font-size: 0.6rem;">NEW</span>
+                <?php if (!$enableChatbot): ?>
+                    <span class="badge rounded-pill bg-secondary ms-auto" style="font-size: 0.6rem;">OFF</span>
+                <?php else: ?>
+                    <span class="badge rounded-pill bg-primary ms-auto" style="font-size: 0.6rem;">NEW</span>
+                <?php endif; ?>
             </a>
-            <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-chatbot' || $currentPage === 'ai-chatbot-editor' ? 'active' : ''; ?>">
+            <?php endif; ?>
+
+            <?php if ($enableAIChatbot || $isUserAdmin): ?>
+            <a href="<?= baseUrl('dashboard/ai-chatbot.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-chatbot' || $currentPage === 'ai-chatbot-editor' ? 'active' : ''; ?>" style="<?= !$enableAIChatbot ? 'opacity: 0.55;' : ''; ?>">
                 <i class="bi bi-stars"></i>
                 <span>AI ChatBot Builder</span>
-                <span class="badge rounded-pill ms-auto" style="font-size: 0.6rem; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">AI</span>
+                <?php if (!$enableAIChatbot): ?>
+                    <span class="badge rounded-pill bg-secondary ms-auto" style="font-size: 0.6rem;">OFF</span>
+                <?php else: ?>
+                    <span class="badge rounded-pill ms-auto" style="font-size: 0.6rem; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">AI</span>
+                <?php endif; ?>
             </a>
+            <?php endif; ?>
         </div>
+        <?php endif; ?>
 
         <!-- CRM & Contacts -->
         <div class="sidebar-section">
@@ -107,14 +135,18 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
                 <i class="bi bi-list-check"></i>
                 <span>Message Logs</span>
             </a>
-            <a href="<?= baseUrl('dashboard/ai-analytics.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-analytics' ? 'active' : ''; ?>">
+            <?php if ($enableAIChatbot || $isUserAdmin): ?>
+            <a href="<?= baseUrl('dashboard/ai-analytics.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-analytics' ? 'active' : ''; ?>" style="<?= !$enableAIChatbot ? 'opacity: 0.55;' : ''; ?>">
                 <i class="bi bi-graph-up-arrow"></i>
                 <span>AI Analytics</span>
+                <?php if (!$enableAIChatbot): ?><span class="badge rounded-pill bg-secondary ms-auto" style="font-size: 0.6rem;">OFF</span><?php endif; ?>
             </a>
-            <a href="<?= baseUrl('dashboard/ai-conversations.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-conversations' ? 'active' : ''; ?>">
+            <a href="<?= baseUrl('dashboard/ai-conversations.php'); ?>" class="sidebar-link <?= $currentPage === 'ai-conversations' ? 'active' : ''; ?>" style="<?= !$enableAIChatbot ? 'opacity: 0.55;' : ''; ?>">
                 <i class="bi bi-chat-left-text"></i>
                 <span>AI Conversations</span>
+                <?php if (!$enableAIChatbot): ?><span class="badge rounded-pill bg-secondary ms-auto" style="font-size: 0.6rem;">OFF</span><?php endif; ?>
             </a>
+            <?php endif; ?>
         </div>
 
         <!-- Account -->

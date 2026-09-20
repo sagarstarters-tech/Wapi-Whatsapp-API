@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         'ai_max_context_messages' => sanitizeInt($_POST['ai_max_context_messages'] ?? 10),
         'ai_rate_limit_default' => sanitizeInt($_POST['ai_rate_limit_default'] ?? 100),
         'ai_default_system_prompt' => sanitize($_POST['ai_default_system_prompt'] ?? ''),
+        'enable_ai_chatbot_builder' => isset($_POST['enable_ai_chatbot_builder']) ? '1' : '0',
     ];
 
     foreach ($aiSettings as $key => $value) {
@@ -165,6 +166,24 @@ include __DIR__ . '/../includes/header.php';
 
         <form method="POST">
             <?= CSRF::tokenField(); ?>
+            <!-- Master AI ChatBot Builder Module Toggle -->
+            <div class="card mb-4" style="border-radius: var(--border-radius); border-left: 4px solid #667eea;">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 text-white d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; font-size: 1.4rem; background: linear-gradient(135deg, #667eea, #764ba2);">
+                            <i class="bi bi-stars"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1">AI ChatBot Builder Module</h5>
+                            <div class="text-muted small">Enable or disable AI ChatBot Builder, AI Analytics, and AI Conversations across the platform.</div>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" name="enable_ai_chatbot_builder" id="masterAIChatbotSwitch" <?= $settings->get('enable_ai_chatbot_builder', '1') === '1' ? 'checked' : ''; ?> style="width: 3rem; height: 1.6rem; cursor: pointer;">
+                        <label class="form-check-label fw-semibold ms-1" for="masterAIChatbotSwitch">Enabled</label>
+                    </div>
+                </div>
+            </div>
 
             <!-- OpenAI -->
             <div class="card mb-4" style="border-radius: var(--border-radius);">
