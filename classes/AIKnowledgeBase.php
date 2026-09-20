@@ -743,7 +743,10 @@ class AIKnowledgeBase
             if (empty($href) || strpos($href, 'javascript:') === 0 || $href === '#' || strpos($href, 'tel:') === 0) {
                 return $anchor;
             }
-            return $anchor . ' (' . $href . ')';
+            if (empty($anchor) || strpos($anchor, 'http') === 0 || rtrim($anchor, '/') === rtrim($href, '/')) {
+                return $href;
+            }
+            return $anchor . ': ' . $href;
         }, $source);
 
         // Replace block elements with newlines
