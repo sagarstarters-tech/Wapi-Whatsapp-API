@@ -17,7 +17,7 @@ try {
             $res['messages'] = $db->fetchAll(
                 "SELECT id, direction, sender_type, content, tokens_used, created_at 
                  FROM ai_messages 
-                 WHERE conversation_id = ? 
+                 WHERE conversation_id = ? AND id >= 45
                  ORDER BY created_at ASC",
                 [$conv['id']]
             );
