@@ -455,6 +455,16 @@ class AIKnowledgeBase
 
         $source = !empty($mainContent) ? $mainContent : $html;
 
+        // Preserve link URLs so product links and references are not lost
+        $source = preg_replace_callback('/<a\s+[^>]*href=[\'"]([^\'"]+)[\'"][^>]*>(.*?)<\/a>/is', function($matches) {
+            $href = trim($matches[1]);
+            $anchor = trim(strip_tags($matches[2]));
+            if (empty($href) || strpos($href, 'javascript:') === 0 || $href === '#' || strpos($href, 'tel:') === 0) {
+                return $anchor;
+            }
+            return $anchor . ' (' . $href . ')';
+        }, $source);
+
         // Replace block elements with newlines
         $source = preg_replace('/<\/(p|div|h[1-6]|li|tr|br|hr)[^>]*>/i', "\n", $source);
         $source = preg_replace('/<br\s*\/?>/i', "\n", $source);
