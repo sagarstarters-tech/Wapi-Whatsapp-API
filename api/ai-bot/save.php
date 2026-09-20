@@ -113,14 +113,16 @@ try {
     ];
 
     if ($botId > 0) {
-        // Update existing bot
-        $result = AIBot::update($botId, $userId, $botData);
-
-        if (!$result) {
+        // Check ownership first
+        $existing = AIBot::getById($botId, $userId);
+        if (!$existing) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Bot not found or you do not have permission to update it.']);
             exit;
         }
+
+        // Update existing bot
+        AIBot::update($botId, $userId, $botData);
 
         $bot = AIBot::getById($botId, $userId);
 

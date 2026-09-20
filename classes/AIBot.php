@@ -225,12 +225,13 @@ class AIBot
         }
 
         if (empty($updateData)) {
-            return false;
+            return true;
         }
 
         $updateData['updated_at'] = date('Y-m-d H:i:s');
 
-        return $db->update('ai_bots', $updateData, 'id = ? AND user_id = ?', [$id, $userId]);
+        $db->update('ai_bots', $updateData, 'id = ? AND user_id = ?', [$id, $userId]);
+        return true;
     }
 
     /**

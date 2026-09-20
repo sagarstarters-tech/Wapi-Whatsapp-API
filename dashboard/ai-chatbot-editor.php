@@ -375,7 +375,7 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
                             <div class="input-group">
-                                <input type="text" id="testMessage" class="form-control" placeholder="Type a message to test..." autocomplete="off">
+                                <input type="text" id="testMessage" class="form-control" placeholder="Type a message to test..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();sendTestMessage();}">
                                 <button type="button" class="btn btn-primary" id="btnSendTest"><i class="bi bi-send-fill"></i></button>
                             </div>
                             <?php endif; ?>
@@ -521,8 +521,17 @@ document.getElementById('botEditorForm')?.addEventListener('submit', function(e)
 });
 
 // Test Bot
-document.getElementById('btnSendTest')?.addEventListener('click', sendTestMessage);
-document.getElementById('testMessage')?.addEventListener('keydown', function(e) { if (e.key === 'Enter') sendTestMessage(); });
+document.getElementById('btnSendTest')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    sendTestMessage();
+});
+document.getElementById('testMessage')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        sendTestMessage();
+    }
+});
 
 function sendTestMessage() {
     const input = document.getElementById('testMessage');
@@ -541,12 +550,15 @@ function sendTestMessage() {
         body: JSON.stringify({ bot_id: botId, message: msg })
     }).then(r => r.json()).then(data => {
         document.getElementById('typing')?.remove();
-        const reply = data.success ? data.reply : (data.message || 'Error processing message.');
-        chatBox.insertAdjacentHTML('beforeend', `<div class="d-flex mb-3"><div style="background: var(--border-color); padding: 8px 14px; border-radius: 14px 14px 14px 4px; max-width: 75%; font-size: 0.875rem;">${reply}</div></div>`);
+        const isError = !data.success || (data.data && data.data.status === 'error');
+        const reply = data.reply || data.message || 'Error processing message.';
+        const bgStyle = isError ? 'background: #fee2e2; color: #991b1b; border: 1px solid #f87171;' : 'background: var(--border-color);';
+        chatBox.insertAdjacentHTML('beforeend', `<div class="d-flex mb-3"><div style="${bgStyle} padding: 8px 14px; border-radius: 14px 14px 14px 4px; max-width: 75%; font-size: 0.875rem;">${isError ? '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' : ''}${reply}</div></div>`);
         chatBox.scrollTop = chatBox.scrollHeight;
-    }).catch(() => {
+    }).catch(err => {
         document.getElementById('typing')?.remove();
-        chatBox.insertAdjacentHTML('beforeend', `<div class="d-flex mb-3"><div style="background: #fce4ec; padding: 8px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.875rem; color: #c62828;">Network error.</div></div>`);
+        chatBox.insertAdjacentHTML('beforeend', `<div class="d-flex mb-3"><div style="background: #fee2e2; padding: 8px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.875rem; color: #991b1b;"><i class="bi bi-exclamation-triangle-fill me-1"></i> Network error: ${err.message}</div></div>`);
+        chatBox.scrollTop = chatBox.scrollHeight;
     });
 }
 </script>
