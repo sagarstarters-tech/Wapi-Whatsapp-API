@@ -509,7 +509,7 @@ class WhatsApp {
      * Sync templates from Meta
      */
     public function syncTemplates($userId) {
-        $waAccount = $this->db->fetch("SELECT waba_id, access_token FROM whatsapp_accounts WHERE user_id = ? AND status = 'active' LIMIT 1", [$userId]);
+        $waAccount = $this->db->fetch("SELECT waba_id, access_token FROM whatsapp_accounts WHERE user_id = ? AND waba_id IS NOT NULL AND access_token IS NOT NULL ORDER BY (status = 'active') DESC LIMIT 1", [$userId]);
         if (!$waAccount || empty($waAccount['waba_id']) || empty($waAccount['access_token'])) {
             return ['success' => false, 'message' => 'WhatsApp API is not connected or WABA ID is missing. Setup your API credentials first.'];
         }
@@ -541,6 +541,7 @@ class WhatsApp {
                     $headerType = 'none';
                     $bodyContent = '';
                     $footerContent = '';
+                    $variablesContent = null;
                     $buttonsContent = null;
                     
                     if (!empty($tpl['components'])) {
@@ -550,12 +551,20 @@ class WhatsApp {
                                 $headerContent = $comp['text'] ?? '';
                             } elseif ($comp['type'] === 'BODY') {
                                 $bodyContent = $comp['text'] ?? '';
+                                if (!empty($comp['example']['body_text'][0])) {
+                                    $variablesContent = json_encode($comp['example']['body_text'][0]);
+                                }
                             } elseif ($comp['type'] === 'FOOTER') {
                                 $footerContent = $comp['text'] ?? '';
                             } elseif ($comp['type'] === 'BUTTONS') {
                                 $buttonsContent = json_encode($comp['buttons'] ?? []);
                             }
                         }
+                    }
+
+                    // If variables not in example, check if {{1}}, {{2}} exist
+                    if (!$variablesContent && preg_match_all('/\{\{(\d+)\}\}/', $bodyContent, $m)) {
+                        $variablesContent = json_encode($m[0]);
                     }
                     
                     $existing = $this->db->fetch("SELECT id FROM templates WHERE user_id = ? AND name = ? AND language = ?", [$userId, $name, $language]);
@@ -568,6 +577,7 @@ class WhatsApp {
                         'header_type' => $headerType,
                         'header_content' => $headerContent,
                         'body' => $bodyContent,
+                        'variables' => $variablesContent,
                         'footer' => $footerContent,
                         'buttons' => $buttonsContent,
                         'status' => $status

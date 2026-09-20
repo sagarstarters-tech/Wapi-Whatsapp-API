@@ -136,6 +136,12 @@ $unreadNotifications = $db->count('notifications', "user_id = ? AND is_read = 0"
     </nav>
 
     <div class="sidebar-footer">
+        <?php if ($isAdmin): ?>
+        <a href="<?= baseUrl('admin/'); ?>" class="sidebar-link" style="color: var(--primary);">
+            <i class="bi bi-shield-check"></i>
+            <span>Admin Panel</span>
+        </a>
+        <?php endif; ?>
         <a href="<?= baseUrl(); ?>" class="sidebar-link">
             <i class="bi bi-globe"></i>
             <span>View Website</span>

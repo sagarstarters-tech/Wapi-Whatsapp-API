@@ -111,6 +111,10 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
     </nav>
 
     <div class="sidebar-footer">
+        <a href="<?= baseUrl('dashboard/'); ?>" class="sidebar-link" style="color: var(--primary);">
+            <i class="bi bi-person-workspace"></i>
+            <span>User Dashboard</span>
+        </a>
         <a href="<?= baseUrl(); ?>" class="sidebar-link">
             <i class="bi bi-globe"></i>
             <span>View Website</span>
