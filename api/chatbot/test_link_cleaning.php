@@ -11,9 +11,10 @@ try {
     require_once __DIR__ . '/../../classes/AIModelAdapter.php';
     require_once __DIR__ . '/../../classes/AIKnowledgeBase.php';
 
+    $testPhone = '919999' . substr(time(), -6);
     $testRes = AIOrchestrator::processMessage(
         1,
-        'test_user_sim_website_links',
+        $testPhone,
         'Sim User',
         'kya aapke paas koi website hai jaha sabhi products dekh sake? website link do',
         'test',
