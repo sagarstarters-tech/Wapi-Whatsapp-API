@@ -5,6 +5,8 @@ uploads/*
 !uploads/chatbot/*
 !uploads/cms/
 !uploads/cms/*
+!uploads/settings/
+!uploads/settings/*
 vendor/
 .DS_Store
 .git/

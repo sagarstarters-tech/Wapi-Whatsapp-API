@@ -30,9 +30,13 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     
     <!-- Favicon -->
     <?php 
-    $siteFavicon = $settings->get('site_favicon', 'assets/images/favicon.png');
-    $siteFaviconPath = str_replace('/wapi/', '', $siteFavicon);
-    $siteFaviconUrl = (strpos($siteFaviconPath, 'http') === 0) ? $siteFaviconPath : baseUrl($siteFaviconPath);
+    $siteFavicon = $settings->get('site_favicon', '');
+    if ($siteFavicon) {
+        $siteFaviconPath = str_replace('/wapi/', '', $siteFavicon);
+        $siteFaviconUrl = (strpos($siteFaviconPath, 'http') === 0) ? $siteFaviconPath : baseUrl($siteFaviconPath);
+    } else {
+        $siteFaviconUrl = baseUrl('assets/img/favicon.png');
+    }
     ?>
     <link rel="icon" href="<?= e($siteFaviconUrl); ?>">
     
@@ -98,13 +102,20 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="<?= baseUrl(); ?>">
                 <?php 
-                if ($siteLogo): 
+                $logoUrl = '';
+                if ($siteLogo) {
                     $logoPath = str_replace('/wapi/', '', $siteLogo);
                     $logoUrl = (strpos($logoPath, 'http') === 0) ? $logoPath : baseUrl($logoPath);
+                } elseif (file_exists(APP_ROOT . '/assets/img/logo.png')) {
+                    $logoUrl = baseUrl('assets/img/logo.png');
+                }
                 ?>
-                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="height: <?= (int)$logoHeight; ?>px; max-height: <?= (int)$logoHeight; ?>px; width: auto; object-fit: contain;">
+                <?php if (!empty($logoUrl)): ?>
+                    <img src="<?= e($logoUrl); ?>" alt="<?= e($siteName); ?>" style="height: <?= (int)$logoHeight; ?>px; max-height: <?= (int)$logoHeight; ?>px; width: auto; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('navbarBrandFallback').style.display='inline-block';">
+                    <span class="brand" id="navbarBrandFallback" style="display: none;"><?= e($siteName); ?></span>
+                <?php else: ?>
+                    <span class="brand"><?= e($siteName); ?></span>
                 <?php endif; ?>
-                <span class="brand"><?= e($siteName); ?></span>
             </a>
             
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
