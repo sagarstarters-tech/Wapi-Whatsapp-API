@@ -1,45 +1,33 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
-$db = Database::getInstance();
 
-$aiBots = $db->fetchAll("SELECT id, user_id, whatsapp_account_id, name, status FROM ai_bots");
-$waAccounts = $db->fetchAll("SELECT id, user_id, phone_number_id, phone_number, status FROM whatsapp_accounts");
+$urls = [
+    '72' => 'https://www.sagarstarters.com/product/1773370897-3-hp-3-phase-semi-automatic-motor-starter',
+    '73' => 'https://www.sagarstarters.com/product/1773370426-3-hp-3-phase-automatic-motor-starter',
+    '74' => 'https://www.sagarstarters.com/product/1773371765-up-to-7-5-hp-3-phase-semi-automatic-motor-starter',
+    '75' => 'https://www.sagarstarters.com/product/1773371765-up-to-7-5-hp-3-phase-semi-automatic-motor-starter',
+    '76' => 'https://www.sagarstarters.com/shop.php?category=11',
+    '77' => 'https://www.sagarstarters.com/product/1773064855-30-hp-automatic-star-delta-motor-starter',
+    '79' => 'https://www.sagarstarters.com/shop.php?category=7',
+    '80' => 'https://www.sagarstarters.com/shop.php?category=8',
+    '47' => 'https://www.sagarstarters.com/page.php?slug=1773469568-support'
+];
 
-$helloFlow = $db->fetch("SELECT id, user_id, name, is_active, flow_json FROM chatbot_flows WHERE name LIKE '%hello%' OR name LIKE '%bot%' ORDER BY id DESC LIMIT 1");
-$startNode = null;
-$nodeSummaries = [];
-
-if ($helloFlow) {
-    $data = json_decode($helloFlow['flow_json'], true);
-    $nodes = $data['drawflow']['Home']['data'] ?? $data['drawflow']['home']['data'] ?? [];
-    foreach ($nodes as $nId => $n) {
-        $name = $n['name'] ?? 'unknown';
-        if ($name === 'start') {
-            $startNode = [
-                'id' => $nId,
-                'data' => $n['data'] ?? [],
-                'outputs' => $n['outputs'] ?? []
-            ];
+$images = [];
+foreach ($urls as $nodeId => $url) {
+    $html = @file_get_contents($url, false, stream_context_create([
+        'http' => ['timeout' => 4, 'header' => "User-Agent: Mozilla/5.0\r\n"]
+    ]));
+    if ($html) {
+        if (preg_match('/<meta property="og:image" content="([^"]+)"/i', $html, $m)) {
+            $images[$nodeId] = html_entity_decode($m[1]);
+        } elseif (preg_match('/src="([^"]*uploads\/media\/images\/[^"]+)"/i', $html, $m2)) {
+            $img = $m2[1];
+            if (strpos($img, 'http') !== 0) $img = 'https://www.sagarstarters.com/' . ltrim($img, '/');
+            $images[$nodeId] = $img;
         }
-        $nodeSummaries[$nId] = [
-            'name' => $name,
-            'image' => $n['data']['image'] ?? null,
-            'text' => substr($n['data']['text'] ?? $n['data']['body_text'] ?? '', 0, 40),
-            'conns' => count($n['outputs']['output_1']['connections'] ?? [])
-        ];
     }
 }
 
 header('Content-Type: application/json');
-echo json_encode([
-    'ai_bots' => $aiBots,
-    'wa_accounts' => $waAccounts,
-    'flow_meta' => [
-        'id' => $helloFlow['id'] ?? null,
-        'user_id' => $helloFlow['user_id'] ?? null,
-        'name' => $helloFlow['name'] ?? null,
-        'is_active' => $helloFlow['is_active'] ?? null,
-    ],
-    'start_node' => $startNode,
-    'nodes_summary' => $nodeSummaries
-], JSON_PRETTY_PRINT);
+echo json_encode($images, JSON_PRETTY_PRINT);
