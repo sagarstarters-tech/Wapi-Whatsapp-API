@@ -1,35 +1,21 @@
 <?php
-require_once __DIR__ . '/../../config/config.php';
-
-$found = [];
-$searchDirs = [
-    dirname(__DIR__, 2), // root of wapi
-    dirname(__DIR__, 3), // parent dir (e.g. public_html or domains)
-    sys_get_temp_dir()
+$urls = [
+    'cat11' => 'https://www.sagarstarters.com/shop.php?category=11',
+    'cat7' => 'https://www.sagarstarters.com/shop.php?category=7',
+    'cat8' => 'https://www.sagarstarters.com/shop.php?category=8',
 ];
 
-foreach ($searchDirs as $dir) {
-    if (!is_dir($dir)) continue;
-    try {
-        $files = new RecursiveIteratorIterator(
-            new RecursiveCallbackFilterIterator(
-                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-                function ($file, $key, $iterator) {
-                    if ($iterator->hasChildren() && in_array($file->getFilename(), ['.git', 'vendor', 'node_modules', 'sessions'])) {
-                        return false;
-                    }
-                    return true;
-                }
-            )
-        );
-        foreach ($files as $file) {
-            if (strpos($file->getFilename(), 'media_69') !== false || strpos($file->getFilename(), '177571') !== false) {
-                $found[] = $file->getPathname();
-                if (count($found) > 30) break 2;
-            }
-        }
-    } catch (Exception $e) {}
+$res = [];
+foreach ($urls as $k => $u) {
+    $h = @file_get_contents($u, false, stream_context_create([
+        'http' => ['timeout' => 5, 'header' => "User-Agent: Mozilla/5.0\r\n", 'follow_location' => 1]
+    ]));
+    if ($h) {
+        preg_match_all('/uploads\/media\/images\/[a-zA-Z0-9_\-\.]+/i', $h, $m);
+        $res[$k] = array_values(array_unique($m[0] ?? []));
+    } else {
+        $res[$k] = 'failed to fetch';
+    }
 }
-
 header('Content-Type: application/json');
-echo json_encode(['found_media' => $found], JSON_PRETTY_PRINT);
+echo json_encode($res, JSON_PRETTY_PRINT);
