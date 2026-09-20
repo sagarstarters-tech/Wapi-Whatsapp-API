@@ -80,6 +80,9 @@ try {
     );
 
     $reply = $result['message'] ?? 'No response generated. Check your bot configuration.';
+    if (!empty($result['ai_response'])) {
+        $reply = $result['ai_response'];
+    }
     $success = ($result['status'] === 'success' || $result['status'] === 'handover');
 
     echo json_encode([
