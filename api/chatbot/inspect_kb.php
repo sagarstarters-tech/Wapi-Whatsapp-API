@@ -8,7 +8,7 @@ try {
     $db = Database::getInstance();
     $res = [];
 
-    $bot = $db->fetch("SELECT id, name, system_prompt, greeting_message, welcome_message, fallback_message, business_hours_enabled, ai_model FROM ai_bots WHERE id = 1");
+    $bot = $db->fetch("SELECT * FROM ai_bots WHERE id = 1");
     echo json_encode(['bot' => $bot], JSON_PRETTY_PRINT);
     exit;
 } catch (Throwable $t) {
