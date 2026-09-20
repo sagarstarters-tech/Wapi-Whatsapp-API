@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================
-    // PREMIUM CANVAS ZOOM & PANNING ENHANCEMENT
+    // PREMIUM CANVAS ZOOM & PANNING ENGINE
     // ==========================================
     
     // 1. Direct Mouse Wheel Zoom (without Ctrl key requirement)
@@ -87,7 +87,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, { capture: true, passive: false });
 
-    // 2. Custom Multi-Gesture Canvas Panning (Middle-Click, Right-Click, Space+Left-Click)
+    // Helper: Determine if mouse target is interactive (node, handle, button, form input)
+    function isInteractiveTarget(target) {
+        if (!target) return false;
+        return !!(
+            target.closest('.drawflow-node') ||
+            target.closest('.input') ||
+            target.closest('.output') ||
+            target.closest('.point') ||
+            target.closest('.main-path') ||
+            target.closest('.drawflow-delete') ||
+            target.closest('.canvas-controls') ||
+            target.closest('#configSidebar') ||
+            target.closest('.top-palette') ||
+            target.closest('.builder-actions') ||
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.tagName === 'BUTTON'
+        );
+    }
+
+    // 2. High-Performance Canvas Panning (Left-Click on background, Middle-Click, Right-Click, Space+Left)
     let isPanning = false;
     let panStartX = 0;
     let panStartY = 0;
@@ -100,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.code === 'Space') {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || activeEl.isContentEditable)) {
-                return; // Allow typing spaces in input fields
+                return;
             }
             spacePressed = true;
             canvas.style.cursor = 'grab';
@@ -110,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener('keyup', (e) => {
         if (e.code === 'Space') {
             spacePressed = false;
-            canvas.style.cursor = '';
+            if (!isPanning) canvas.style.cursor = '';
         }
     });
 
@@ -119,19 +140,40 @@ document.addEventListener("DOMContentLoaded", () => {
         const isMiddleClick = e.button === 1;
         const isRightClick = e.button === 2;
         const isSpaceDrag = e.button === 0 && spacePressed;
+        const isCanvasBgClick = e.button === 0 && !isInteractiveTarget(e.target);
 
-        if (isMiddleClick || isRightClick || isSpaceDrag) {
+        if (isMiddleClick || isRightClick || isSpaceDrag || isCanvasBgClick) {
             isPanning = true;
             panStartX = e.clientX;
             panStartY = e.clientY;
             panStartCanvasX = editor.canvas_x;
             panStartCanvasY = editor.canvas_y;
+            
+            canvas.classList.add('is-panning');
             canvas.style.cursor = 'grabbing';
+            
+            // Prevent Drawflow's internal editor_selected from causing double-speed pan glitches
+            if (editor) {
+                editor.editor_selected = false;
+            }
+
+            // Deselect any selected node or connection when clicking background
+            if (isCanvasBgClick) {
+                if (editor.node_selected) {
+                    editor.node_selected.classList.remove('selected');
+                    editor.node_selected = null;
+                    editor.dispatch('nodeUnselected', true);
+                }
+                if (editor.connection_selected) {
+                    editor.connection_selected.classList.remove('selected');
+                    editor.connection_selected = null;
+                }
+            }
             
             e.preventDefault();
             e.stopPropagation();
         }
-    }, true); // True handles capture phase, intercepting before Drawflow node dragging triggers
+    }, true);
 
     // Apply smooth pan offsets on mousemove
     window.addEventListener('mousemove', (e) => {
@@ -144,8 +186,9 @@ document.addEventListener("DOMContentLoaded", () => {
         editor.canvas_x = panStartCanvasX + dx;
         editor.canvas_y = panStartCanvasY + dy;
 
-        // Trigger visual transformation of the canvas precanvas
+        // Trigger visual transformation of the precanvas
         editor.precanvas.style.transform = `translate(${editor.canvas_x}px, ${editor.canvas_y}px) scale(${editor.zoom})`;
+        editor.dispatch('translate', { x: editor.canvas_x, y: editor.canvas_y });
         
         e.preventDefault();
         e.stopPropagation();
@@ -155,15 +198,48 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener('mouseup', (e) => {
         if (isPanning) {
             isPanning = false;
+            canvas.classList.remove('is-panning');
             canvas.style.cursor = spacePressed ? 'grab' : '';
             e.preventDefault();
             e.stopPropagation();
         }
     }, true);
 
+    // Touch support for touchscreens / tablets
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1 && !isInteractiveTarget(e.target)) {
+            isPanning = true;
+            panStartX = e.touches[0].clientX;
+            panStartY = e.touches[0].clientY;
+            panStartCanvasX = editor.canvas_x;
+            panStartCanvasY = editor.canvas_y;
+            canvas.classList.add('is-panning');
+            if (editor) editor.editor_selected = false;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isPanning || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - panStartX;
+        const dy = e.touches[0].clientY - panStartY;
+        editor.canvas_x = panStartCanvasX + dx;
+        editor.canvas_y = panStartCanvasY + dy;
+        editor.precanvas.style.transform = `translate(${editor.canvas_x}px, ${editor.canvas_y}px) scale(${editor.zoom})`;
+        editor.dispatch('translate', { x: editor.canvas_x, y: editor.canvas_y });
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+        if (isPanning) {
+            isPanning = false;
+            canvas.classList.remove('is-panning');
+        }
+    });
+
     // Disable default browser context menus on the canvas to allow smooth right-click panning
     canvas.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
+        if (!isInteractiveTarget(e.target) || isPanning) {
+            e.preventDefault();
+        }
     }, true);
 
     // Auto-load master flow on start
@@ -857,7 +933,7 @@ function updateNodePreview(nodeId) {
             const imgContainer = nodeEl.querySelector('.node-image-container');
             if (imgContainer) {
                 if (node.data.image) {
-                    imgContainer.innerHTML = `<img src="${node.data.image}" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;\\'><i class=\\'bi bi-image\\' style=\\'font-size:24px; color:#94a3b8;\\'></i></div>';" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
+                    imgContainer.innerHTML = `<img src="${node.data.image}" draggable="false" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;\\'><i class=\\'bi bi-image\\' style=\\'font-size:24px; color:#94a3b8;\\'></i></div>';" style="width:100%; height:80px; object-fit:cover; border-radius:8px; pointer-events:none; user-select:none;">`;
                 } else {
                     imgContainer.innerHTML = `<div style="background:#e2e8f0; height:80px; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-image" style="font-size:24px; color:#94a3b8;"></i></div>`;
                 }
@@ -919,7 +995,7 @@ function updateNodePreview(nodeId) {
             const imgContainer = nodeEl.querySelector('.interactive-header-img');
             if (imgContainer) {
                 if (node.data.image) {
-                    imgContainer.innerHTML = `<img src="${node.data.image}" onerror="this.onerror=null; this.parentElement.style.display='none';" style="width:100%; height:80px; object-fit:cover; border-radius:8px;">`;
+                    imgContainer.innerHTML = `<img src="${node.data.image}" draggable="false" onerror="this.onerror=null; this.parentElement.style.display='none';" style="width:100%; height:80px; object-fit:cover; border-radius:8px; pointer-events:none; user-select:none;">`;
                     imgContainer.style.display = 'block';
                 } else {
                     imgContainer.innerHTML = '';
@@ -1400,7 +1476,7 @@ function getNodeTemplate(type) {
                 </div>
             `;
         default:
-            return `<div>Node type not found</div>`;
+            return '';
     }
 }
 
@@ -1417,11 +1493,20 @@ function drag(ev) {
 function drop(ev) {
     ev.preventDefault();
     const type = ev.dataTransfer.getData("node");
-    addNodeToDrawflow(type, ev.clientX, ev.clientY);
+    const validTypes = ['start', 'text', 'image', 'audio', 'video', 'file', 'text-cta', 'cta', 'interactive', 'confirm', 'condition'];
+    if (!type || typeof type !== 'string' || !validTypes.includes(type.trim())) {
+        return;
+    }
+    addNodeToDrawflow(type.trim(), ev.clientX, ev.clientY);
 }
 
 function addNodeToDrawflow(type, pos_x, pos_y) {
-    if (editor.editor_mode === 'fixed') return false;
+    if (!editor || editor.editor_mode === 'fixed') return false;
+    const validTypes = ['start', 'text', 'image', 'audio', 'video', 'file', 'text-cta', 'cta', 'interactive', 'confirm', 'condition'];
+    if (!type || typeof type !== 'string' || !validTypes.includes(type.trim())) {
+        return false;
+    }
+    type = type.trim();
     pos_x = pos_x * (editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)) - (editor.precanvas.getBoundingClientRect().x * (editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)));
     pos_y = pos_y * (editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)) - (editor.precanvas.getBoundingClientRect().y * (editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)));
 
@@ -1565,6 +1650,18 @@ function saveFlow() {
 
     const data = editor.export();
     
+    // Sanitize exported nodes to remove any invalid/empty-named nodes
+    if (data && data.drawflow && data.drawflow.Home && data.drawflow.Home.data) {
+        const validTypes = ['start', 'text', 'image', 'audio', 'video', 'file', 'text-cta', 'cta', 'interactive', 'confirm', 'condition'];
+        const nodesData = data.drawflow.Home.data;
+        Object.keys(nodesData).forEach(k => {
+            const nodeName = nodesData[k]?.name;
+            if (!nodeName || !validTypes.includes(nodeName)) {
+                delete nodesData[k];
+            }
+        });
+    }
+    
     // Validate Flow before saving
     const validation = validateFlow(data);
     if (!validation.valid) {
@@ -1608,14 +1705,32 @@ function loadFlow(quiet = false) {
     .then(res => {
         if (!quiet) Swal.close();
         if (res.success && res.flow) {
+            // Sanitize flow data: remove any nodes that have invalid or empty names
+            if (res.flow && res.flow.drawflow && res.flow.drawflow.Home && res.flow.drawflow.Home.data) {
+                const validTypes = ['start', 'text', 'image', 'audio', 'video', 'file', 'text-cta', 'cta', 'interactive', 'confirm', 'condition'];
+                const nodesData = res.flow.drawflow.Home.data;
+                Object.keys(nodesData).forEach(k => {
+                    const nodeName = nodesData[k]?.name;
+                    if (!nodeName || !validTypes.includes(nodeName)) {
+                        delete nodesData[k];
+                    }
+                });
+            }
             editor.import(res.flow);
             // Update flow name in header input
             if (res.flow_name) {
                 const nameInput = document.getElementById('flowNameInput');
                 if (nameInput) nameInput.value = res.flow_name;
             }
-            // Update all node previews to show actual saved data
-            setTimeout(() => updateAllNodePreviews(), 100);
+            // Update all node previews and remove any rogue DOM elements
+            setTimeout(() => {
+                document.querySelectorAll('.drawflow-node').forEach(el => {
+                    if (el.textContent.includes('Node type not found') || el.innerHTML.trim() === '') {
+                        el.remove();
+                    }
+                });
+                updateAllNodePreviews();
+            }, 100);
         } else if (!quiet) {
             Swal.fire({ icon: 'info', title: 'No Flow Found', text: 'Start by dragging nodes from the top bar!' });
         }

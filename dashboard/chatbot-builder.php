@@ -111,7 +111,7 @@ include __DIR__ . '/../includes/header.php';
         </aside>
 
         <!-- Main Canvas Area -->
-        <main class="builder-canvas-area flex-grow-1 position-relative" id="drawflow-canvas" ondrop="drop(event)" ondragover="allowDrop(event)" style="height: calc(100vh - var(--builder-top-height));">
+        <main class="parent-drawflow builder-canvas-area flex-grow-1 position-relative" id="drawflow-canvas" ondrop="drop(event)" ondragover="allowDrop(event)" style="height: calc(100vh - var(--builder-top-height));">
             <!-- Drawflow will be initialized here -->
             
             <!-- Canvas Controls -->
