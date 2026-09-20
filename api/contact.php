@@ -1,7 +1,7 @@
 <?php
 /**
  * WAPI SaaS - Contact Form API Handler
- * Receives contact form submissions and stores them in the database
+ * Receives contact form submissions, stores in database, and notifies admin via email
  */
 header('Content-Type: application/json');
 
@@ -62,6 +62,8 @@ try {
         `subject` VARCHAR(255) NOT NULL,
         `message` TEXT NOT NULL,
         `status` ENUM('unread','read','replied') DEFAULT 'unread',
+        `email_sent` TINYINT(1) DEFAULT 0,
+        `email_error` VARCHAR(255) DEFAULT NULL,
         `ip_address` VARCHAR(45) DEFAULT NULL,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX `idx_status` (`status`),
@@ -71,12 +73,18 @@ try {
     // Add phone column if it doesn't exist (for existing tables)
     try {
         $db->query("ALTER TABLE `contact_messages` ADD COLUMN `phone` VARCHAR(30) DEFAULT NULL AFTER `email`");
-    } catch (Exception $e) {
-        // Column already exists — ignore
-    }
+    } catch (Exception $e) {}
 
-    // Insert message
-    $db->insert('contact_messages', [
+    // Add email_sent & email_error columns if they don't exist
+    try {
+        $db->query("ALTER TABLE `contact_messages` ADD COLUMN `email_sent` TINYINT(1) DEFAULT 0 AFTER `status`");
+    } catch (Exception $e) {}
+    try {
+        $db->query("ALTER TABLE `contact_messages` ADD COLUMN `email_error` VARCHAR(255) DEFAULT NULL AFTER `email_sent`");
+    } catch (Exception $e) {}
+
+    // Insert message record
+    $messageId = $db->insert('contact_messages', [
         'first_name' => $firstName,
         'last_name'  => $lastName,
         'email'      => $email,
@@ -86,22 +94,34 @@ try {
         'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
     ]);
 
-    // --- Send email notification to admin ---
-    $settings  = new Settings();
-    $adminEmail = $settings->get('contact_email', '');
-    // Fallback: if no contact_email, try SMTP_USER
-    if (empty($adminEmail) && defined('SMTP_USER') && SMTP_USER) {
-        $adminEmail = SMTP_USER;
+    // --- Determine Admin Recipient Email ---
+    $settings   = new Settings();
+    $adminEmail = trim((string)$settings->get('contact_email', ''));
+
+    // Intelligent fallback if contact_email is empty or default dummy placeholder
+    if (empty($adminEmail) || stripos($adminEmail, 'support@wapi.com') !== false) {
+        if (defined('SMTP_USER') && !empty(SMTP_USER) && stripos(SMTP_USER, '@wapi.com') === false) {
+            $adminEmail = SMTP_USER;
+        } elseif ($realAdmin = $db->fetch("SELECT email FROM users WHERE role = 'admin' AND email NOT LIKE '%@wapi.com' ORDER BY id ASC LIMIT 1")) {
+            $adminEmail = $realAdmin['email'];
+        } elseif (!empty($settings->get('smtp_from_email')) && stripos($settings->get('smtp_from_email'), '@wapi.com') === false) {
+            $adminEmail = $settings->get('smtp_from_email');
+        } elseif (!empty($settings->get('smtp_username')) && stripos($settings->get('smtp_username'), '@wapi.com') === false) {
+            $adminEmail = $settings->get('smtp_username');
+        }
     }
 
+    $emailSent  = 0;
+    $emailError = null;
+
     if (!empty($adminEmail)) {
-        $siteName   = $settings->get('site_name', 'WAPI');
+        $siteName    = $settings->get('site_name', 'WAPI');
         $senderName  = htmlspecialchars($firstName . ' ' . $lastName, ENT_QUOTES, 'UTF-8');
         $senderEmail = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
         $senderPhone = htmlspecialchars($fullPhone, ENT_QUOTES, 'UTF-8');
         $subjectSafe = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
         $messageSafe = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
-        $adminUrl    = APP_URL . '/admin/contact-messages.php';
+        $adminUrl    = function_exists('baseUrl') ? baseUrl('admin/contact-messages.php') : (rtrim(APP_URL, '/') . '/admin/contact-messages.php');
         $dateTime    = date('d M Y, h:i A');
 
         $emailSubject = "[{$siteName}] New Contact Message: {$subject}";
@@ -145,14 +165,33 @@ try {
             </div>
         </div>";
 
-        // Send — errors are logged but don't break the user-facing response
-        $mailResult = Mail::send($adminEmail, $emailSubject, $emailBody);
-        if (!$mailResult['success']) {
+        // Pass customer email & name as Reply-To so admin can click reply directly!
+        $mailResult = Mail::send($adminEmail, $emailSubject, $emailBody, null, null, $email, $firstName . ' ' . $lastName);
+        if ($mailResult['success']) {
+            $emailSent = 1;
+        } else {
+            $emailError = substr($mailResult['message'], 0, 250);
             error_log("Contact form admin notification failed: " . $mailResult['message']);
         }
+    } else {
+        $emailError = 'No admin contact email configured';
+        error_log("Contact form notice: No admin email found to receive contact message notification.");
     }
 
-    echo json_encode(['success' => true, 'message' => 'Your message has been sent successfully! We will get back to you soon.']);
+    // Update message record with email delivery status
+    if (!empty($messageId)) {
+        try {
+            $db->update('contact_messages', [
+                'email_sent'  => $emailSent,
+                'email_error' => $emailError
+            ], 'id = ?', [$messageId]);
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Your message has been sent successfully! We will get back to you soon.'
+    ]);
 
 } catch (Exception $e) {
     error_log("Contact form error: " . $e->getMessage());

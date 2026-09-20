@@ -42,6 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
     // Save text settings
     $textFields = $_POST['settings'] ?? [];
     foreach ($textFields as $key => $value) {
+        if ($key === 'smtp_password' && empty(trim((string)$value))) {
+            continue;
+        }
         $settings->set(sanitize($key), $value);
     }
 
