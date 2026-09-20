@@ -45,13 +45,14 @@ class AIOrchestrator
         $messageText = self::sanitizeInput($messageText);
 
         // Check business hours if enabled
-        if ($bot['business_hours_enabled']) {
+        if (!empty($bot['business_hours_enabled'])) {
             if (!self::isWithinBusinessHours($bot)) {
+                $outsideMsg = !empty($bot['outside_hours_message']) ? $bot['outside_hours_message'] : 'We are currently outside of business hours. We will respond as soon as possible.';
                 // Send outside hours message
-                self::sendWhatsAppMessage($phoneNumberId, $accessToken, $customerPhone, $bot['outside_hours_message']);
+                self::sendWhatsAppMessage($phoneNumberId, $accessToken, $customerPhone, $outsideMsg);
                 return [
                     'status' => 'outside_hours',
-                    'message' => $bot['outside_hours_message'],
+                    'message' => $outsideMsg,
                 ];
             }
         }
@@ -194,7 +195,7 @@ class AIOrchestrator
             );
         } catch (Exception $e) {
             // On AI failure, send fallback message
-            $fallback = $bot['fallback_message'] ?: "I'm sorry, I'm having trouble processing your request right now. Please try again.";
+            $fallback = !empty($bot['fallback_message']) ? $bot['fallback_message'] : "I'm sorry, I'm having trouble processing your request right now. Please try again.";
             self::sendWhatsAppMessage($phoneNumberId, $accessToken, $customerPhone, $fallback);
 
             $db->insert('ai_messages', [

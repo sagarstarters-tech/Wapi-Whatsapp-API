@@ -116,6 +116,10 @@ class Database {
      * Get row count
      */
     public function count($table, $where = '1', $params = []) {
+        if (stripos(trim($table), 'SELECT ') === 0) {
+            $queryParams = is_array($where) ? $where : (is_array($params) ? $params : []);
+            return (int) $this->fetchColumn($table, $queryParams);
+        }
         $sql = "SELECT COUNT(*) FROM `{$table}` WHERE {$where}";
         return (int) $this->fetchColumn($sql, $params);
     }

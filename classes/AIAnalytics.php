@@ -28,7 +28,7 @@ class AIAnalytics
         }
 
         // Total conversations
-        $totalConversations = (int) $db->count(
+        $totalConversations = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM ai_conversations c 
              JOIN ai_bots b ON c.bot_id = b.id 
              WHERE b.user_id = ?{$botFilter}",
@@ -36,7 +36,7 @@ class AIAnalytics
         );
 
         // Resolved by AI (conversations that ended without handover)
-        $resolvedByAI = (int) $db->count(
+        $resolvedByAI = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM ai_conversations c 
              JOIN ai_bots b ON c.bot_id = b.id 
              WHERE b.user_id = ? AND c.status IN ('resolved', 'closed', 'expired'){$botFilter}",
@@ -44,7 +44,7 @@ class AIAnalytics
         );
 
         // Transferred to human
-        $transferredToHuman = (int) $db->count(
+        $transferredToHuman = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM ai_conversations c 
              JOIN ai_bots b ON c.bot_id = b.id 
              WHERE b.user_id = ? AND c.status = 'handed_over'{$botFilter}",
@@ -52,7 +52,7 @@ class AIAnalytics
         );
 
         // Leads generated
-        $leadsGenerated = (int) $db->count(
+        $leadsGenerated = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM ai_leads l 
              JOIN ai_bots b ON l.bot_id = b.id 
              WHERE b.user_id = ?" . ($botId ? ' AND l.bot_id = ?' : ''),
@@ -78,7 +78,7 @@ class AIAnalytics
         );
 
         // Active conversations (currently open)
-        $activeConversations = (int) $db->count(
+        $activeConversations = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM ai_conversations c 
              JOIN ai_bots b ON c.bot_id = b.id 
              WHERE b.user_id = ? AND c.status = 'active'{$botFilter}",
@@ -424,7 +424,7 @@ class AIAnalytics
             [$botId, $date]
         );
 
-        $leadsCount = (int) $db->count(
+        $leadsCount = (int) $db->fetchColumn(
             "SELECT COUNT(*) FROM ai_leads WHERE bot_id = ? AND DATE(created_at) = ?",
             [$botId, $date]
         );
@@ -461,15 +461,15 @@ class AIAnalytics
         $db = Database::getInstance();
 
         // Total bots
-        $totalBots = (int) $db->count("SELECT COUNT(*) FROM ai_bots");
-        $activeBots = (int) $db->count("SELECT COUNT(*) FROM ai_bots WHERE status = 'active'");
+        $totalBots = (int) $db->count('ai_bots');
+        $activeBots = (int) $db->count('ai_bots', "status = 'active'");
 
         // Total conversations
-        $totalConversations = (int) $db->count("SELECT COUNT(*) FROM ai_conversations");
-        $activeConversations = (int) $db->count("SELECT COUNT(*) FROM ai_conversations WHERE status = 'active'");
+        $totalConversations = (int) $db->count('ai_conversations');
+        $activeConversations = (int) $db->count('ai_conversations', "status = 'active'");
 
         // Total messages
-        $totalMessages = (int) $db->count("SELECT COUNT(*) FROM ai_messages");
+        $totalMessages = (int) $db->count('ai_messages');
 
         // Total tokens
         $totalTokens = $db->fetchColumn(
@@ -479,23 +479,25 @@ class AIAnalytics
         // Today's stats
         $today = date('Y-m-d');
         $todayConversations = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_conversations WHERE DATE(created_at) = ?",
+            'ai_conversations',
+            "DATE(created_at) = ?",
             [$today]
         );
         $todayMessages = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_messages WHERE DATE(created_at) = ?",
+            'ai_messages',
+            "DATE(created_at) = ?",
             [$today]
         );
 
         // Total handovers
-        $totalHandovers = (int) $db->count("SELECT COUNT(*) FROM ai_handovers");
-        $pendingHandovers = (int) $db->count("SELECT COUNT(*) FROM ai_handovers WHERE status = 'pending'");
+        $totalHandovers = (int) $db->count('ai_handovers');
+        $pendingHandovers = (int) $db->count('ai_handovers', "status = 'pending'");
 
         // Total leads
-        $totalLeads = (int) $db->count("SELECT COUNT(*) FROM ai_leads");
+        $totalLeads = (int) $db->count('ai_leads');
 
         // Users with bots
-        $usersWithBots = (int) $db->count("SELECT COUNT(DISTINCT user_id) FROM ai_bots");
+        $usersWithBots = (int) $db->fetchColumn("SELECT COUNT(DISTINCT user_id) FROM ai_bots");
 
         // Average response time
         $avgResponseTime = (float) $db->fetchColumn(

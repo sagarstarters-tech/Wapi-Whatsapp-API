@@ -59,11 +59,20 @@ $db->insert('payments', [
     'payment_method' => 'free'
 ]);
 
-// Update credits
-$db->update('credits', [
-    'total_credits' => $plan['message_limit'],
-    'used_credits' => 0
-], "user_id = ?", [$userId]);
+// Update or insert credits
+$creditExists = $db->fetch("SELECT id FROM credits WHERE user_id = ?", [$userId]);
+if ($creditExists) {
+    $db->update('credits', [
+        'total_credits' => $plan['message_limit'],
+        'used_credits' => 0
+    ], "user_id = ?", [$userId]);
+} else {
+    $db->insert('credits', [
+        'user_id' => $userId,
+        'total_credits' => $plan['message_limit'],
+        'used_credits' => 0
+    ]);
+}
 
 setFlash('success', '14 Days Free Trial activated successfully!');
 redirect('dashboard/subscription.php');

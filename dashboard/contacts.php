@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
         if (!empty($ids)) {
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $params = array_merge($ids, [$userId]);
-            $db->run("DELETE FROM contacts WHERE id IN ($placeholders) AND user_id = ?", $params);
+            $db->query("DELETE FROM contacts WHERE id IN ($placeholders) AND user_id = ?", $params);
             setFlash('success', count($ids) . ' contacts deleted.');
         }
     } elseif ($action === 'import' && isset($_FILES['import_file'])) {

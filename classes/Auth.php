@@ -289,7 +289,9 @@ class Auth {
      */
     public static function requireLogin() {
         if (!self::isLoggedIn()) {
-            $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+            if (!empty($_SERVER['REQUEST_URI'])) {
+                $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+            }
             header('Location: ' . APP_URL . '/auth/login.php');
             exit;
         }

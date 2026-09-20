@@ -29,40 +29,40 @@ ini_set('error_log', __DIR__ . '/../logs/error.log');
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $fallbackUrl = $protocol . "://" . $host;
-define('APP_URL', $_ENV['APP_URL'] ?? $fallbackUrl);
-define('APP_NAME', $_ENV['APP_NAME'] ?? 'WAPI');
-define('APP_VERSION', $_ENV['APP_VERSION'] ?? '1.0.0');
-define('APP_ROOT', dirname(__DIR__));
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'development');
+if (!defined('APP_URL')) define('APP_URL', $_ENV['APP_URL'] ?? $fallbackUrl);
+if (!defined('APP_NAME')) define('APP_NAME', $_ENV['APP_NAME'] ?? 'WAPI');
+if (!defined('APP_VERSION')) define('APP_VERSION', $_ENV['APP_VERSION'] ?? '1.0.0');
+if (!defined('APP_ROOT')) define('APP_ROOT', dirname(__DIR__));
+if (!defined('APP_ENV')) define('APP_ENV', $_ENV['APP_ENV'] ?? 'development');
 
 // Database Configuration
-define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
-define('DB_NAME', $_ENV['DB_NAME'] ?? 'wapi_saas');
-define('DB_USER', $_ENV['DB_USER'] ?? 'root');
-define('DB_PASS', $_ENV['DB_PASS'] ?? '');
-define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? 'utf8mb4');
+if (!defined('DB_HOST')) define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
+if (!defined('DB_NAME')) define('DB_NAME', $_ENV['DB_NAME'] ?? 'wapi_saas');
+if (!defined('DB_USER')) define('DB_USER', $_ENV['DB_USER'] ?? 'root');
+if (!defined('DB_PASS')) define('DB_PASS', $_ENV['DB_PASS'] ?? '');
+if (!defined('DB_CHARSET')) define('DB_CHARSET', $_ENV['DB_CHARSET'] ?? 'utf8mb4');
 
 // Session Configuration
-define('SESSION_NAME', $_ENV['SESSION_NAME'] ?? 'WAPI_SESSION');
-define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 7200);
-define('SESSION_SECURE', ($_ENV['SESSION_SECURE'] ?? 'false') === 'true');
-define('SESSION_HTTPONLY', ($_ENV['SESSION_HTTPONLY'] ?? 'true') === 'true');
+if (!defined('SESSION_NAME')) define('SESSION_NAME', $_ENV['SESSION_NAME'] ?? 'WAPI_SESSION');
+if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', $_ENV['SESSION_LIFETIME'] ?? 7200);
+if (!defined('SESSION_SECURE')) define('SESSION_SECURE', ($_ENV['SESSION_SECURE'] ?? 'false') === 'true');
+if (!defined('SESSION_HTTPONLY')) define('SESSION_HTTPONLY', ($_ENV['SESSION_HTTPONLY'] ?? 'true') === 'true');
 
 // Security
-define('CSRF_TOKEN_NAME', '_csrf_token');
-define('HASH_ALGO', PASSWORD_BCRYPT);
-define('HASH_COST', 12);
-define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? 'default-secret');
-define('ENCRYPTION_KEY', $_ENV['ENCRYPTION_KEY'] ?? 'default-encryption-key');
-define('WEBHOOK_VERIFY_TOKEN', $_ENV['WEBHOOK_VERIFY_TOKEN'] ?? 'default-verify-token');
+if (!defined('CSRF_TOKEN_NAME')) define('CSRF_TOKEN_NAME', '_csrf_token');
+if (!defined('HASH_ALGO')) define('HASH_ALGO', PASSWORD_BCRYPT);
+if (!defined('HASH_COST')) define('HASH_COST', 12);
+if (!defined('JWT_SECRET')) define('JWT_SECRET', $_ENV['JWT_SECRET'] ?? 'default-secret');
+if (!defined('ENCRYPTION_KEY')) define('ENCRYPTION_KEY', $_ENV['ENCRYPTION_KEY'] ?? 'default-encryption-key');
+if (!defined('WEBHOOK_VERIFY_TOKEN')) define('WEBHOOK_VERIFY_TOKEN', $_ENV['WEBHOOK_VERIFY_TOKEN'] ?? 'default-verify-token');
 
 // File Upload
-define('UPLOAD_DIR', APP_ROOT . '/uploads/');
-define('MAX_UPLOAD_SIZE', (int)($_ENV['MAX_UPLOAD_SIZE'] ?? (100 * 1024 * 1024)));
-define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'mp4', 'mp3']);
+if (!defined('UPLOAD_DIR')) define('UPLOAD_DIR', APP_ROOT . '/uploads/');
+if (!defined('MAX_UPLOAD_SIZE')) define('MAX_UPLOAD_SIZE', (int)($_ENV['MAX_UPLOAD_SIZE'] ?? (100 * 1024 * 1024)));
+if (!defined('ALLOWED_EXTENSIONS')) define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'mp4', 'mp3']);
 
 // Pagination
-define('ITEMS_PER_PAGE', $_ENV['ITEMS_PER_PAGE'] ?? 20);
+if (!defined('ITEMS_PER_PAGE')) define('ITEMS_PER_PAGE', $_ENV['ITEMS_PER_PAGE'] ?? 20);
 
 // Rate Limiting
 define('MAX_LOGIN_ATTEMPTS', 5);

@@ -16,6 +16,11 @@ $hideNav = true;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
 
+    if (!CSRF::validateToken()) {
+        echo json_encode(['success' => false, 'message' => 'Security token expired. Please refresh the page.']);
+        exit;
+    }
+
     $id = sanitizeInt($_POST['id'] ?? 0);
 
     if ($_POST['action'] === 'update_status') {
@@ -233,6 +238,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    const csrfToken = '<?= CSRF::getToken(); ?>';
+
     // ---- Status change (inline) ----
     document.querySelectorAll('.status-select').forEach(sel => {
         sel.addEventListener('change', function() {
@@ -242,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fd.append('action', 'update_status');
             fd.append('id', id);
             fd.append('status', status);
+            fd.append('csrf_token', csrfToken);
 
             fetch(currentUrl, { method: 'POST', body: fd })
                 .then(r => r.json())
@@ -262,6 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fd = new FormData();
             fd.append('action', 'delete');
             fd.append('id', id);
+            fd.append('csrf_token', csrfToken);
 
             fetch(currentUrl, { method: 'POST', body: fd })
                 .then(r => r.json())

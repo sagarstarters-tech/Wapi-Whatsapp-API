@@ -2,8 +2,6 @@
 /**
  * WAPI SaaS - Admin Payments Management
  */
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
 Auth::requireAdmin();
@@ -111,7 +109,13 @@ try {
     $totalRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success'") ?: 0;
     $monthlyRevenue = $db->fetchColumn("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success' AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())") ?: 0;
 } catch (Exception $e) {
-    die("<h3>FATAL ERROR:</h3><p>" . $e->getMessage() . "</p><p>SQL: SELECT p.*, u.name as user_name, u.email as user_email, s.billing_cycle, pl.name as plan_name, COALESCE(pl2.name, pl.name) as actual_plan_name FROM payments p JOIN users u ON p.user_id = u.id LEFT JOIN subscriptions s ON p.subscription_id = s.id LEFT JOIN plans pl ON s.plan_id = pl.id LEFT JOIN plans pl2 ON p.plan_id = pl2.id</p>");
+    error_log("Error loading payments in admin/payments.php: " . $e->getMessage());
+    $totalPayments = 0;
+    $pagination = paginate(0, 1, 20);
+    $payments = [];
+    $totalRevenue = 0;
+    $monthlyRevenue = 0;
+    setFlash('danger', 'Unable to fetch payments: ' . e($e->getMessage()));
 }
 
 $pageTitle = 'Payments';

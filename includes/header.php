@@ -85,7 +85,8 @@ $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
     }
     
     // Auto-hide public nav for admin and dashboard pages
-    if (strpos($_SERVER['REQUEST_URI'], '/admin/') !== false || strpos($_SERVER['REQUEST_URI'], '/dashboard/') !== false) {
+    $reqUri = $_SERVER['REQUEST_URI'] ?? '';
+    if (strpos($reqUri, '/admin/') !== false || strpos($reqUri, '/dashboard/') !== false) {
         $hideNav = true;
     }
     ?>

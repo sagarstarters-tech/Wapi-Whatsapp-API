@@ -22,7 +22,7 @@ try {
     ];
 
     // Handle status update (move card)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && CSRF::validateToken()) {
         $action = $_POST['action'] ?? '';
         if ($action === 'update_status' && !empty($_POST['contact_id']) && !empty($_POST['status'])) {
             $db->update('contacts', [

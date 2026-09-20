@@ -25,17 +25,22 @@ Options -Indexes
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
 </IfModule>
 
-# Protect sensitive files
-<FilesMatch "^(config|classes|helpers|includes|logs)">
-    Order Allow,Deny
-    Deny from all
+# Protect sensitive directories from direct HTTP access
+<IfModule mod_rewrite.c>
+    RewriteRule ^(config|classes|helpers|includes|logs|database|scratch)/ - [F,L]
+</IfModule>
+
+# Protect sensitive files and extensions
+<FilesMatch "^(\.env|\.git|composer\.|package\.)|(\.(env|sql|log|md))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
-# Protect .env and config files
-<FilesMatch "\.(env|sql|log|md)$">
-    Order Allow,Deny
-    Deny from all
-</FilesMatch>
 
 # Protect uploads from PHP execution
 <IfModule mod_rewrite.c>

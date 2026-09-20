@@ -847,25 +847,10 @@ class AIKnowledgeBase
     {
         $db = Database::getInstance();
 
-        $documentCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_documents WHERE kb_id = ?",
-            [$kbId]
-        );
-
-        $urlCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_urls WHERE kb_id = ?",
-            [$kbId]
-        );
-
-        $qaCount = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_qa_pairs WHERE kb_id = ?",
-            [$kbId]
-        );
-
-        $totalChunks = (int) $db->count(
-            "SELECT COUNT(*) FROM ai_kb_chunks WHERE kb_id = ?",
-            [$kbId]
-        );
+        $documentCount = (int) $db->count('ai_kb_documents', 'kb_id = ?', [$kbId]);
+        $urlCount = (int) $db->count('ai_kb_urls', 'kb_id = ?', [$kbId]);
+        $qaCount = (int) $db->count('ai_kb_qa_pairs', 'kb_id = ?', [$kbId]);
+        $totalChunks = (int) $db->count('ai_kb_chunks', 'kb_id = ?', [$kbId]);
 
         $totalWords = (int) $db->fetchColumn(
             "SELECT COALESCE(SUM(word_count), 0) FROM ai_kb_chunks WHERE kb_id = ?",

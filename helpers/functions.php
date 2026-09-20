@@ -17,17 +17,20 @@ function redirect($path) {
  * Get base URL
  */
 function baseUrl($path = '') {
-    // Strip redundant /wapi/ from the start of the path string
-    $path = ltrim($path, '/');
-    if (strpos($path, 'wapi/') === 0) {
+    $path = ltrim((string)$path, '/');
+    $hasWapiBase = (strpos(APP_URL, '/wapi') !== false);
+
+    // Strip redundant wapi/ from the start of the path string if base URL already includes it
+    if ($hasWapiBase && strpos($path, 'wapi/') === 0) {
         $path = substr($path, 5);
     }
     
-    $url = rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
+    $url = rtrim(APP_URL, '/') . ($path !== '' ? '/' . $path : '');
     
-    // Final deduplication (e.g., /wapi/wapi/ -> /wapi/)
-    // Replaces multiple occurrences of /wapi with a single one
-    return preg_replace('/(\/wapi)+/', '/wapi', $url);
+    if ($hasWapiBase) {
+        return preg_replace('/(\/wapi)+/', '/wapi', $url);
+    }
+    return $url;
 }
 
 /**
@@ -135,12 +138,18 @@ function truncate($text, $length = 100, $suffix = '...') {
  * Slugify text
  */
 function slugify($text) {
-    $text = preg_replace('~[^\pL\d]+~u', '-', $text);
-    $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+    $text = preg_replace('~[^\pL\d]+~u', '-', (string)$text);
+    if (function_exists('iconv')) {
+        $trans = @iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+        if ($trans !== false) {
+            $text = $trans;
+        }
+    }
     $text = preg_replace('~[^-\w]+~', '', $text);
     $text = trim($text, '-');
     $text = preg_replace('~-+~', '-', $text);
-    return strtolower($text);
+    $slug = strtolower($text);
+    return !empty($slug) ? $slug : 'item-' . substr(md5(uniqid('', true)), 0, 8);
 }
 
 /**
