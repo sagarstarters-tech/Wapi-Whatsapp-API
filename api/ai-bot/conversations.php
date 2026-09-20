@@ -37,8 +37,8 @@ try {
         $conv = $db->fetch(
             "SELECT c.* FROM ai_conversations c 
              JOIN ai_bots b ON c.bot_id = b.id 
-             WHERE c.id = ? AND b.user_id = ?",
-            [$conversationId, $userId]
+             WHERE c.id = ? AND (c.user_id = ? OR b.user_id = ?)",
+            [$conversationId, $userId, $userId]
         );
         
         if (!$conv) {

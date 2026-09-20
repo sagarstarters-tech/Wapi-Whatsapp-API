@@ -64,7 +64,7 @@ if ($isEdit) {
 
 $pageTitle = $isEdit ? 'Edit AI Bot' : 'Create AI Bot';
 $extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
-$extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js')];
+$extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js?v=' . time())];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -402,7 +402,7 @@ include __DIR__ . '/../includes/header.php';
 const botId = <?= $botId; ?>;
 const csrfToken = '<?= CSRF::generateToken(); ?>';
 const baseUrl = '<?= APP_URL; ?>/';
-window.APP_BASE = '<?= baseUrl(); ?>';
+window.APP_BASE = '<?= rtrim(baseUrl(), '/') . '/'; ?>';
 
 // Model card selection
 document.querySelectorAll('.model-radio').forEach(radio => {

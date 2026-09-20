@@ -62,7 +62,7 @@ try {
 
 $pageTitle = 'AI Conversations';
 $extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
-$extraJs = [asset('assets/js/ai-chatbot.js')];
+$extraJs = [asset('assets/js/ai-chatbot.js?v=' . time())];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -222,7 +222,7 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-window.APP_BASE = '<?= baseUrl(); ?>';
+window.APP_BASE = '<?= rtrim(baseUrl(), '/') . '/'; ?>';
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

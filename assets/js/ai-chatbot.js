@@ -11,7 +11,21 @@
     // ============================================
     // Utility Functions
     // ============================================
+    function getFullUrl(path) {
+        if (!path) return '';
+        // If already full URL, ensure domain and path are separated by a slash (prevents .comapi/... bug)
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+            return path.replace(/(https?:\/\/[^\/]+)(api\/|dashboard\/)/i, '$1/$2');
+        }
+        let base = (window.APP_BASE || '').trim();
+        if (!base) base = '/';
+        if (!base.endsWith('/')) base += '/';
+        if (path.startsWith('/')) path = path.substring(1);
+        return base + path;
+    }
+
     function apiRequest(url, options = {}) {
+        url = getFullUrl(url);
         const defaults = {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
@@ -516,33 +530,53 @@
         if (detail.style.display === 'none' || !detail.style.display) {
             // Load messages if not loaded
             if (!detail.dataset.loaded) {
-                detail.innerHTML = '<div class="text-center py-3"><span class="ai-spinner"></span></div>';
-                detail.style.display = 'block';
+                detail.innerHTML = '<td colspan="7" class="p-0"><div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div><span style="font-size:13px; color:var(--text-muted);">Loading conversation...</span></div></td>';
+                detail.style.display = 'table-row';
 
-                apiRequest(window.APP_BASE + 'api/ai-bot/conversations.php?conversation_id=' + convId).then(data => {
-                    if (data.success && data.data?.messages) {
-                        let html = '<div class="conversation-thread">';
-                        data.data.messages.forEach(msg => {
-                            const isInbound = msg.direction === 'inbound';
-                            const avatarClass = msg.sender_type === 'ai' ? 'ai-avatar' : (msg.sender_type === 'human' ? 'human-avatar' : '');
-                            const avatarIcon = msg.sender_type === 'ai' ? 'bi-robot' : (msg.sender_type === 'human' ? 'bi-person' : 'bi-person');
-                            html += `
-                                <div class="thread-message ${isInbound ? 'inbound' : 'outbound'}">
-                                    <div class="msg-avatar ${avatarClass}"><i class="bi ${avatarIcon}"></i></div>
-                                    <div>
-                                        <div class="msg-content">${escapeHtml(msg.content)}</div>
-                                        <div class="msg-time">${msg.created_at}</div>
+                apiRequest('api/ai-bot/conversations.php?conversation_id=' + convId).then(data => {
+                    const td = detail.querySelector('td') || detail;
+                    if (data && data.success && data.data) {
+                        const messages = data.data.messages || [];
+                        if (messages.length === 0) {
+                            td.innerHTML = '<div class="p-4 text-center text-muted"><i class="bi bi-chat-square-dots me-2"></i> No messages recorded in this conversation yet.</div>';
+                        } else {
+                            let html = '<div class="conversation-thread p-3" style="background: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; max-height: 480px; overflow-y: auto;">';
+                            messages.forEach(msg => {
+                                const isInbound = msg.direction === 'inbound';
+                                const isAI = msg.sender_type === 'ai';
+                                const avatarBg = isInbound ? '#e2e8f0' : (isAI ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#10b981');
+                                const avatarColor = isInbound ? '#475569' : '#fff';
+                                const avatarIcon = isAI ? 'bi-robot' : 'bi-person';
+                                const senderLabel = isInbound ? 'Customer' : (isAI ? 'AI Assistant' : 'Human Agent');
+
+                                html += `
+                                    <div class="thread-message mb-3 d-flex gap-2 ${isInbound ? '' : 'flex-row-reverse'}">
+                                        <div class="msg-avatar shadow-sm" style="width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:${avatarBg}; color:${avatarColor}; flex-shrink:0; font-size:14px;" title="${senderLabel}">
+                                            <i class="bi ${avatarIcon}"></i>
+                                        </div>
+                                        <div style="max-width: 75%;">
+                                            <div class="d-flex align-items-center gap-2 mb-1 ${isInbound ? '' : 'justify-content-end'}">
+                                                <span style="font-size:11px; font-weight:600; color:var(--text-muted);">${senderLabel}</span>
+                                                <span style="font-size:10px; color:var(--text-muted);">${msg.created_at || ''}</span>
+                                            </div>
+                                            <div class="msg-content p-2 px-3 rounded-3" style="background:${isInbound ? '#ffffff' : '#e0e7ff'}; border:1px solid ${isInbound ? '#e2e8f0' : '#c7d2fe'}; color:#1e293b; font-size:13px; word-break:break-word; white-space:pre-wrap; line-height:1.5; box-shadow:0 1px 3px rgba(0,0,0,0.03);">${escapeHtml(msg.content)}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            `;
-                        });
-                        html += '</div>';
-                        detail.innerHTML = html;
+                                `;
+                            });
+                            html += '</div>';
+                            td.innerHTML = html;
+                        }
                         detail.dataset.loaded = 'true';
+                    } else {
+                        td.innerHTML = `<div class="p-3 text-center text-danger"><i class="bi bi-exclamation-circle me-1"></i> ${(data && data.message) ? data.message : 'Failed to load conversation'}</div>`;
                     }
+                }).catch(err => {
+                    const td = detail.querySelector('td') || detail;
+                    td.innerHTML = '<div class="p-3 text-center text-danger"><i class="bi bi-exclamation-circle me-1"></i> Network error loading conversation. Please try again.</div>';
                 });
             } else {
-                detail.style.display = 'block';
+                detail.style.display = 'table-row';
             }
         } else {
             detail.style.display = 'none';

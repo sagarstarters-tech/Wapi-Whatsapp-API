@@ -44,7 +44,7 @@ $waAccounts = $db->fetchAll('SELECT id, phone_number, business_name FROM whatsap
 
 $pageTitle = 'AI ChatBot Builder';
 $extraCss = [asset('assets/css/dashboard.css'), asset('assets/css/ai-chatbot.css')];
-$extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js')];
+$extraJs = ['https://cdn.jsdelivr.net/npm/sweetalert2@11', asset('assets/js/ai-chatbot.js?v=' . time())];
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -237,7 +237,7 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-window.APP_BASE = '<?= baseUrl(); ?>';
+window.APP_BASE = '<?= rtrim(baseUrl(), '/') . '/'; ?>';
 
 // Delete Bot
 function deleteBot(botId, botName) {
