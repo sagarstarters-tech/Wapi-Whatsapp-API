@@ -191,8 +191,6 @@ class AIModelAdapter
             throw new Exception('Gemini API key is not configured. Please set it in Admin Settings.');
         }
 
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . urlencode($apiKey);
-
         // Convert messages to Gemini format
         $contents = [];
 
@@ -228,17 +226,40 @@ class AIModelAdapter
             'x-goog-api-key: ' . $apiKey,
         ];
 
-        $usedModel = 'gemini-2.0-flash';
-        $response = self::makeCurlRequest($url, $headers, $payload);
-        $data = json_decode($response, true);
+        // List of candidate models in priority order.
+        // Google deprecated gemini-2.0-flash and instructs: "use models/gemini-2.5-flash"
+        $candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-exp'];
+        $lastException = null;
+        $response = null;
+        $usedModel = 'gemini-2.5-flash';
 
-        // Fallback to gemini-1.5-flash if 2.0-flash is not available on this API key/region
-        if (isset($data['error']) && (strpos($data['error']['message'] ?? '', 'gemini-2.0-flash') !== false || ($data['error']['code'] ?? 0) === 404)) {
-            $fallbackUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . urlencode($apiKey);
-            $response = self::makeCurlRequest($fallbackUrl, $headers, $payload);
-            $data = json_decode($response, true);
-            $usedModel = 'gemini-1.5-flash';
+        foreach ($candidateModels as $modelCandidate) {
+            $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $modelCandidate . ':generateContent?key=' . urlencode($apiKey);
+            try {
+                $response = self::makeCurlRequest($url, $headers, $payload);
+                $usedModel = $modelCandidate;
+                $lastException = null;
+                break;
+            } catch (Exception $e) {
+                $lastException = $e;
+                $msg = $e->getMessage();
+                // If model is deprecated / not found / not available, try next model candidate
+                if (stripos($msg, 'no longer available') !== false ||
+                    stripos($msg, 'not found') !== false ||
+                    stripos($msg, '404') !== false ||
+                    stripos($msg, 'is not supported') !== false) {
+                    continue;
+                }
+                // For other errors (invalid auth, quota, etc.), rethrow immediately
+                throw $e;
+            }
         }
+
+        if ($response === null) {
+            throw $lastException ?? new Exception('Failed to connect to Google Gemini.');
+        }
+
+        $data = json_decode($response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new Exception('Failed to parse Gemini response: ' . json_last_error_msg());
