@@ -133,7 +133,29 @@ include __DIR__ . '/../includes/header.php';
                                     <?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?>
                                 <?php endif; ?>
                             </td>
-                            <td><span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span></td>
+                            <td>
+                                <span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span>
+                                <?php if ($msg['status'] === 'failed' && !empty($msg['error_message'])): ?>
+                                    <div class="mt-1" style="font-size: 0.72rem; line-height: 1.25;">
+                                        <?php
+                                        $err = $msg['error_message'];
+                                        if (strpos($err, '131047') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-clock-history me-1"></i>24h Window Expired</span>';
+                                        } elseif (strpos($err, '132000') !== false || stripos($err, 'parameters') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-exclamation-triangle me-1"></i>Variables Mismatch</span>';
+                                        } elseif (strpos($err, '132001') !== false || stripos($err, 'does not exist') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-translate me-1"></i>Template/Lang Not Found</span>';
+                                        } elseif (strpos($err, '133010') !== false || strpos($err, '131031') !== false || stripos($err, 'payment') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-credit-card me-1"></i>Meta Payment Required</span>';
+                                        } elseif (strpos($err, '132005') !== false || stripos($err, 'paused') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-pause-circle me-1"></i>Template Paused</span>';
+                                        } else {
+                                            echo '<span class="text-danger" title="' . e($err) . '"><i class="bi bi-info-circle me-1"></i>' . e(substr($err, 0, 32)) . (strlen($err) > 32 ? '...' : '') . '</span>';
+                                        }
+                                        ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap;"><?= timeAgo($msg['created_at']); ?></td>
                             <td>
                                 <button class="btn btn-sm btn-light-primary" onclick="viewMessage(<?= htmlspecialchars(json_encode([
@@ -356,6 +378,48 @@ include __DIR__ . '/../includes/header.php';
                 errorBox.style.background = 'rgba(245, 158, 11, 0.08)';
                 errorBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
                 errorBox.style.color = '#92400e';
+            } else if (err.includes('132000') || err.toLowerCase().includes('parameters') || err.toLowerCase().includes('number of parameters')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b45309;"><i class="bi bi-exclamation-triangle-fill me-1"></i> Meta Template Variable Mismatch (Error #132000)</div>' +
+                    '<div class="mb-2 text-dark">Meta me is template ke variables aur bhejte waqt provide kiye gaye variables ki sankhya (parameter count) match nahi hui.</div>' +
+                    '<div class="p-2 bg-white rounded border border-warning-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution:</strong><br>' +
+                    '1. Bulk Messages page par jayein aur upar <strong>"Sync from Meta"</strong> button dabayein taaki template ka latest structure sync ho sake.<br>' +
+                    '2. Template me Header text, Body aur Buttons me jitne variables hain, sabhi ki value bharein.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(245, 158, 11, 0.08)';
+                errorBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                errorBox.style.color = '#92400e';
+            } else if (err.includes('132001') || err.toLowerCase().includes('does not exist in the translated language')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b45309;"><i class="bi bi-translate me-1"></i> Template / Language Not Found (Error #132001)</div>' +
+                    '<div class="mb-2 text-dark">Meta me is template name ya language code ka approved version nahi mila.</div>' +
+                    '<div class="p-2 bg-white rounded border border-warning-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution:</strong> Bulk Messages page par <strong>"Sync from Meta"</strong> par click karein taaki Meta se latest approved templates fetch ho sakein.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(245, 158, 11, 0.08)';
+                errorBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                errorBox.style.color = '#92400e';
+            } else if (err.includes('133010') || err.includes('131031') || err.toLowerCase().includes('payment')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b91c1c;"><i class="bi bi-credit-card-2-front-fill me-1"></i> Meta WhatsApp Payment Method Required (Error #133010 / #131031)</div>' +
+                    '<div class="mb-2 text-dark">Meta ke niyamon ke mutabiq <strong>Marketing Templates</strong> send karne ke liye aapke Meta WhatsApp Business Account (WABA) par valid Credit/Debit Card ya Payment Method link hona anivarya hai.</div>' +
+                    '<div class="p-2 bg-white rounded border border-danger-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution:</strong> Meta Business Suite / WhatsApp Manager me jayein -> <em>Account Tools -> Payment Methods</em> me apna payment card add karein.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(239,68,68,0.06)';
+                errorBox.style.borderColor = 'rgba(239,68,68,0.3)';
+                errorBox.style.color = '#b91c1c';
+            } else if (err.includes('132005') || err.toLowerCase().includes('paused') || err.toLowerCase().includes('disabled')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b91c1c;"><i class="bi bi-pause-circle-fill me-1"></i> Template Paused by Meta (Error #132005)</div>' +
+                    '<div class="mb-2 text-dark">Meta ne is template ko temporarily pause ya disable kar diya hai.</div>' +
+                    '<div class="p-2 bg-white rounded border border-danger-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution:</strong> Meta WhatsApp Manager me template ka status aur quality rating check karein.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(239,68,68,0.06)';
+                errorBox.style.borderColor = 'rgba(239,68,68,0.3)';
+                errorBox.style.color = '#b91c1c';
             } else {
                 errorBox.innerText = data.error;
                 errorBox.style.background = 'rgba(239,68,68,0.06)';

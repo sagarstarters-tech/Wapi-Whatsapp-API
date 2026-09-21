@@ -44,7 +44,7 @@ if ($rawComponents) {
 // If template, look up full template details from DB
 $templateHeaderType = 'none';
 if ($type === 'template' && !empty($content)) {
-    $tplRow = $db->fetch("SELECT language, header_type FROM templates WHERE user_id = ? AND name = ? LIMIT 1", [$userId, $content]);
+    $tplRow = $db->fetch("SELECT language, header_type, header_content, buttons FROM templates WHERE user_id = ? AND name = ? LIMIT 1", [$userId, $content]);
     if ($tplRow) {
         // Use DB language if not passed from frontend
         if (empty($templateLanguage)) {
@@ -97,6 +97,29 @@ foreach ($phones as $phone) {
     $phone = trim($phone);
     if (empty($phone)) continue;
 
+    // Contact name personalization for template variables
+    $phoneComponents = $templateComponents;
+    if ($type === 'template' && !empty($phoneComponents)) {
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        $cName = $db->fetchColumn(
+            "SELECT name FROM contacts WHERE user_id = ? AND (phone = ? OR phone LIKE ? OR ? LIKE CONCAT('%', phone)) LIMIT 1",
+            [$userId, $phone, "%{$cleanPhone}%", $cleanPhone]
+        );
+        if ($cName) {
+            foreach ($phoneComponents as &$comp) {
+                if (($comp['type'] ?? '') === 'body' && !empty($comp['parameters'])) {
+                    foreach ($comp['parameters'] as &$p) {
+                        if (isset($p['text']) && in_array(strtolower(trim($p['text'])), ['customer name', '{name}', '{contact_name}', 'name', 'customer_name'])) {
+                            $p['text'] = $cName;
+                        }
+                    }
+                    unset($p);
+                }
+            }
+            unset($comp);
+        }
+    }
+
     switch ($type) {
         case 'text':
             $result = $wa->sendText($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content);
@@ -105,7 +128,7 @@ foreach ($phones as $phone) {
             $result = $wa->sendImage($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $mediaUrl, $content);
             break;
         case 'template':
-            $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content, $templateLanguage, $templateComponents);
+            $result = $wa->sendTemplate($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content, $templateLanguage, $phoneComponents);
             break;
         default:
             $result = $wa->sendText($userId, $waAccount['phone_number_id'], $waAccount['access_token'], $phone, $content);

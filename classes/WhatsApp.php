@@ -701,9 +701,20 @@ class WhatsApp {
             $errorMsg = $result['error']['message'] ?? 'Unknown API error (HTTP ' . $httpCode . ')';
             $errorCode = $result['error']['code'] ?? 0;
             $errorSubcode = $result['error']['error_subcode'] ?? 0;
-            $fullError = "HTTP {$httpCode} | Code: {$errorCode} | Subcode: {$errorSubcode} | {$errorMsg}";
-            $this->logApiError('API_ERROR', $url, $data, $fullError);
-            return ['success' => false, 'message' => $errorMsg, 'data' => $result];
+            $details = $result['error']['error_data']['details'] ?? '';
+            $userTitle = $result['error']['error_user_title'] ?? '';
+            $userMsg = $result['error']['error_user_msg'] ?? '';
+
+            $errParts = [];
+            if ($errorCode) $errParts[] = "Error #{$errorCode}";
+            if ($errorSubcode) $errParts[] = "Subcode #{$errorSubcode}";
+            $errParts[] = $errorMsg;
+            if ($details) $errParts[] = "Details: {$details}";
+            if ($userTitle || $userMsg) $errParts[] = "({$userTitle}: {$userMsg})";
+
+            $formattedError = implode(' | ', $errParts);
+            $this->logApiError('API_ERROR', $url, $data, $formattedError);
+            return ['success' => false, 'message' => $formattedError, 'data' => $result];
         }
     }
 

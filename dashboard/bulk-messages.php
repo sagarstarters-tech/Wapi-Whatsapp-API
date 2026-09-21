@@ -62,19 +62,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 }
 
 $totalContacts = $db->count('contacts', 'user_id = ? AND is_active = 1', [$userId]);
-$templates     = $db->fetchAll("SELECT id, name, language, body, header_type, header_content FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
+$templates     = $db->fetchAll("SELECT id, name, category, language, body, header_type, header_content, buttons, variables FROM templates WHERE user_id = ? AND status = 'approved' ORDER BY name ASC", [$userId]);
 
 // Pre-process variable counts for each template
-$templateVarCounts = [];
-$templateButtonVars = [];
+$templateVarCounts       = [];
+$templateHeaderVarCounts = [];
+$templateButtonVars      = [];
 foreach ($templates as $tpl) {
+    // Header text variables (e.g. {{1}} in header)
+    $headerVars = 0;
+    if (($tpl['header_type'] ?? 'none') === 'text' && !empty($tpl['header_content'])) {
+        preg_match_all('/\{\{(\d+)\}\}/', $tpl['header_content'], $hMatches);
+        $headerVars = !empty($hMatches[1]) ? max(array_map('intval', $hMatches[1])) : 0;
+    }
+    $templateHeaderVarCounts[$tpl['id']] = $headerVars;
+
+    // Body variables
     preg_match_all('/\{\{(\d+)\}\}/', $tpl['body'], $matches);
     $maxVar = !empty($matches[1]) ? max(array_map('intval', $matches[1])) : 0;
     $templateVarCounts[$tpl['id']] = $maxVar;
 
+    // Button variables (dynamic URL)
     $btnVarCount = 0;
     if (!empty($tpl['buttons'])) {
-        $btns = json_decode($tpl['buttons'], true);
+        $btns = is_array($tpl['buttons']) ? $tpl['buttons'] : json_decode($tpl['buttons'], true);
         if (is_array($btns)) {
             foreach ($btns as $btn) {
                 if (($btn['type'] ?? '') === 'URL' && strpos($btn['url'] ?? '', '{{1}}') !== false) {
@@ -214,6 +225,8 @@ include __DIR__ . '/../includes/header.php';
                                 <option value="<?= $tpl['id']; ?>"
                                         data-body="<?= e($tpl['body']); ?>"
                                         data-vars="<?= $templateVarCounts[$tpl['id']]; ?>"
+                                        data-header-vars="<?= $templateHeaderVarCounts[$tpl['id']] ?? 0; ?>"
+                                        data-header-content="<?= e($tpl['header_content'] ?? ''); ?>"
                                         data-btn-vars="<?= $templateButtonVars[$tpl['id']] ?? 0; ?>"
                                         data-name="<?= e($tpl['name']); ?>"
                                         data-language="<?= e($tpl['language']); ?>"
@@ -297,12 +310,20 @@ function updateTemplatePreview() {
     const headerHint   = document.getElementById('templateHeaderHint');
 
     if (option && option.value) {
-        const body       = option.getAttribute('data-body');
-        const varCount   = parseInt(option.getAttribute('data-vars')) || 0;
-        const btnVarCount= parseInt(option.getAttribute('data-btn-vars')) || 0;
-        const headerType = option.getAttribute('data-header-type') || 'none';
+        const body          = option.getAttribute('data-body') || '';
+        const varCount      = parseInt(option.getAttribute('data-vars')) || 0;
+        const headerVarCount= parseInt(option.getAttribute('data-header-vars')) || 0;
+        const headerContent = option.getAttribute('data-header-content') || '';
+        const btnVarCount   = parseInt(option.getAttribute('data-btn-vars')) || 0;
+        const headerType    = option.getAttribute('data-header-type') || 'none';
         document.getElementById('msgContent').value = body;
-        previewBox.textContent = body || 'No content.';
+        
+        let displayPreview = '';
+        if (headerContent && headerType === 'text') {
+            displayPreview += '📌 [HEADER]: ' + headerContent + '\n\n';
+        }
+        displayPreview += body;
+        previewBox.textContent = displayPreview || 'No content.';
 
         // Handle header media (image/video/document)
         if (['image', 'video', 'document'].includes(headerType)) {
@@ -313,22 +334,39 @@ function updateTemplatePreview() {
             headerGroup.style.display = 'none';
         }
 
-        // Handle body and button variables
+        // Handle header, body, and button variables
         varsContainer.innerHTML = '';
-        if (varCount > 0 || btnVarCount > 0) {
+        const totalVars = headerVarCount + varCount + btnVarCount;
+        if (totalVars > 0) {
             varsGroup.style.display = 'block';
+            
+            // 1. Text header variables
+            if (headerType === 'text' && headerVarCount > 0) {
+                for (let i = 1; i <= headerVarCount; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'mb-2';
+                    d.innerHTML = `<label class="form-label small fw-semibold text-primary mb-1"><i class="bi bi-fonts me-1"></i>Header Variable {{${i}}}</label>
+                        <input type="text" name="tpl_header_vars[]" class="form-control" placeholder="Value for Header {{${i}}}" required>`;
+                    varsContainer.appendChild(d);
+                }
+            }
+
+            // 2. Body variables
             for (let i = 1; i <= varCount; i++) {
                 const d = document.createElement('div');
                 d.className = 'mb-2';
+                const defaultHint = (i === 1) ? 'Enter value (or type {name} for contact name)' : `Value for {{${i}}}`;
                 d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Body Variable {{${i}}}</label>
-                    <input type="text" name="tpl_vars[]" class="form-control" placeholder="Value for {{${i}}}" required>`;
+                    <input type="text" name="tpl_vars[]" class="form-control" placeholder="${defaultHint}" required>`;
                 varsContainer.appendChild(d);
             }
+
+            // 3. Button variables
             for (let i = 1; i <= btnVarCount; i++) {
                 const d = document.createElement('div');
                 d.className = 'mb-2';
-                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1">Button Dynamic Link Variable</label>
-                    <input type="text" name="btn_vars[]" class="form-control" placeholder="e.g. your-promo-code" required>`;
+                d.innerHTML = `<label class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-link-45deg me-1"></i>Button Dynamic Link Variable {{${i}}}</label>
+                    <input type="text" name="btn_vars[]" class="form-control" placeholder="e.g. promo-code or page-slug" required>`;
                 varsContainer.appendChild(d);
             }
         } else {
@@ -423,13 +461,18 @@ async function startBulkSend() {
         const headerType  = selectedOpt?.getAttribute('data-header-type') || 'none';
         const headerUrl   = document.getElementById('templateHeaderUrl')?.value || '';
 
-        if (['image', 'video', 'document'].includes(headerType) && !headerUrl) {
-            alert('This template requires a Header Media file. Please select and upload a file before sending.');
-            return;
-        }
-
-        // Header component (image/video/document)
-        if (['image', 'video', 'document'].includes(headerType) && headerUrl) {
+        // 1. Header component (text variables OR media file)
+        if (headerType === 'text') {
+            const hInputs = form.querySelectorAll('input[name="tpl_header_vars[]"]');
+            if (hInputs.length > 0) {
+                const hParams = Array.from(hInputs).map(i => ({ type: 'text', text: i.value }));
+                templateComponents.push({ type: 'header', parameters: hParams });
+            }
+        } else if (['image', 'video', 'document'].includes(headerType)) {
+            if (!headerUrl) {
+                alert('This template requires a Header Media file. Please select and upload a file before sending.');
+                return;
+            }
             const headerParam = { type: headerType };
             headerParam[headerType] = { link: headerUrl };
             templateComponents.push({ type: 'header', parameters: [headerParam] });
