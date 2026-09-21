@@ -91,8 +91,8 @@ if (!$rawPayload && !empty($msg['to_number']) && !empty($msg['created_at'])) {
     }
 }
 
-// 4. Detect OTP from content or raw payload
-$detectedOtp = extractOtpFromMessage($msg['content'], $rawPayload);
+// 4. Detect OTP from content or raw payload (only for inbound messages)
+$detectedOtp = ($msg['direction'] === 'inbound') ? extractOtpFromMessage($msg['content'], $rawPayload) : null;
 
 // 5. Retroactive self-healing: if message in DB has generic notice or missing raw payload, update it
 if ($rawPayload && (empty($msg['error_message']) || strpos($msg['content'] ?? '', 'isn\'t supported in the chat viewer yet') !== false)) {

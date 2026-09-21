@@ -111,9 +111,12 @@ include __DIR__ . '/../includes/header.php';
                             <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"><?= ucfirst($msg['type']); ?></span></td>
                             <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem;">
                                 <?php
-                                    $rowOtp = extractOtpFromMessage($msg['content'], $msg['error_message'] ?? '');
+                                    $rowOtp = ($msg['direction'] === 'inbound') ? extractOtpFromMessage($msg['content'], $msg['error_message'] ?? '') : null;
                                     if ($rowOtp): ?>
                                     <span class="badge rounded-pill bg-success px-2 py-1 me-1 shadow-sm"><i class="bi bi-shield-lock-fill"></i> OTP: <?= e($rowOtp); ?></span>
+                                <?php endif; ?>
+                                <?php if ($msg['status'] === 'failed' && !empty($msg['error_message']) && strpos($msg['error_message'], '131047') !== false): ?>
+                                    <span class="badge rounded-pill bg-danger-subtle text-danger px-2 py-1 me-1 border border-danger-subtle" title="Customer has not replied in 24 hours. Meta requires an approved WhatsApp Template message."><i class="bi bi-clock-history me-1"></i>24h Window Expired</span>
                                 <?php endif; ?>
                                 <?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?>
                             </td>
@@ -304,7 +307,17 @@ include __DIR__ . '/../includes/header.php';
         const errorSection = document.getElementById('modalErrorSection');
         const errorBox     = document.getElementById('modalError');
         if (data.error && (data.status.toLowerCase() === 'failed' || data.type.toLowerCase() === 'unsupported')) {
-            errorBox.innerText = data.error;
+            const err = String(data.error);
+            if (err.includes('131047') || err.toLowerCase().includes('re-engagement') || err.toLowerCase().includes('24 hours')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem;">⚠️ Meta Policy: 24-Hour Window Expired (Error #131047)</div>' +
+                    '<div class="mb-2">Meta WhatsApp policy ke mutabiq aap customer ko 24 ghante ke baad direct <strong>Text message</strong> nahi bhej sakte jab tak customer samne se message na kare.</div>' +
+                    '<div class="p-2 bg-white rounded border border-danger-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution:</strong> Bulk Messages bhejte waqt Type me <strong>"Template"</strong> select karein aur Meta dwara Approved Template use karein. Template message 24-hour window ke baad bhi deliver ho jate hain.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+            } else {
+                errorBox.innerText = data.error;
+            }
             errorSection.style.display = 'block';
         } else {
             errorSection.style.display = 'none';
@@ -335,10 +348,12 @@ include __DIR__ . '/../includes/header.php';
                     if (res.content && res.content !== data.content) {
                         document.getElementById('modalContent').innerText = res.content;
                     }
-                    if (res.detected_otp) {
+                    if (res.detected_otp && data.direction === 'inbound') {
                         currentModalOtp = res.detected_otp;
                         otpCodeEl.innerText = res.detected_otp;
                         otpSection.style.display = 'block';
+                    } else {
+                        otpSection.style.display = 'none';
                     }
                     if (res.raw_payload) {
                         currentRawJson = JSON.stringify(res.raw_payload, null, 2);

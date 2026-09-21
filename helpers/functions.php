@@ -303,6 +303,13 @@ function renderPagination($pagination, $urlPattern = '?page=%d') {
  * Detect and extract OTP or verification code from text or JSON array
  */
 function extractOtpFromMessage($content, $rawData = null) {
+    // If rawData is an error payload (e.g. from Meta API failure), don't extract error codes as OTP
+    if (is_array($rawData) && (isset($rawData['error']) || isset($rawData['error_data']) || (isset($rawData['type']) && $rawData['type'] === 'OAuthException'))) {
+        $rawData = null;
+    } elseif (is_string($rawData) && (stripos($rawData, 'OAuthException') !== false || stripos($rawData, 'Re-engagement message') !== false)) {
+        $rawData = null;
+    }
+
     $textToSearch = (string)$content;
     if (is_array($rawData)) {
         $textToSearch .= ' ' . json_encode($rawData, JSON_UNESCAPED_UNICODE);
@@ -312,32 +319,47 @@ function extractOtpFromMessage($content, $rawData = null) {
 
     if (empty(trim($textToSearch))) return null;
 
+    $knownErrorCodes = ['131047', '131051', '131026', '131000', '131005', '130429', '131009', '131016', '131031', '131052', '131053', '131056'];
+
     // 1. Explicit keyword followed by 4-8 digit code (e.g. "code is 123456", "verification code is: 456789", "OTP: 987654", "Facebook code: 123456")
     if (preg_match('/(?:code|otp|pin|verification(?:\s+code)?|password|security\s+code)(?:(?:\s+is)?[\s:=–-]+|\s+)([0-9]{4,8})\b/i', $textToSearch, $m)) {
-        return $m[1];
+        if (!in_array($m[1], $knownErrorCodes)) {
+            return $m[1];
+        }
     }
 
     // 2. Android / WhatsApp Autofill format: "<#> 123456 is your code" or "<#> 123456"
     if (preg_match('/<#>\s*([0-9]{4,8})\b/i', $textToSearch, $m)) {
-        return $m[1];
+        if (!in_array($m[1], $knownErrorCodes)) {
+            return $m[1];
+        }
     }
 
     // 3. Code followed by "is your ... code" (e.g. "849201 is your Facebook code", "492-104 is your WhatsApp code")
     if (preg_match('/\b([0-9]{3,4}[-\s][0-9]{3,4})\s+(?:is\s+your|for)\b/i', $textToSearch, $m)) {
-        return preg_replace('/[^0-9]/', '', $m[1]);
+        $clean = preg_replace('/[^0-9]/', '', $m[1]);
+        if (!in_array($clean, $knownErrorCodes)) {
+            return $clean;
+        }
     }
     if (preg_match('/\b([0-9]{4,8})\s+(?:is\s+your|for)\b/i', $textToSearch, $m)) {
-        return $m[1];
+        if (!in_array($m[1], $knownErrorCodes)) {
+            return $m[1];
+        }
     }
 
-    // 4. JSON key for code or otp (e.g. "code":"123456", "otp":"123456", "token":"123456")
-    if (preg_match('/"(?:code|otp|pin|token|code_value)"\s*:\s*"?([0-9]{4,8})"?/i', $textToSearch, $m)) {
-        return $m[1];
+    // 4. JSON key for OTP (e.g. "otp":"123456", "token":"123456", "pin":"123456") - Note: Avoid generic "code" which matches API error codes
+    if (preg_match('/"(?:otp|pin|token|code_value|verification_code)"\s*:\s*"?([0-9]{4,8})"?/i', $textToSearch, $m)) {
+        if (!in_array($m[1], $knownErrorCodes)) {
+            return $m[1];
+        }
     }
 
     // 5. Template parameter text that is purely digits between 4-8 chars
     if (preg_match('/"(?:text|body)"\s*:\s*"([0-9]{4,8})"/i', $textToSearch, $m)) {
-        return $m[1];
+        if (!in_array($m[1], $knownErrorCodes)) {
+            return $m[1];
+        }
     }
 
     return null;
