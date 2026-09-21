@@ -145,8 +145,12 @@ include __DIR__ . '/../includes/header.php';
                                             echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-exclamation-triangle me-1"></i>Variables Mismatch</span>';
                                         } elseif (strpos($err, '132001') !== false || stripos($err, 'does not exist') !== false) {
                                             echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-translate me-1"></i>Template/Lang Not Found</span>';
-                                        } elseif (strpos($err, '133010') !== false || strpos($err, '131031') !== false || stripos($err, 'payment') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-credit-card me-1"></i>Meta Payment Required</span>';
+                                        } elseif (strpos($err, '131042') !== false || stripos($err, 'payment') !== false || stripos($err, 'billing') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-credit-card me-1"></i>Meta Payment Issue (#131042)</span>';
+                                        } elseif (strpos($err, '131031') !== false || stripos($err, 'locked') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-shield-lock-fill me-1"></i>Account Locked (#131031)</span>';
+                                        } elseif (strpos($err, '133010') !== false || stripos($err, 'not registered') !== false) {
+                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-telephone-x me-1"></i>Number Not Registered (#133010)</span>';
                                         } elseif (strpos($err, '132005') !== false || stripos($err, 'paused') !== false) {
                                             echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-pause-circle me-1"></i>Template Paused</span>';
                                         } else {
@@ -400,16 +404,43 @@ include __DIR__ . '/../includes/header.php';
                 errorBox.style.background = 'rgba(245, 158, 11, 0.08)';
                 errorBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
                 errorBox.style.color = '#92400e';
-            } else if (err.includes('133010') || err.includes('131031') || err.toLowerCase().includes('payment')) {
-                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b91c1c;"><i class="bi bi-credit-card-2-front-fill me-1"></i> Meta WhatsApp Payment Method Required (Error #133010 / #131031)</div>' +
-                    '<div class="mb-2 text-dark">Meta ke niyamon ke mutabiq <strong>Marketing Templates</strong> send karne ke liye aapke Meta WhatsApp Business Account (WABA) par valid Credit/Debit Card ya Payment Method link hona anivarya hai.</div>' +
+            } else if (err.includes('131042') || err.toLowerCase().includes('payment') || err.toLowerCase().includes('billing')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b91c1c;"><i class="bi bi-credit-card-2-front-fill me-1"></i> Meta WhatsApp Payment / Billing Issue (Error #131042)</div>' +
+                    '<div class="mb-2 text-dark">Meta ke niyamon ke mutabiq <strong>Marketing Templates</strong> send karne ke liye aapke Meta WhatsApp Business Account (WABA) par valid Credit/Debit Card active hona anivarya hai.</div>' +
                     '<div class="p-2 bg-white rounded border border-danger-subtle mb-2 text-dark">' +
-                    '<strong>💡 Solution:</strong> Meta Business Suite / WhatsApp Manager me jayein -> <em>Account Tools -> Payment Methods</em> me apna payment card add karein.' +
+                    '<strong>💡 Kripya yeh 3 cheezein check karein:</strong><br>' +
+                    '1. <strong>Card Expiry:</strong> Agar card par "Expires in /" dikh raha hai, to card details re-enter karke OTP verify karein.<br>' +
+                    '2. <strong>Business Address:</strong> Meta Business Suite me <em>Settings -> Business info -> Address</em> me complete address fill karein (India me RBI billing compliance ke liye address anivarya hai).<br>' +
+                    '3. <strong>Card International / Online Usage:</strong> Apne bank app me card ki Online / International transaction active rakhein.' +
                     '</div>' +
                     '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
                 errorBox.style.background = 'rgba(239,68,68,0.06)';
                 errorBox.style.borderColor = 'rgba(239,68,68,0.3)';
                 errorBox.style.color = '#b91c1c';
+            } else if (err.includes('131031') || err.toLowerCase().includes('locked')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b91c1c;"><i class="bi bi-shield-lock-fill me-1"></i> Meta Business Account Locked / Restricted (Error #131031)</div>' +
+                    '<div class="mb-2 text-dark">Meta ne is WhatsApp Business Account par temporary security lock lagaya hai. Iska payment se seedha sambandh nahi hota balki Meta security review ya PIN verification se hota hai.</div>' +
+                    '<div class="p-2 bg-white rounded border border-danger-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution (Lock Kaise Hatayein):</strong><br>' +
+                    '1. <strong>Meta Business Support Home</strong> (Account Quality) par jayein: <a href="https://business.facebook.com/accountquality" target="_blank" class="fw-bold">business.facebook.com/accountquality</a><br>' +
+                    '2. Wahan check karein agar koi <em>"Request Review"</em> ya <em>"Confirm Identity"</em> button dikh raha hai to uspar click karein.<br>' +
+                    '3. Meta Business Suite me <em>Settings -> Business info</em> me Legal Business Name aur Address ko poora bharein.<br>' +
+                    '4. WhatsApp Manager me jakar apne phone number ka <strong>Two-Step Verification PIN</strong> check / reset karein.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(239,68,68,0.06)';
+                errorBox.style.borderColor = 'rgba(239,68,68,0.3)';
+                errorBox.style.color = '#b91c1c';
+            } else if (err.includes('133010') || err.toLowerCase().includes('not registered')) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b45309;"><i class="bi bi-telephone-x-fill me-1"></i> Phone Number Not Registered (Error #133010)</div>' +
+                    '<div class="mb-2 text-dark">Meta Cloud API par yeh phone number registration complete nahi hui hai.</div>' +
+                    '<div class="p-2 bg-white rounded border border-warning-subtle mb-2 text-dark">' +
+                    '<strong>💡 Solution:</strong> WhatsApp Manager me jayein, Phone Numbers tab me jakar number ka status check karein aur 6-digit PIN se number verify karein.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(245, 158, 11, 0.08)';
+                errorBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                errorBox.style.color = '#92400e';
             } else if (err.includes('132005') || err.toLowerCase().includes('paused') || err.toLowerCase().includes('disabled')) {
                 errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b91c1c;"><i class="bi bi-pause-circle-fill me-1"></i> Template Paused by Meta (Error #132005)</div>' +
                     '<div class="mb-2 text-dark">Meta ne is template ko temporarily pause ya disable kar diya hai.</div>' +
