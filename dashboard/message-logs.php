@@ -105,7 +105,13 @@ include __DIR__ . '/../includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="fw-semibold"><?= e($msg['contact_name'] ?? $msg['to_number']); ?></div>
+                                <div class="fw-semibold">
+                                    <?php if ($msg['to_number'] === '447974905007' || strpos($msg['contact_name'] ?? '', '447974905007') !== false): ?>
+                                        <i class="bi bi-facebook text-primary me-1"></i> Facebook (Meta Security)
+                                    <?php else: ?>
+                                        <?= e($msg['contact_name'] ?? $msg['to_number']); ?>
+                                    <?php endif; ?>
+                                </div>
                                 <div style="font-size: 0.75rem; color: var(--text-muted);"><?= e($msg['to_number']); ?></div>
                             </td>
                             <td><span class="badge-custom" style="background: var(--primary-bg); color: var(--primary);"><?= ucfirst($msg['type']); ?></span></td>
@@ -118,7 +124,14 @@ include __DIR__ . '/../includes/header.php';
                                 <?php if ($msg['status'] === 'failed' && !empty($msg['error_message']) && strpos($msg['error_message'], '131047') !== false): ?>
                                     <span class="badge rounded-pill bg-danger-subtle text-danger px-2 py-1 me-1 border border-danger-subtle" title="Customer has not replied in 24 hours. Meta requires an approved WhatsApp Template message."><i class="bi bi-clock-history me-1"></i>24h Window Expired</span>
                                 <?php endif; ?>
-                                <?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?>
+                                <?php if ($msg['to_number'] === '447974905007' || (strpos($msg['error_message'] ?? '', '131051') !== false && $msg['type'] === 'unsupported')): ?>
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-2 py-1 me-1 border border-warning-subtle" title="Meta Cloud API blocks incoming 2FA OTP messages to business webhooks. Use SMS on Facebook."><i class="bi bi-shield-exclamation me-1"></i>Meta OTP Blocked</span>
+                                <?php endif; ?>
+                                <?php if ($msg['to_number'] === '447974905007' || (strpos($msg['error_message'] ?? '', '131051') !== false && $msg['type'] === 'unsupported')): ?>
+                                    <span class="text-secondary">Facebook 2FA Verification Code (Blocked by Meta Cloud API)</span>
+                                <?php else: ?>
+                                    <?= e(substr($msg['content'], 0, 60)); ?><?= strlen($msg['content']) > 60 ? '...' : ''; ?>
+                                <?php endif; ?>
                             </td>
                             <td><span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span></td>
                             <td style="font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap;"><?= timeAgo($msg['created_at']); ?></td>
@@ -127,7 +140,7 @@ include __DIR__ . '/../includes/header.php';
                                     'id'          => $msg['id'],
                                     'direction'   => $msg['direction'],
                                     'to'          => $msg['to_number'],
-                                    'name'        => $msg['contact_name'] ?? $msg['to_number'],
+                                    'name'        => ($msg['to_number'] === '447974905007' || strpos($msg['contact_name'] ?? '', '447974905007') !== false) ? 'Facebook (Meta Security)' : ($msg['contact_name'] ?? $msg['to_number']),
                                     'type'        => ucfirst($msg['type']),
                                     'status'      => ucfirst($msg['status']),
                                     'time'        => date('d M Y, H:i:s', strtotime($msg['created_at'])),
@@ -275,7 +288,22 @@ include __DIR__ . '/../includes/header.php';
         // Reset and populate modal data
         document.getElementById('modalTarget').innerText  = data.name;
         document.getElementById('modalTime').innerText    = data.time;
-        document.getElementById('modalContent').innerText = data.content || '-';
+        
+        const isFbOtp = (data.to.includes('447974905007') || (data.type.toLowerCase() === 'unsupported' && (data.error && data.error.includes('131051'))));
+        if (isFbOtp) {
+            document.getElementById('modalContent').innerHTML = '<div class="alert alert-warning border border-warning mb-0 p-3" style="font-size: 0.88rem; background: #fffbeb; color: #92400e;">' +
+                '<div class="fw-bold mb-1"><i class="bi bi-shield-exclamation me-1"></i> Facebook 2FA Verification Code (Blocked by Meta Cloud API)</div>' +
+                '<p class="mb-2">Facebook ne verification code WhatsApp ke zariye bheja hai, lekin <strong>Meta WhatsApp Cloud API policy</strong> ke mutabiq Business accounts ke webhook par kisi third-party app ya Facebook ka incoming 2FA authentication message deliver nahi hota (Error #131051: Message type unknown). Meta ne webhook payload me koi text ya OTP code provide nahi kiya hai.</p>' +
+                '<div class="p-2 bg-white rounded border border-warning-subtle text-dark">' +
+                '<strong>👉 OTP Kaise Prapt Karein:</strong><br>' +
+                '1. Facebook login / verification screen par jayein.<br>' +
+                '2. <strong>"Try another way"</strong> ya <strong>"Send via SMS"</strong> par click karein.<br>' +
+                '3. Verification code aapke mobile par normal SMS ke roop me turant deliver ho jayega.' +
+                '</div>' +
+                '</div>';
+        } else {
+            document.getElementById('modalContent').innerText = data.content || '-';
+        }
         document.getElementById('modalType').innerText    = data.type;
         
         const statusEl = document.getElementById('modalStatus');
@@ -285,7 +313,7 @@ include __DIR__ . '/../includes/header.php';
         // Initial OTP check from row
         const otpSection = document.getElementById('modalOtpSection');
         const otpCodeEl  = document.getElementById('modalOtpCode');
-        if (currentModalOtp) {
+        if (currentModalOtp && !isFbOtp) {
             otpCodeEl.innerText = currentModalOtp;
             otpSection.style.display = 'block';
         } else {
@@ -315,8 +343,24 @@ include __DIR__ . '/../includes/header.php';
                     '<strong>💡 Solution:</strong> Bulk Messages bhejte waqt Type me <strong>"Template"</strong> select karein aur Meta dwara Approved Template use karein. Template message 24-hour window ke baad bhi deliver ho jate hain.' +
                     '</div>' +
                     '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(239,68,68,0.06)';
+                errorBox.style.borderColor = 'rgba(239,68,68,0.3)';
+                errorBox.style.color = '#b91c1c';
+            } else if (err.includes('131051') || isFbOtp) {
+                errorBox.innerHTML = '<div class="fw-bold mb-1" style="font-size: 0.95rem; color: #b45309;"><i class="bi bi-shield-lock-fill me-1"></i> Meta Cloud API Security Policy (Error #131051)</div>' +
+                    '<div class="mb-2">WhatsApp Cloud API (WABA) incoming authentication templates (2FA verification codes) ko webhook par deliver nahi karta. Yeh Meta ki platform policy hai, koi software bug nahi hai.</div>' +
+                    '<div class="p-2 bg-white rounded border border-warning-subtle mb-2 text-dark">' +
+                    '<strong>💡 Kripya SMS option chunein:</strong> Facebook verification page par <strong>"Send Code via SMS"</strong> select karein taaki OTP normal message me prapt ho sake.' +
+                    '</div>' +
+                    '<div class="text-muted small" style="font-size: 0.72rem; word-break: break-all;">Meta Raw Webhook Error: ' + err.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                errorBox.style.background = 'rgba(245, 158, 11, 0.08)';
+                errorBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                errorBox.style.color = '#92400e';
             } else {
                 errorBox.innerText = data.error;
+                errorBox.style.background = 'rgba(239,68,68,0.06)';
+                errorBox.style.borderColor = 'rgba(239,68,68,0.3)';
+                errorBox.style.color = '#b91c1c';
             }
             errorSection.style.display = 'block';
         } else {
@@ -345,10 +389,10 @@ include __DIR__ . '/../includes/header.php';
             .then(r => r.json())
             .then(res => {
                 if (res.success) {
-                    if (res.content && res.content !== data.content) {
+                    if (res.content && res.content !== data.content && !isFbOtp) {
                         document.getElementById('modalContent').innerText = res.content;
                     }
-                    if (res.detected_otp && data.direction === 'inbound') {
+                    if (res.detected_otp && data.direction === 'inbound' && !isFbOtp) {
                         currentModalOtp = res.detected_otp;
                         otpCodeEl.innerText = res.detected_otp;
                         otpSection.style.display = 'block';

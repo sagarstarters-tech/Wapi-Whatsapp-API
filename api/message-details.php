@@ -107,6 +107,19 @@ if ($rawPayload && (empty($msg['error_message']) || strpos($msg['content'] ?? ''
     $db->update('messages', $updateFields, 'id = ?', [$msg['id']]);
 }
 
+// 6. Clarify Facebook / Meta blocked OTP messages
+$isMetaOtpBlocked = ($msg['to_number'] === '447974905007' || strpos($msg['error_message'] ?? '', '131051') !== false || strpos($msg['content'] ?? '', '447974905007') !== false);
+if ($isMetaOtpBlocked && $msg['type'] === 'unsupported') {
+    $clarifiedContent = "🔐 Facebook / Meta Verification Code: [Blocked by Meta Cloud API Policy #131051 - Meta does not deliver incoming 2FA OTPs over Business Cloud API webhooks. Please select 'Send via SMS' on Facebook.]";
+    if ($msg['content'] !== $clarifiedContent && strpos($msg['content'] ?? '', 'Unsupported Message') !== false) {
+        $db->update('messages', ['content' => $clarifiedContent], 'id = ?', [$msg['id']]);
+        $msg['content'] = $clarifiedContent;
+    }
+    if (empty($msg['contact_name']) || $msg['contact_name'] === $msg['to_number']) {
+        $msg['contact_name'] = 'Facebook (Meta Security)';
+    }
+}
+
 echo json_encode([
     'success'      => true,
     'id'           => $msg['id'],

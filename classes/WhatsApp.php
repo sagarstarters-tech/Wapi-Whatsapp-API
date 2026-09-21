@@ -418,6 +418,8 @@ class WhatsApp {
                 $foundOtp = function_exists('extractOtpFromMessage') ? extractOtpFromMessage('', $msg) : null;
                 if ($foundOtp) {
                     $text = "🔐 OTP / Verification Code: {$foundOtp}" . ($unsupType ? "\n[System message type: {$unsupType}]" : '');
+                } elseif (strpos($from ?? '', '447974905007') !== false || (!empty($msg['from']) && strpos($msg['from'], '447974905007') !== false)) {
+                    $text = "🔐 Facebook / Meta Verification Code: [Blocked by Meta Cloud API Policy #131051 - Meta does not deliver incoming 2FA OTPs over Business Cloud API webhooks. Please select 'Send via SMS' on Facebook.]";
                 } elseif (!empty($errDetails)) {
                     $text = "⚠️ Unsupported Message" . ($unsupType ? " ({$unsupType})" : "") . ": {$errDetails}";
                 } else {
