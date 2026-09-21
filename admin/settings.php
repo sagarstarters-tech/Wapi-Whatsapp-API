@@ -52,6 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && CSRF::validateToken()) {
 }
 
 $activeTab = sanitize($_GET['tab'] ?? 'general');
+if ($activeTab === 'email') {
+    redirect('admin/email-settings.php');
+}
 $allSettings = $settings->getAll();
 
 $pageTitle = 'Settings';
@@ -85,7 +88,7 @@ include __DIR__ . '/../includes/header.php';
             <li><a class="nav-link <?= $activeTab === 'landing' ? 'active' : ''; ?> btn-sm" href="?tab=landing" style="border-radius: 8px;">Landing Page</a></li>
             <li><a class="nav-link <?= $activeTab === 'seo' ? 'active' : ''; ?> btn-sm" href="?tab=seo" style="border-radius: 8px;">SEO</a></li>
             <li><a class="nav-link <?= $activeTab === 'payment' ? 'active' : ''; ?> btn-sm" href="?tab=payment" style="border-radius: 8px;">Payment</a></li>
-            <li><a class="nav-link <?= $activeTab === 'email' ? 'active' : ''; ?> btn-sm" href="?tab=email" style="border-radius: 8px;">Email / SMTP</a></li>
+            <li><a class="nav-link btn-sm" href="<?= baseUrl('admin/email-settings.php'); ?>" style="border-radius: 8px;"><i class="bi bi-envelope-fill me-1"></i>Email / SMTP</a></li>
             <li><a class="nav-link <?= $activeTab === 'security' ? 'active' : ''; ?> btn-sm" href="?tab=security" style="border-radius: 8px;">Security</a></li>
             <li><a class="nav-link <?= $activeTab === 'widget' ? 'active' : ''; ?> btn-sm" href="?tab=widget" style="border-radius: 8px;">Chat Widget</a></li>
             <li><a class="nav-link <?= $activeTab === 'social' ? 'active' : ''; ?> btn-sm" href="?tab=social" style="border-radius: 8px;">Social Links</a></li>
@@ -348,30 +351,6 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6"><label class="form-label">Merchant Name</label><input type="text" name="settings[upi_name]" class="form-control" value="<?= e($allSettings['upi_name'] ?? ''); ?>" placeholder="Sagar Starters"></div>
                         <div class="col-md-12"><label class="form-label">Merchant UPI ID</label><input type="text" name="settings[upi_id]" class="form-control" value="<?= e($allSettings['upi_id'] ?? ''); ?>" placeholder="merchant@upi"></div>
-                    </div>
-
-                <?php elseif ($activeTab === 'email'): ?>
-                    <h5 class="fw-bold mb-4">Email Configuration</h5>
-                    <div class="row g-4">
-                        <div class="col-12">
-                            <label class="form-label">Mail Driver</label>
-                            <select name="settings[email_driver]" class="form-control">
-                                <option value="mail" <?= ($allSettings['email_driver'] ?? 'mail') === 'mail' ? 'selected' : ''; ?>>PHP Mail (Previous)</option>
-                                <option value="smtp" <?= ($allSettings['email_driver'] ?? '') === 'smtp' ? 'selected' : ''; ?>>SMTP (Gmail/Other)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6"><label class="form-label">SMTP Host</label><input type="text" name="settings[smtp_host]" class="form-control" value="<?= e($allSettings['smtp_host'] ?? ''); ?>" placeholder="smtp.gmail.com"></div>
-                        <div class="col-md-3"><label class="form-label">Port</label><input type="number" name="settings[smtp_port]" class="form-control" value="<?= e($allSettings['smtp_port'] ?? '587'); ?>"></div>
-                        <div class="col-md-3"><label class="form-label">Encryption</label>
-                            <select name="settings[smtp_encryption]" class="form-control">
-                                <option value="tls" <?= ($allSettings['smtp_encryption'] ?? '') === 'tls' ? 'selected' : ''; ?>>TLS</option>
-                                <option value="ssl" <?= ($allSettings['smtp_encryption'] ?? '') === 'ssl' ? 'selected' : ''; ?>>SSL</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6"><label class="form-label">Username</label><input type="text" name="settings[smtp_username]" class="form-control" value="<?= e($allSettings['smtp_username'] ?? ''); ?>"></div>
-                        <div class="col-md-6"><label class="form-label">Password</label><input type="password" name="settings[smtp_password]" class="form-control" value="<?= e($allSettings['smtp_password'] ?? ''); ?>"></div>
-                        <div class="col-md-6"><label class="form-label">From Name</label><input type="text" name="settings[smtp_from_name]" class="form-control" value="<?= e($allSettings['smtp_from_name'] ?? ''); ?>"></div>
-                        <div class="col-md-6"><label class="form-label">From Email</label><input type="email" name="settings[smtp_from_email]" class="form-control" value="<?= e($allSettings['smtp_from_email'] ?? ''); ?>"></div>
                     </div>
 
                 <?php elseif ($activeTab === 'security'): ?>

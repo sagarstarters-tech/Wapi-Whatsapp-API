@@ -52,7 +52,7 @@ $totalUsers = $db->count('users', 'role = ?', ['user']);
             </a>
             <a href="<?= baseUrl('admin/messages.php'); ?>" class="sidebar-link <?= $currentPage === 'messages' ? 'active' : ''; ?>">
                 <i class="bi bi-chat-dots-fill"></i>
-                <span>Messages</span>
+                <span>WhatsApp Messages</span>
             </a>
             <?php
                 try {

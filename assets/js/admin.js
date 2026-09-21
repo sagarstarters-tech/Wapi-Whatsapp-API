@@ -147,13 +147,6 @@ function initDataTables() {
     });
 }
 
-// ===== Delete Confirm =====
-function confirmDelete(url, name) {
-    if (confirm('Are you sure you want to delete "' + name + '"? This action cannot be undone.')) {
-        window.location.href = url;
-    }
-}
-
 // ===== Bulk Actions =====
 function toggleSelectAll(checkbox) {
     document.querySelectorAll('.row-checkbox').forEach(function(cb) {
@@ -161,37 +154,3 @@ function toggleSelectAll(checkbox) {
     });
 }
 
-// ===== AJAX Form Submit =====
-async function submitForm(formId, callback) {
-    const form = document.getElementById(formId);
-    if (!form) return;
-
-    const formData = new FormData(form);
-    const submitBtn = form.querySelector('[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    
-    submitBtn.innerHTML = '<span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Saving...';
-    submitBtn.disabled = true;
-
-    try {
-        const response = await fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const result = await response.json();
-        
-        if (callback) callback(result);
-        
-        if (result.success) {
-            showAlert('#alertContainer', 'success', result.message);
-        } else {
-            showAlert('#alertContainer', 'danger', result.message);
-        }
-    } catch (error) {
-        showAlert('#alertContainer', 'danger', 'An error occurred. Please try again.');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }
-}

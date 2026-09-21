@@ -184,7 +184,7 @@ include __DIR__ . '/../includes/header.php';
                     <thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>Method</th><th>UTR / Payment ID</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
                     <tbody>
                         <?php if (empty($payments)): ?>
-                        <tr><td colspan="7" class="text-center text-muted py-4">No payments found</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">No payments found</td></tr>
                         <?php else: ?>
                         <?php foreach ($payments as $p): ?>
                         <tr>

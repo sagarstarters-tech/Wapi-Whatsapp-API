@@ -299,8 +299,8 @@ include __DIR__ . '/../includes/header.php';
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-outline-primary btn-sm d-lg-none" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
-                <a href="<?= baseUrl('dashboard/templates.php'); ?>" class="btn btn-outline-secondary btn-sm" title="Go to User Dashboard Templates">
-                    <i class="bi bi-box-arrow-up-right me-1"></i> User Dashboard
+                <a href="<?= baseUrl('dashboard/templates.php'); ?>" class="btn btn-outline-secondary btn-sm" title="Go to User Templates View">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> User Templates View
                 </a>
                 <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#syncModal">
                     <i class="bi bi-arrow-repeat me-1"></i> Sync from Meta
