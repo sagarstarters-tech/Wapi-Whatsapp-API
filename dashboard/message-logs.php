@@ -136,25 +136,37 @@ include __DIR__ . '/../includes/header.php';
                             <td>
                                 <span class="status-badge status-<?= $msg['status']; ?>"><?= ucfirst($msg['status']); ?></span>
                                 <?php if ($msg['status'] === 'failed' && !empty($msg['error_message'])): ?>
-                                    <div class="mt-1" style="font-size: 0.72rem; line-height: 1.25;">
+                                    <div class="mt-1" style="font-size: 0.72rem; line-height: 1.25; cursor: pointer;" onclick="viewMessage(<?= htmlspecialchars(json_encode([
+                                        'id'          => $msg['id'],
+                                        'direction'   => $msg['direction'],
+                                        'to'          => $msg['to_number'],
+                                        'name'        => ($msg['to_number'] === '447974905007' || strpos($msg['contact_name'] ?? '', '447974905007') !== false) ? 'Facebook (Meta Security)' : ($msg['contact_name'] ?? $msg['to_number']),
+                                        'type'        => ucfirst($msg['type']),
+                                        'status'      => ucfirst($msg['status']),
+                                        'time'        => date('d M Y, H:i:s', strtotime($msg['created_at'])),
+                                        'content'     => $msg['content'],
+                                        'error'       => $msg['error_message'] ?? '',
+                                        'media_url'   => $msg['media_url'] ?? '',
+                                        'row_otp'     => $rowOtp
+                                    ])); ?>)" title="Click to view exact Meta error & fix guide">
                                         <?php
                                         $err = $msg['error_message'];
                                         if (strpos($err, '131047') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-clock-history me-1"></i>24h Window Expired</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-clock-history me-1"></i>24h Window Expired <i class="bi bi-info-circle ms-1"></i></span>';
                                         } elseif (strpos($err, '132000') !== false || stripos($err, 'parameters') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-exclamation-triangle me-1"></i>Variables Mismatch</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i>Variables Mismatch <i class="bi bi-info-circle ms-1"></i></span>';
                                         } elseif (strpos($err, '132001') !== false || stripos($err, 'does not exist') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-translate me-1"></i>Template/Lang Not Found</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-translate me-1"></i>Template/Lang Not Found <i class="bi bi-info-circle ms-1"></i></span>';
                                         } elseif (strpos($err, '131042') !== false || stripos($err, 'payment') !== false || stripos($err, 'billing') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-credit-card me-1"></i>Meta Payment Issue (#131042)</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-credit-card me-1"></i>Payment / Billing Issue (#131042) <i class="bi bi-info-circle ms-1"></i></span>';
                                         } elseif (strpos($err, '131031') !== false || stripos($err, 'locked') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-shield-lock-fill me-1"></i>Account Locked (#131031)</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-shield-lock-fill me-1"></i>Account Locked (#131031) <i class="bi bi-info-circle ms-1"></i></span>';
                                         } elseif (strpos($err, '133010') !== false || stripos($err, 'not registered') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-telephone-x me-1"></i>Number Not Registered (#133010)</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-telephone-x me-1"></i>Number Not Registered (#133010) <i class="bi bi-info-circle ms-1"></i></span>';
                                         } elseif (strpos($err, '132005') !== false || stripos($err, 'paused') !== false) {
-                                            echo '<span class="text-danger fw-semibold" title="' . e($err) . '"><i class="bi bi-pause-circle me-1"></i>Template Paused</span>';
+                                            echo '<span class="text-danger fw-semibold"><i class="bi bi-pause-circle me-1"></i>Template Paused <i class="bi bi-info-circle ms-1"></i></span>';
                                         } else {
-                                            echo '<span class="text-danger" title="' . e($err) . '"><i class="bi bi-info-circle me-1"></i>' . e(substr($err, 0, 32)) . (strlen($err) > 32 ? '...' : '') . '</span>';
+                                            echo '<span class="text-danger"><i class="bi bi-info-circle me-1"></i>' . e(substr($err, 0, 32)) . (strlen($err) > 32 ? '...' : '') . '</span>';
                                         }
                                         ?>
                                     </div>
